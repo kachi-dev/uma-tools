@@ -761,7 +761,15 @@ function App(props) {
 
 	function handleSkillDrag(skillId, umaIndex, newStart, newEnd){
 		console.log('handleSkillDrag called:', {skillId, umaIndex, newStart, newEnd});
-		// Just log for now - no comparison trigger
+		
+		// Update the forced skill position for the appropriate horse
+		if (umaIndex === 0) {
+			setUma1(uma1.set('forcedSkillPositions', uma1.forcedSkillPositions.set(skillId, newStart)));
+		} else if (umaIndex === 1) {
+			setUma2(uma2.set('forcedSkillPositions', uma2.forcedSkillPositions.set(skillId, newStart)));
+		} else if (umaIndex === 2) {
+			setPacer(pacer.set('forcedSkillPositions', pacer.forcedSkillPositions.set(skillId, newStart)));
+		}
 	}
 
 	const mid = Math.floor(results.length / 2);
@@ -1029,7 +1037,7 @@ function App(props) {
 		<Language.Provider value={props.lang}>
 			<IntlProvider definition={strings}>
 				<div id="topPane" class={chartData ? 'hasResults' : ''}>
-					<RaceTrack courseid={courseId} width={960} height={240} xOffset={20} yOffset={15} yExtra={20} mouseMove={rtMouseMove} mouseLeave={rtMouseLeave} onSkillDrag={handleSkillDrag} regions={[...skillActivations, ...rushedIndicators]}>
+					<RaceTrack courseid={courseId} width={960} height={240} xOffset={20} yOffset={15} yExtra={20} mouseMove={rtMouseMove} mouseLeave={rtMouseLeave} onSkillDrag={handleSkillDrag} regions={[...skillActivations, ...rushedIndicators]} uma1={uma1} uma2={uma2} pacer={pacer}>
 						<VelocityLines data={chartData} courseDistance={course.distance} width={960} height={250} xOffset={20} showHp={showHp} />
 						
 						<g id="rtMouseOverBox" style="display:none">

@@ -194,7 +194,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		const forcedPos = uma1.forcedSkillPositions.get(id);
 		if (forcedPos != null) {
 			standard.addSkillAtPosition(skillId, forcedPos, Perspective.Self);
-			compare.addSkillAtPosition(skillId, forcedPos, Perspective.Other);
+			compare.addSkill(skillId, Perspective.Other);
 		} else {
 			standard.addSkill(skillId, Perspective.Self);
 			compare.addSkill(skillId, Perspective.Other);
@@ -205,7 +205,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		const forcedPos = uma2.forcedSkillPositions.get(id);
 		if (forcedPos != null) {
 			compare.addSkillAtPosition(skillId, forcedPos, Perspective.Self);
-			standard.addSkillAtPosition(skillId, forcedPos, Perspective.Other);
+			standard.addSkill(skillId, Perspective.Other);
 		} else {
 			compare.addSkill(skillId, Perspective.Self);
 			standard.addSkill(skillId, Perspective.Other);

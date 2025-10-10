@@ -147,7 +147,6 @@ export function RaceTrack(props) {
 	
 	const [draggedSkill, setDraggedSkill] = useState(null);	
 	const [dragOffset, setDragOffset] = useState({x: 0, y: 0});
-	const [draggedPositions, setDraggedPositions] = useState(new Map());
 	const svgRef = useRef(null);
 
 
@@ -182,10 +181,6 @@ export function RaceTrack(props) {
 			const newEnd = Math.max(newStart + skillLength, Math.min(course.distance, newStart + skillLength));
 			
 			console.log('Dragging:', {newStart, newEnd, dragOffset, x, w});
-			
-			// Store the new position locally
-			const key = `${draggedSkill.skillId}-${draggedSkill.umaIndex}`;
-			setDraggedPositions(prev => new Map(prev).set(key, {start: newStart, end: newEnd}));
 			
 			if (props.onSkillDrag) { 
 				props.onSkillDrag(draggedSkill.skillId, draggedSkill.umaIndex, newStart, newEnd); 
@@ -387,11 +382,26 @@ export function RaceTrack(props) {
 			} else if (desc.type == RegionDisplayType.Textbox) {
 				console.log('Processing Textbox region:', desc);
 				const rects = desc.regions.map(r => {
-					// Check if this skill has been dragged
-					const key = `${desc.skillId}-${desc.umaIndex}`;
-					const draggedPos = draggedPositions.get(key);
-					const start = draggedPos ? draggedPos.start : r.start;
-					const end = draggedPos ? draggedPos.end : r.end;
+					// Check if this skill has a forced position
+					let start = r.start;
+					let end = r.end;
+					
+					if (desc.skillId && desc.umaIndex !== undefined) {
+						let horseState = null;
+						if (desc.umaIndex === 0 && props.uma1) {
+							horseState = props.uma1;
+						} else if (desc.umaIndex === 1 && props.uma2) {
+							horseState = props.uma2;
+						} else if (desc.umaIndex === 2 && props.pacer) {
+							horseState = props.pacer;
+						}
+						
+						if (horseState && horseState.forcedSkillPositions.has(desc.skillId)) {
+							const forcedPos = horseState.forcedSkillPositions.get(desc.skillId);
+							start = forcedPos;
+							end = forcedPos + (r.end - r.start); // Maintain original skill length
+						}
+					}
 					
 					const x = start / course.distance * 100;
 					const w = (end - start) / course.distance * 100;
@@ -458,7 +468,7 @@ export function RaceTrack(props) {
 			}
 			return state;
 		}, {seen: new Set(), rungs: Array(10).fill(0).map(_ => []), elem: []}).elem;
-	}, [props.regions, course.distance, draggedPositions]);
+	}, [props.regions, course.distance, props.uma1, props.uma2, props.pacer]);
 
 	return (
 		<IntlProvider definition={lang == 'ja' ? STRINGS_ja : STRINGS_en}>
