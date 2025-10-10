@@ -445,6 +445,62 @@ function nextUiState(state: typeof DEFAULT_UI_STATE, msg: UiStateMsg) {
 	}
 }
 
+function WitVarianceSettingsPopup({ 
+	show, 
+	onClose, 
+	allowRushedUma1, 
+	allowRushedUma2, 
+	allowDownhillUma1, 
+	allowDownhillUma2, 
+	skillCheckChance, 
+	useEnhancedSpurt,
+	toggleRushedUma1,
+	toggleRushedUma2,
+	toggleDownhillUma1,
+	toggleDownhillUma2,
+	toggleSkillCheckChance,
+	toggleEnhancedSpurt
+}) {
+	if (!show) return null;
+	
+	return (
+		<div className="wit-variance-popup-overlay" onClick={onClose}>
+			<div className="wit-variance-popup" onClick={(e) => e.stopPropagation()}>
+				<div className="wit-variance-popup-header">
+					<h3>Wit Variance Settings</h3>
+					<button className="wit-variance-popup-close" onClick={onClose}>×</button>
+				</div>
+				<div className="wit-variance-popup-content">
+					<div className="wit-variance-setting">
+						<label style={{color: 'rgb(42, 119, 197)'}}>Rushed State (Uma 1)</label>
+						<input type="checkbox" checked={allowRushedUma1} onChange={toggleRushedUma1} />
+					</div>
+					<div className="wit-variance-setting">
+						<label style={{color: 'rgb(197, 42, 42)'}}>Rushed State (Uma 2)</label>
+						<input type="checkbox" checked={allowRushedUma2} onChange={toggleRushedUma2} />
+					</div>
+					<div className="wit-variance-setting">
+						<label style={{color: 'rgb(42, 119, 197)'}}>Downhill Mode (Uma 1)</label>
+						<input type="checkbox" checked={allowDownhillUma1} onChange={toggleDownhillUma1} />
+					</div>
+					<div className="wit-variance-setting">
+						<label style={{color: 'rgb(197, 42, 42)'}}>Downhill Mode (Uma 2)</label>
+						<input type="checkbox" checked={allowDownhillUma2} onChange={toggleDownhillUma2} />
+					</div>
+					<div className="wit-variance-setting">
+						<label>Skill Check Chance</label>
+						<input type="checkbox" checked={skillCheckChance} onChange={toggleSkillCheckChance} />
+					</div>
+					<div className="wit-variance-setting">
+						<label>Enhanced Spurt Calculator</label>
+						<input type="checkbox" checked={useEnhancedSpurt} onChange={toggleEnhancedSpurt} />
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+}
+
 function App(props) {
 	//const [language, setLanguage] = useLanguageSelect(); 
 	const [darkMode, toggleDarkMode] = useReducer(b=>!b, false);
@@ -467,52 +523,18 @@ function App(props) {
 		}
 	}
 
-	const [allowWitVariance, toggleWitVarience] = useReducer((b,_) => !b, true);
 	const [allowRushedUma1, toggleRushedUma1] = useReducer((b,_) => !b, true);
 	const [allowRushedUma2, toggleRushedUma2] = useReducer((b,_) => !b, true);
-	const [useEnhancedSpurt, toggleEnhancedSpurt] = useReducer((b,_) => !b, false);
+	const [useEnhancedSpurt, toggleEnhancedSpurt] = useReducer((b,_) => !b, true);
 	const [allowDownhillUma1, toggleDownhillUma1] = useReducer((b,_) => !b, true);
 	const [allowDownhillUma2, toggleDownhillUma2] = useReducer((b,_) => !b, true);
 	const [skillCheckChance, toggleSkillCheckChance] = useReducer((b,_) => !b, true);
-	const [witVarToggle, toggleWitVar] = useReducer((b,_) => !b, true);
+	const [simWitVariance, toggleSimWitVariance] = useReducer((b,_) => !b, true);
+	const [showWitVarianceSettings, setShowWitVarianceSettings] = useState(false);
 	
-	
-	function handleWitToggle() {
-		const newState = !witVarToggle;
-		toggleWitVar();
-		
-		//wit var checks everything in the box!!!
-		if (newState) {
-			// Enable all features
-			if (!allowRushedUma1) toggleRushedUma1();
-			if (!allowRushedUma2) toggleRushedUma2();
-			if (!allowDownhillUma1) toggleDownhillUma1();
-			if (!allowDownhillUma2) toggleDownhillUma2();
-			if (!skillCheckChance) toggleSkillCheckChance();
-			if (!useEnhancedSpurt) toggleEnhancedSpurt();
-		} else {
-			// Disable all features
-			if (allowRushedUma1) toggleRushedUma1();
-			if (allowRushedUma2) toggleRushedUma2();
-			if (allowDownhillUma1) toggleDownhillUma1();
-			if (allowDownhillUma2) toggleDownhillUma2();
-			if (skillCheckChance) toggleSkillCheckChance();
-			if (useEnhancedSpurt) toggleEnhancedSpurt();
-		}
+	function handleSimWitVarianceToggle() {
+		toggleSimWitVariance(null);
 	}
-	
-	// Fires if all individual wit check related toggles are on
-	useEffect(() => {
-		const allEnabled = allowRushedUma1 && allowRushedUma2 && allowDownhillUma1 && allowDownhillUma2 && skillCheckChance && useEnhancedSpurt;
-		const allDisabled = !allowRushedUma1 && !allowRushedUma2 && !allowDownhillUma1 && !allowDownhillUma2 && !skillCheckChance && !useEnhancedSpurt;
-		
-		// Only update wit toggle if all individual toggles are checkmarked
-		if (allEnabled && !witVarToggle) {
-			toggleWitVar();
-		} else if (allDisabled && witVarToggle) {
-			toggleWitVar();
-		}
-	}, [allowRushedUma1, allowRushedUma2, allowDownhillUma1, allowDownhillUma2, skillCheckChance, useEnhancedSpurt, witVarToggle]);
 	
 	const [{courseId, results, runData, chartData, displaying, rushedStats, spurtInfo, spurtStats}, setSimState] = useReducer(updateResultsState, EMPTY_RESULTS_STATE);
 	const setCourseId = setSimState;
@@ -625,7 +647,18 @@ function App(props) {
 			uma1: uma1.toJS(),
 			uma2: uma2.toJS(),
 			pacer: pacer.toJS(),
-			options: {seed, posKeepMode, allowRushedUma1, allowRushedUma2, allowDownhillUma1, allowDownhillUma2, useEnhancedSpurt, accuracyMode: useEnhancedSpurt, pacerSpeedUpRate, skillCheckChance}
+			options: {
+				seed, 
+				posKeepMode, 
+				allowRushedUma1: simWitVariance ? allowRushedUma1 : false,
+				allowRushedUma2: simWitVariance ? allowRushedUma2 : false,
+				allowDownhillUma1: simWitVariance ? allowDownhillUma1 : false,
+				allowDownhillUma2: simWitVariance ? allowDownhillUma2 : false,
+				useEnhancedSpurt: simWitVariance ? useEnhancedSpurt : false,
+				accuracyMode: simWitVariance ? useEnhancedSpurt : false,
+				pacerSpeedUpRate, 
+				skillCheckChance: simWitVariance ? skillCheckChance : false
+			}
 		}
 		});
 	}
@@ -641,8 +674,26 @@ function App(props) {
 		const skills2 = skills.slice(Math.floor(skills.length/2));
 		updateTableData('reset');
 		updateTableData(filler);
-		worker1.postMessage({msg: 'chart', data: {skills: skills1, course, racedef: params, uma, pacer: pacer.toJS(), options: {seed, posKeepMode, pacerSpeedUpRate, allowRushedUma1, allowDownhillUma1, useEnhancedSpurt, accuracyMode: useEnhancedSpurt, skillCheckChance}}});
-		worker2.postMessage({msg: 'chart', data: {skills: skills2, course, racedef: params, uma, pacer: pacer.toJS(), options: {seed, posKeepMode, pacerSpeedUpRate, allowRushedUma1, allowDownhillUma1, useEnhancedSpurt, accuracyMode: useEnhancedSpurt, skillCheckChance}}});
+		worker1.postMessage({msg: 'chart', data: {skills: skills1, course, racedef: params, uma, pacer: pacer.toJS(), options: {
+			seed, 
+			posKeepMode, 
+			pacerSpeedUpRate, 
+			allowRushedUma1: simWitVariance ? allowRushedUma1 : false,
+			allowDownhillUma1: simWitVariance ? allowDownhillUma1 : false,
+			useEnhancedSpurt: simWitVariance ? useEnhancedSpurt : false,
+			accuracyMode: simWitVariance ? useEnhancedSpurt : false,
+			skillCheckChance: simWitVariance ? skillCheckChance : false
+		}}});
+		worker2.postMessage({msg: 'chart', data: {skills: skills2, course, racedef: params, uma, pacer: pacer.toJS(), options: {
+			seed, 
+			posKeepMode, 
+			pacerSpeedUpRate, 
+			allowRushedUma1: simWitVariance ? allowRushedUma1 : false,
+			allowDownhillUma1: simWitVariance ? allowDownhillUma1 : false,
+			useEnhancedSpurt: simWitVariance ? useEnhancedSpurt : false,
+			accuracyMode: simWitVariance ? useEnhancedSpurt : false,
+			skillCheckChance: simWitVariance ? skillCheckChance : false
+		}}});
 	}
 
 	function basinnChartSelection(skillId) {
@@ -954,7 +1005,7 @@ function App(props) {
 		resultsPane = (
 			<div id="resultsPaneWrapper">
 				<div id="resultsPane" class="mode-chart">
-					<BasinnChart data={tableData.values().toArray()} hidden={uma1.skills}
+					<BasinnChart data={Array.from(tableData.values())} hidden={uma1.skills}
 						onSelectionChange={basinnChartSelection}
 						onRunTypeChange={setChartData}
 						onDblClickRow={addSkillFromTable}
@@ -1036,47 +1087,24 @@ function App(props) {
 							)}
 						</fieldset>
 						<div>
-							<label for="showhp">Show HP consumption</label>
+							<label for="showhp">Show HP</label>
 							<input type="checkbox" id="showhp" checked={showHp} onClick={toggleShowHp} />
 						</div>
-					<div style="border-top: 10px solid #ccccccff; padding: 20px; background-color: #a7fab2ff; margin-top: 15px; font-family: 'Inter','Noto Sans JP',system-ui,-apple-system,'Segoe UI',Roboto,'Hiragino Kaku Gothic ProN','Meiryo',sans-serif;">
-						<details style="margin-bottom: 10px;">
-							<summary style="font-weight: bold; color: #000000ff; cursor: pointer; user-select: none;" title="Controls all advanced features below">
-								Advanced Settings - {witVarToggle ? 'Enabled' : 'Disabled'}
-							</summary>
-							<div style="margin-left: 20px; margin-top: 10px; padding: 10px; background-color: #c7c7c7ff; border-radius: 4px; font-family: 'Inter','Noto Sans JP',system-ui,-apple-system,'Segoe UI',Roboto,'Hiragino Kaku Gothic ProN','Meiryo',sans-serif;">
-								<div style="margin-bottom: 8px;">
-									<label style="color: rgb(42, 119, 197); font-size: 14px;">Allow Rushed (Uma 1)</label>
-									<input type="checkbox" checked={allowRushedUma1} onClick={toggleRushedUma1} style="margin-left: 8px;" />
+						<div>
+							<label for="simWitVariance">Wit Variance</label>
+							<input type="checkbox" id="simWitVariance" checked={simWitVariance} onClick={handleSimWitVarianceToggle} />
+							<button 
+								className="wit-variance-settings-btn" 
+								onClick={() => setShowWitVarianceSettings(true)}
+								title="Configure Wit Variance settings"
+								disabled={!simWitVariance}
+							>
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<circle cx="12" cy="12" r="3"></circle>
+									<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+								</svg>
+							</button>
 						</div>
-								<div style="margin-bottom: 8px;">
-									<label style="color: rgb(197, 42, 42); font-size: 14px;">Allow Rushed (Uma 2)</label>
-									<input type="checkbox" checked={allowRushedUma2} onClick={toggleRushedUma2} style="margin-left: 8px;" />
-					</div>
-								<div style="margin-bottom: 8px;">
-									<label style="color: rgb(42, 119, 197); font-size: 14px;">Allow Downhill (Uma 1)</label>
-									<input type="checkbox" checked={allowDownhillUma1} onClick={toggleDownhillUma1} style="margin-left: 8px;" />
-				</div>
-								<div style="margin-bottom: 8px;">
-									<label style="color: rgb(197, 42, 42); font-size: 14px;">Allow Downhill (Uma 2)</label>
-									<input type="checkbox" checked={allowDownhillUma2} onClick={toggleDownhillUma2} style="margin-left: 8px;" />
-				</div>
-								<div style="margin-bottom: 8px;">
-									<label style="color: #333; font-size: 14px;">Skill Activations with Wit Check</label>
-									<input type="checkbox" checked={skillCheckChance} onClick={toggleSkillCheckChance} style="margin-left: 8px;" />
-				</div>
-								<div style="margin-bottom: 8px;">
-									<label style="color: #333; font-size: 14px;">Enhanced Spurt Calculator</label>
-									<input type="checkbox" checked={useEnhancedSpurt} onClick={toggleEnhancedSpurt} style="margin-left: 8px;" />
-								</div>
-								<div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #ddd;">
-									<button onClick={handleWitToggle} style="padding: 4px 12px; font-size: 12px; background-color: #007acc; color: white; border: none; border-radius: 3px; cursor: pointer;">
-										{witVarToggle ? 'Disable All' : 'Enable All'}
-									</button>
-								</div>
-							</div>
-						</details>
-					</div>
 
 						{
 							mode == Mode.Compare
@@ -1124,6 +1152,22 @@ function App(props) {
 					{expanded && <div id="closeUmaOverlay" title="Close panel" onClick={toggleExpand}>✕</div>}
 				</div>
 				{popoverSkill && <BasinnChartPopover skillid={popoverSkill} results={tableData.get(popoverSkill).results} courseDistance={course.distance} />}
+				<WitVarianceSettingsPopup 
+					show={showWitVarianceSettings}
+					onClose={() => setShowWitVarianceSettings(false)}
+					allowRushedUma1={allowRushedUma1}
+					allowRushedUma2={allowRushedUma2}
+					allowDownhillUma1={allowDownhillUma1}
+					allowDownhillUma2={allowDownhillUma2}
+					skillCheckChance={skillCheckChance}
+					useEnhancedSpurt={useEnhancedSpurt}
+					toggleRushedUma1={toggleRushedUma1}
+					toggleRushedUma2={toggleRushedUma2}
+					toggleDownhillUma1={toggleDownhillUma1}
+					toggleDownhillUma2={toggleDownhillUma2}
+					toggleSkillCheckChance={toggleSkillCheckChance}
+					toggleEnhancedSpurt={toggleEnhancedSpurt}
+				/>
 			</IntlProvider>
 		</Language.Provider>
 	);
