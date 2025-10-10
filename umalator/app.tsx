@@ -387,12 +387,13 @@ function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | strin
 
 function RacePresets(props) {
 	const id = useId();
+	const selectedIdx = presets.findIndex(p => p.courseId == props.courseId && p.racedef.equals(props.racedef));
 	return (
 		<Fragment>
 			<label for={id}>Preset:</label>
 			<select id={id} onChange={e => { const i = +e.currentTarget.value; i > -1 && props.set(presets[i].courseId, presets[i].racedef); }}>
 				<option value="-1"></option>
-				{presets.map((p,i) => <option value={i}>{p.name || (p.date.getFullYear() + '-' + (100 + p.date.getUTCMonth() + 1).toString().slice(-2) + (p.type == EventType.CM ? ' CM' : ' LOH'))}</option>)}
+				{presets.map((p,i) => <option value={i} selected={i == selectedIdx}>{p.name || (p.date.getFullYear() + '-' + (100 + p.date.getUTCMonth() + 1).toString().slice(-2) + (p.type == EventType.CM ? ' CM' : ' LOH'))}</option>)}
 			</select>
 		</Fragment>
 	);
@@ -749,7 +750,7 @@ function App(props) {
 							: <button id="run" onClick={doBasinnChart} tabindex={1}>RUN</button>
 						}
 						<a href="#" onClick={copyStateUrl}>Copy link</a>
-						<RacePresets set={(courseId, racedef) => { setCourseId(courseId); setRaceDef(racedef); }} />
+						<RacePresets courseId={courseId} racedef={racedef} set={(courseId, racedef) => { setCourseId(courseId); setRaceDef(racedef); }} />
 					</div>
 					<div id="buttonsRow">
 						<TrackSelect key={courseId} courseid={courseId} setCourseid={setCourseId} tabindex={2} />
