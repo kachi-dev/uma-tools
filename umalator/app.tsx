@@ -525,7 +525,7 @@ function App(props) {
 
 	const [allowRushedUma1, toggleRushedUma1] = useReducer((b,_) => !b, true);
 	const [allowRushedUma2, toggleRushedUma2] = useReducer((b,_) => !b, true);
-	const [useEnhancedSpurt, toggleEnhancedSpurt] = useReducer((b,_) => !b, true);
+	const [useEnhancedSpurt, toggleEnhancedSpurt] = useReducer((b,_) => !b, false);
 	const [allowDownhillUma1, toggleDownhillUma1] = useReducer((b,_) => !b, true);
 	const [allowDownhillUma2, toggleDownhillUma2] = useReducer((b,_) => !b, true);
 	const [skillCheckChance, toggleSkillCheckChance] = useReducer((b,_) => !b, true);
@@ -807,53 +807,6 @@ function App(props) {
 					</table>
 					<div id="resultsHelp">Negative numbers mean <strong style="color:#2a77c5">Umamusume 1</strong> is faster, positive numbers mean <strong style="color:#c52a2a">Umamusume 2</strong> is faster.</div>
 					
-					{rushedStats && (rushedStats.uma1.frequency > 0 || rushedStats.uma2.frequency > 0) && (allowRushedUma1 || allowRushedUma2) && (
-						<table id="rushedStatsSummary" style="margin-top: 15px; width: 100%;">
-							<caption style="font-weight: bold; margin-bottom: 5px;">Rushed Status Statistics (across {nsamples} simulations)</caption>
-							<thead>
-								<tr>
-									<th></th>
-									<th style="color: #2a77c5">Uma 1</th>
-									<th style="color: #c52a2a">Uma 2</th>
-								</tr>
-							</thead>
-							<tbody>
-								<tr>
-									<th>Frequency</th>
-									<td style="color: #2a77c5">{allowRushedUma1 ? rushedStats.uma1.frequency.toFixed(1) + '%' : 'Disabled'}</td>
-									<td style="color: #c52a2a">{allowRushedUma2 ? rushedStats.uma2.frequency.toFixed(1) + '%' : 'Disabled'}</td>
-								</tr>
-								{allowRushedUma1 && rushedStats.uma1.frequency > 0 && (
-									<tr>
-										<th>Mean length</th>
-										<td style="color: #2a77c5">{rushedStats.uma1.mean.toFixed(1)} m</td>
-										<td style="color: #c52a2a">{allowRushedUma2 && rushedStats.uma2.frequency > 0 ? rushedStats.uma2.mean.toFixed(1) + ' m' : '—'}</td>
-									</tr>
-								)}
-								{allowRushedUma2 && rushedStats.uma2.frequency > 0 && !allowRushedUma1 && (
-									<tr>
-										<th>Mean length</th>
-										<td style="color: #2a77c5">—</td>
-										<td style="color: #c52a2a">{rushedStats.uma2.mean.toFixed(1)} m</td>
-									</tr>
-								)}
-								{(allowRushedUma1 && rushedStats.uma1.frequency > 0) || (allowRushedUma2 && rushedStats.uma2.frequency > 0) && (
-									<tr>
-										<th>Min length</th>
-										<td style="color: #2a77c5">{allowRushedUma1 && rushedStats.uma1.frequency > 0 ? rushedStats.uma1.min.toFixed(1) + ' m' : '—'}</td>
-										<td style="color: #c52a2a">{allowRushedUma2 && rushedStats.uma2.frequency > 0 ? rushedStats.uma2.min.toFixed(1) + ' m' : '—'}</td>
-									</tr>
-								)}
-								{(allowRushedUma1 && rushedStats.uma1.frequency > 0) || (allowRushedUma2 && rushedStats.uma2.frequency > 0) && (
-									<tr>
-										<th>Max length</th>
-										<td style="color: #2a77c5">{allowRushedUma1 && rushedStats.uma1.frequency > 0 ? rushedStats.uma1.max.toFixed(1) + ' m' : '—'}</td>
-										<td style="color: #c52a2a">{allowRushedUma2 && rushedStats.uma2.frequency > 0 ? rushedStats.uma2.max.toFixed(1) + ' m' : '—'}</td>
-									</tr>
-								)}
-							</tbody>
-						</table>
-					)}
 					
 					{spurtInfo && useEnhancedSpurt && (
 						<>
@@ -972,6 +925,9 @@ function App(props) {
 							<tr><th>Time to finish</th><td>{chartData.t[0][chartData.t[0].length-1].toFixed(4) + ' s'}</td></tr>
 							<tr><th>Start delay</th><td>{chartData.sdly[0].toFixed(4) + ' s'}</td></tr>
 							<tr><th>Top speed</th><td>{chartData.v[0].reduce((a,b) => Math.max(a,b), 0).toFixed(2) + ' m/s'}</td></tr>
+							{rushedStats && allowRushedUma2 && (
+								<tr><th>Rushed frequency</th><td>{rushedStats.uma1.frequency > 0 ? `${rushedStats.uma1.frequency.toFixed(1)}% (${rushedStats.uma1.mean.toFixed(1)}m)` : '0%'}</td></tr>
+							)}
 						</tbody>
 						{chartData.sk[0].size > 0 &&
 							<tbody>
@@ -988,6 +944,9 @@ function App(props) {
 							<tr><th>Time to finish</th><td>{chartData.t[1][chartData.t[1].length-1].toFixed(4) + ' s'}</td></tr>
 							<tr><th>Start delay</th><td>{chartData.sdly[1].toFixed(4) + ' s'}</td></tr>
 							<tr><th>Top speed</th><td>{chartData.v[1].reduce((a,b) => Math.max(a,b), 0).toFixed(2) + ' m/s'}</td></tr>
+							{rushedStats && allowRushedUma2 && (
+								<tr><th>Rushed frequency</th><td>{rushedStats.uma2.frequency > 0 ? `${rushedStats.uma2.frequency.toFixed(1)}% (${rushedStats.uma2.mean.toFixed(1)}m)` : '0%'}</td></tr>
+							)}
 						</tbody>
 						{chartData.sk[1].size > 0 &&
 							<tbody>
