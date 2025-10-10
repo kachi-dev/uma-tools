@@ -1,5 +1,5 @@
 import { h, Fragment } from 'preact';
-import { useState, useContext, useMemo, useCallback } from 'preact/hooks';
+import { useState, useContext, useMemo, useCallback, useRef } from 'preact/hooks';
 import { IntlProvider, Text } from 'preact-i18n';
 
 import { CourseData, CourseHelpers, Surface, Orientation } from '../uma-skill-tools/CourseData';
@@ -144,6 +144,13 @@ function SectionText(props) {
 
 export function RaceTrack(props) {
 	const lang = useLanguage();
+	
+	const [draggedSkill, setDraggedSkill] = useState(null);	
+	const [dragOffset, setDragOffset] = useState({x: 0, y: 0});
+	const [draggedPositions, setDraggedPositions] = useState(new Map());
+	const svgRef = useRef(null);
+
+
 	const course = CourseHelpers.getCourse(props.courseid);
 
 	const xOffset = props.xOffset || 0, yOffset = props.yOffset || 0, xExtra = props.xExtra || 0, yExtra = props.yExtra || 0;
@@ -162,6 +169,28 @@ export function RaceTrack(props) {
 		text.setAttribute('y', y);
 		text.textContent = Math.round(x / w * courses[svg.dataset.courseid].distance) + 'm';
 		props.mouseMove && props.mouseMove(x / w);
+		
+		//dragging handler
+		if (draggedSkill) {
+			// Use the same coordinate calculation as the mouse down handler
+			const rect = svg.getBoundingClientRect();
+			const w = rect.width - xOffset;
+			const x = e.clientX - rect.left - xOffset;
+			
+			const newStart = Math.max(0, Math.min(course.distance, x / w * course.distance - dragOffset.x));
+			const skillLength = Math.max(50, draggedSkill.originalEnd - draggedSkill.originalStart); // Ensure minimum length of 50m
+			const newEnd = Math.max(newStart + skillLength, Math.min(course.distance, newStart + skillLength));
+			
+			console.log('Dragging:', {newStart, newEnd, dragOffset, x, w});
+			
+			// Store the new position locally
+			const key = `${draggedSkill.skillId}-${draggedSkill.umaIndex}`;
+			setDraggedPositions(prev => new Map(prev).set(key, {start: newStart, end: newEnd}));
+			
+			if (props.onSkillDrag) { 
+				props.onSkillDrag(draggedSkill.skillId, draggedSkill.umaIndex, newStart, newEnd); 
+			}
+		}
 	}
 
 	function doMouseLeave(e) {
@@ -172,7 +201,30 @@ export function RaceTrack(props) {
 		line.setAttribute('x2', -5);
 		text.setAttribute('x', -5);
 		text.setAttribute('y', -5);
+		text.textContent = '';
 		props.mouseLeave && props.mouseLeave();
+		
+		
+		if (draggedSkill) {
+			setDraggedSkill(null);
+		}
+	}
+	
+	function handleSkillMouseDown(e, skillId, umaIndex, start, end) {
+		e.preventDefault();
+		e.stopPropagation();
+
+		// Get the main SVG element (the one with the race track)
+		const mainSvg = e.currentTarget.closest('.racetrackView');
+		const rect = mainSvg.getBoundingClientRect();
+		const w = rect.width - xOffset;
+		const x = e.clientX - rect.left - xOffset;
+		const dragX = x / w * course.distance;
+
+		console.log('Starting drag:', {skillId, umaIndex, start, end, dragX, x, w, rect});
+
+		setDraggedSkill({skillId, umaIndex, originalStart: start, originalEnd: end});
+		setDragOffset({x: dragX - start, y: 0});
 	}
 
 	const trackNameHeader = useMemo(() =>
@@ -323,6 +375,7 @@ export function RaceTrack(props) {
 	}, [props.courseid]);
 
 	const regions = useMemo(function () {
+		console.log('Regions being processed:', props.regions);
 		return props.regions.reduce((state,desc) => {
 			if (desc.type == RegionDisplayType.Immediate && desc.regions.length > 0) {
 				let x = desc.regions[0].start / course.distance * 100;
@@ -332,24 +385,62 @@ export function RaceTrack(props) {
 				state.seen.add(x);
 				state.elem.push(<line x1={`${x}%`} y1="0" x2={`${x}%`} y2="100%" stroke={desc.color.stroke} stroke-width={x == 0 ? 4 : 2} />);
 			} else if (desc.type == RegionDisplayType.Textbox) {
+				console.log('Processing Textbox region:', desc);
 				const rects = desc.regions.map(r => {
-					const x = r.start / course.distance * 100;
-					const w = (r.end - r.start) / course.distance * 100;
+					// Check if this skill has been dragged
+					const key = `${desc.skillId}-${desc.umaIndex}`;
+					const draggedPos = draggedPositions.get(key);
+					const start = draggedPos ? draggedPos.start : r.start;
+					const end = draggedPos ? draggedPos.end : r.end;
+					
+					const x = start / course.distance * 100;
+					const w = (end - start) / course.distance * 100;
 					let i = 0;
 					while (i < 10) {
 						if (state.rungs[i].some(b =>
-							(r.start >= b.start && r.start < b.end) || (r.end > b.start && r.end <= b.end)
-								|| (b.start >= r.start && b.start < r.end) || (b.end > r.start && b.end <= r.end)
+							(start >= b.start && start < b.end) || (end > b.start && end <= b.end)
+								|| (b.start >= start && b.start < end) || (b.end > start && b.end <= end)
 						)) {
 							++i;
 						} else {
 							break;
 						}
 					}
-					state.rungs[i % 10].push(r);
+					state.rungs[i % 10].push({start, end});
 					const y = 90 - 10 * i;
 					return (
-						<svg class="textbox" x={x+'%'} y={y+'%'} width={w+'%'} height="10%">
+						<svg class="drag-textbox" x={x+'%'} y={y+'%'} width={w+'%'} height="10%" 
+							onMouseDown={(e) => {
+								console.log('Mouse down on skill marker:', desc.skillId, desc.umaIndex);
+								if (desc.skillId && desc.umaIndex !== undefined) {
+									e.preventDefault();
+									e.stopPropagation();
+									handleSkillMouseDown(e, desc.skillId, desc.umaIndex, start, end);
+								}
+							}}
+							onMouseEnter={(e) => {
+								console.log('Mouse enter on skill marker:', desc.skillId, desc.umaIndex);
+								if (desc.skillId) {
+									e.preventDefault();
+									e.stopPropagation();
+									e.currentTarget.style.cursor = 'grab';
+								}
+							}}
+							onMouseLeave={(e) => {
+								if (desc.skillId) {
+									e.preventDefault();
+									e.stopPropagation();
+									e.currentTarget.style.cursor = 'default';
+								}
+							}}
+							onMouseMove={(e) => {
+								if (desc.skillId) {
+									e.preventDefault();
+									e.stopPropagation();
+									e.currentTarget.style.cursor = 'grab';
+								}
+							}}
+							style={{cursor: 'grab'}}>
 							<rect x="0" y="0" width="100%" height="100%" fill={desc.color.fill} stroke={desc.color.stroke} />
 							<text x="0" y="50%" font-size="12px" dominant-baseline="central">{desc.text}</text>
 						</svg>
@@ -367,13 +458,13 @@ export function RaceTrack(props) {
 			}
 			return state;
 		}, {seen: new Set(), rungs: Array(10).fill(0).map(_ => []), elem: []}).elem;
-	}, [props.regions, course.distance]);
+	}, [props.regions, course.distance, draggedPositions]);
 
 	return (
 		<IntlProvider definition={lang == 'ja' ? STRINGS_ja : STRINGS_en}>
 			<div class="racetrackWrapper" style={`width:${props.width + xOffset + xExtra}px`}>
 				{trackNameHeader}
-				<svg version="1.1" width={props.width + xOffset + xExtra} height={props.height + yOffset + yExtra} xmlns="http://www.w3.org/2000/svg" class="racetrackView" data-courseid={props.courseid} onMouseMove={doMouseMove} onMouseLeave={doMouseLeave}>
+				<svg version="1.1" width={props.width + xOffset + xExtra} height={props.height + yOffset + yExtra} xmlns="http://www.w3.org/2000/svg" class="racetrackView" data-courseid={props.courseid} onMouseMove={doMouseMove} onMouseLeave={doMouseLeave} 				onMouseUp={() => setDraggedSkill(null)}>
 					<svg x={props.xOffset} y={props.yOffset} width={props.width} height={props.height}>
 						{almostEverything}
 						{regions}

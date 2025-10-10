@@ -1,4 +1,4 @@
-import { Record } from 'immutable';
+import { Record, Map as ImmMap } from 'immutable';
 import { SortedSet } from 'immutable-sorted';
 
 import skill_meta from '../skill_meta.json';
@@ -28,5 +28,7 @@ export class HorseState extends Record({
 	distanceAptitude: 'S',
 	surfaceAptitude: 'A',
 	strategyAptitude: 'A',
-	skills: SkillSet([])
+	skills: SkillSet([]),
+	// Map of skillId -> forced position (in meters). If a skill is in this map, it will be forced to activate at that position.
+	forcedSkillPositions: ImmMap()
 }) {}

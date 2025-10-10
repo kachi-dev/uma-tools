@@ -2,9 +2,42 @@ import { h } from 'preact';
 
 import './IntroText.css';
 
+
+
+export function INTRO(props){
+	return(
+		<div id="REALINTROTEXT">
+
+			
+		</div>
+
+
+	)
+
+
+}
+
+
+
+
 export function IntroText(props) {
 	return (
 		<div id="introtext">
+			<h1>WELCOME TO VFalator!!!</h1>
+			<h2>WARNING: PLEASE USE THIS ONLY IF YOU KNOW WHAT YOU ARE DOING!!!</h2>
+			<details>
+				<summary>Credits</summary>
+					<h1>Transparent Dino</h1>
+					<p>Enhanced Spurt calculator (taken from me1080), Virtual Pacemaker, Downhills, Rushed</p>
+					<h1>jechtoff2dudes</h1>
+					<p>Frontrunner Overtake/Speedup mode, Dragging Skill Markers, Downhills, Skill Activation check</p>
+					
+			</details>
+
+
+
+
+
 			<details>
 				<summary>Caveats</summary>
 				The simulator is fairly complete and implements nearly all relevant game mechanics, with the following exceptions:
@@ -16,22 +49,11 @@ export function IntroText(props) {
 							<p>Skills with conditions with <code>_random</code> in the name (e.g. <code>phase_random</code>, <code>corner_random</code>, <code>straight_random</code>) are implemented identically to the in-game logic and will have more accurate mean/median values, as are skills based purely on the course geometry with no blocked front/side/surrounded conditions.</p>
 						</details>
 					</li>
-					<li>
-						<details>
-							<summary>Downhill speed-up mode is not implemented</summary>
-							Relevant for stamina calculation since downhills save you a pretty good amount of HP on average. Consider the reported HP consumption to be worst-case currently. Minimal if any effect on skill efficacy.
-						</details>
-					</li>
-					<li>
-						<details>
-							<summary>The <span style="color:rgb(255,119,61);font-weight:bold">Rushed</span> status effect is not implemented</summary>
-							Like hills this primarily only impacts HP consumption.
-						</details>
-					</li>
+
 					<li>
 						<details>
 							<summary>Skill cooldowns are not implemented</summary>
-							Skills only ever activate once even if they have a cooldown like Professor of Curvature or Beeline Burst.
+							Skills only ever activate once even if they have a cooldown like Professor of Curvature or Beeline Burst. 
 						</details>
 					</li>
 					<li>
@@ -40,18 +62,29 @@ export function IntroText(props) {
 							Unique skills are always simulated as a base level 3★ unique.
 						</details>
 					</li>
-					<li>
-						<details>
-							<summary>Speed up mode on Front Runners is not implemented</summary>
-							Front Runners have a chance to temporarily speed up based on their wit stat. This is difficult to model and not useful for skill comparisons so it is not implemented, but consider that wit on Front Runners is very slightly more useful than the simulator reports.
-						</details>
-					</li>
+					
 					<li>Motivation is always assumed to be maximum</li>
 				</ul>
-				By and large it should be highly accurate. It has been battle-tested on the JP server for several years.
+				By and large it should be highly accurate. It has been battle-tested on the JP server for several years. Please use this if you KNOW what the hell you are doing.
 			</details>
 			<details>
 				<summary>Changelog</summary>
+				<section>
+					<h2>2025-10-09</h2>
+					<ul>
+						<li>Fixed downhills not working</li>
+					</ul>
+				</section>
+				<section>
+					<h2>2025-10-07</h2>
+					<ul>
+						<li>Implemented rushed status effect</li>
+						<li>Implemented downhill speed-up mode along with the 60% HP consumption reduction. Special thanks to Transparent Dino and Justus0246 for the math</li>
+						<li>Virtual pacemaker for nerds who want to relive the glory days of Urara PDM</li>
+						<li>YOU CAN NOW FORCE SKILLS ACTIVATIONS AT CERTAIN DISTANCES!!! LIKE PROFESSOR OF CURVATURE ON A STRAIGHT!</li>
+						<li>Enhanced Spurt Calculations coded by Transparent Dino, used the Me1080 formula</li>
+					</ul>
+				</section>
 				<section>
 					<h2>2025-08-17</h2>
 					<ul>
@@ -128,7 +161,7 @@ export function IntroText(props) {
 				</section>
 			</details>
 			<footer id="sourcelinks">
-				Source code: <a href="https://github.com/alpha123/uma-skill-tools">simulator</a>, <a href="https://github.com/alpha123/uma-tools">UI</a>
+				Original Umalator Source code: <a href="https://github.com/alpha123/uma-skill-tools">simulator</a>, <a href="https://github.com/alpha123/uma-tools">UI</a>
 			</footer>
 		</div>
 	);

@@ -265,6 +265,10 @@ export function HorseDef(props) {
 
 	function handleSkillClick(e) {
 		e.stopPropagation();
+		// Don't toggle expansion if clicking on position input
+		if (e.target.classList.contains('forcedPositionInput')) {
+			return;
+		}
 		const se = e.target.closest('.skill, .expandedSkill');
 		if (se == null) return;
 		if (e.target.classList.contains('skillDismiss')) {
@@ -273,6 +277,17 @@ export function HorseDef(props) {
 			setExpanded(expanded.delete(se.dataset.skillid));
 		} else {
 			setExpanded(expanded.add(se.dataset.skillid));
+		}
+	}
+
+	function handlePositionChange(skillId: string, value: string) {
+		const numValue = parseFloat(value);
+		if (value === '' || isNaN(numValue)) {
+			// Clear the forced position
+			setState(state.set('forcedSkillPositions', state.forcedSkillPositions.delete(skillId)));
+		} else {
+			// Set the forced position
+			setState(state.set('forcedSkillPositions', state.forcedSkillPositions.set(skillId, numValue)));
 		}
 	}
 
@@ -290,12 +305,36 @@ export function HorseDef(props) {
 			expanded.has(id)
 				? <li key={id} class="horseExpandedSkill">
 					  <ExpandedSkillDetails id={id} distanceFactor={props.courseDistance} dismissable={id != u} />
+					  <div class="forcedPositionWrapper">
+						  <label class="forcedPositionLabel">Force @ position (m):</label>
+						  <input 
+							  type="number" 
+							  class="forcedPositionInput"
+							  placeholder="Optional"
+							  value={state.forcedSkillPositions.get(id) || ''}
+							  onInput={(e) => handlePositionChange(id, (e.target as HTMLInputElement).value)}
+							  onClick={(e) => e.stopPropagation()}
+							  min="0"
+							  step="10"
+						  />
+					  </div>
 				  </li>
 				: <li key={id} style="">
 					  <Skill id={id} selected={false} dismissable={id != u} />
+					  <input 
+						  type="number" 
+						  class="forcedPositionInput inline"
+						  placeholder="@m"
+						  title="Force skill activation at this position (in meters)"
+						  value={state.forcedSkillPositions.get(id) || ''}
+						  onInput={(e) => handlePositionChange(id, (e.target as HTMLInputElement).value)}
+						  onClick={(e) => e.stopPropagation()}
+						  min="0"
+						  step="10"
+					  />
 				  </li>
 		);
-	}, [state.skills, umaId, expanded, props.courseDistance]);
+	}, [state.skills, umaId, expanded, props.courseDistance, state.forcedSkillPositions]);
 
 	return (
 		<div class="horseDef">

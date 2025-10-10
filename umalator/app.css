@@ -20,6 +20,74 @@ body {
 	height: 98vh;
 }
 
+#posKeepFieldset {
+	border: 1px solid rgb(148, 150, 189);
+	border-radius: 8px;
+	padding: 8px;
+	margin: 5px 0;
+}
+
+#posKeepFieldset legend {
+	padding: 0 5px;
+}
+
+#posKeepFieldset select {
+	background: none;
+	border: 1px solid rgb(148, 150, 189);
+	border-radius: 4px;
+	padding: 4px 8px;
+	width: 100%;
+	margin-bottom: 5px;
+}
+
+#pacemakerIndicator {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-top: 8px;
+	font-size: 0.9em;
+}
+
+#pacemakerIndicator span {
+	color: rgb(121, 64, 22);
+	font-size: 0.95em;
+}
+
+#pacemakerIndicator button {
+	background: none;
+	border: 1px solid rgb(148, 150, 189);
+	border-radius: 8px;
+	color: rgb(121, 64, 22);
+	cursor: pointer;
+	font-weight: 500;
+	padding: 8px 16px;
+	transition: background 0.2s;
+}
+
+#pacemakerIndicator button:hover {
+	background: rgb(248, 248, 248);
+}
+
+#speedUpRateControl {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	margin-top: 10px;
+	padding-top: 10px;
+	border-top: 1px solid rgb(224, 214, 204);
+}
+
+#speedUpRateControl label {
+	font-size: 0.85em;
+	color: rgb(121, 64, 22);
+	font-weight: 500;
+}
+
+#speedUpRateControl input[type="range"] {
+	width: 100%;
+	cursor: pointer;
+}
+
 #topPane {
 	display: grid;
 	grid-template-columns: 960px auto;
@@ -395,3 +463,20 @@ body {
 .basinnChartPopover .expandedSkill {
 	width: 345px;
 }
+
+:root {
+  --bg: #ffffff;
+  --fg: #111827;
+  --muted: #374151;
+  --card: #f9fafb;
+  --border: #e5e7eb;
+}
+.dark {
+  --bg: #0b1020;
+  --fg: #e5e7eb;
+  --muted: #9ca3af;
+  --card: #121a2a;
+  --border: #1f2937;
+}
+
+body { background: var(--bg); color: var(--fg); }

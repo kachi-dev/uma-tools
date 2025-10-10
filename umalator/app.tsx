@@ -1,7 +1,7 @@
 import { h, Fragment, render } from 'preact';
 import { useState, useReducer, useMemo, useEffect, useRef, useId, useCallback } from 'preact/hooks';
 import { Text, IntlProvider } from 'preact-i18n';
-import { Record, Set as ImmSet } from 'immutable';
+import { Record, Set as ImmSet, Map as ImmMap } from 'immutable';
 import * as d3 from 'd3';
 import { computePosition, flip } from '@floating-ui/dom';
 
@@ -16,7 +16,7 @@ import { HorseState, SkillSet } from '../components/HorseDefTypes';
 import { HorseDef, horseDefTabs } from '../components/HorseDef';
 import { TRACKNAMES_ja, TRACKNAMES_en } from '../strings/common';
 
-import { getActivateableSkills, getNullRow, runBasinnChart, BasinnChart } from './BasinnChart';
+import { getActivateableSkills, getNullRow, BasinnChart } from './BasinnChart';
 
 import { initTelemetry, postEvent } from './telemetry';
 
@@ -25,6 +25,8 @@ import { IntroText } from './IntroText';
 import skilldata from '../uma-skill-tools/data/skill_data.json';
 import skillnames from '../uma-skill-tools/data/skillnames.json';
 import skill_meta from '../skill_meta.json';
+
+
 
 function skillmeta(id: string) {
 	// handle the fake skills (e.g., variations of Sirius unique) inserted by make_skill_data with ids like 100701-1
@@ -35,6 +37,8 @@ import './app.css';
 
 const DEFAULT_SAMPLES = 500;
 const DEFAULT_SEED = 2615953739;
+
+
 
 class RaceParams extends Record({
 	mood: 2 as Mood,
@@ -48,10 +52,9 @@ class RaceParams extends Record({
 const enum EventType { CM, LOH }
 
 const presets = (CC_GLOBAL ? [
-	{type: EventType.CM, name: 'Leo Cup', date: '2025-10-30', courseId: 10906, season: Season.Summer, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
-	{type: EventType.CM, name: 'Cancer Cup', date: '2025-10-07', courseId: 10602, season: Season.Summer, ground: GroundCondition.Yielding, weather: Weather.Sunny, time: Time.Midday},
-	{type: EventType.CM, name: 'Gemini Cup', date: '2025-09', courseId: 10811, season: Season.Spring, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
-	{type: EventType.CM, name: 'Taurus Cup', date: '2025-08', courseId: 10606, season: Season.Spring, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday}
+	{type: EventType.CM, date: '2025-10', courseId: 10602, season: Season.Summer, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
+	{type: EventType.CM, date: '2025-09', courseId: 10811, season: Season.Spring, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
+	{type: EventType.CM, date: '2025-08', courseId: 10606, season: Season.Spring, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday}
 ] : [
 	{type: EventType.LOH, date: '2025-11', courseId: 11502, season: Season.Autumn, time: Time.Midday},
 	{type: EventType.CM, date: '2025-10', courseId: 10302, season: Season.Autumn, ground: GroundCondition.Good, weather: Weather.Cloudy, time: Time.Midday},
@@ -62,7 +65,6 @@ const presets = (CC_GLOBAL ? [
 ])
 	.map(def => ({
 		type: def.type,
-		name: def.name,
 		date: new Date(def.date),
 		courseId: def.courseId,
 		racedef: new RaceParams({
@@ -281,15 +283,17 @@ function racedefToParams({mood, ground, weather, season, time, grade}: RaceParam
 	};
 }
 
-async function serialize(courseId: number, nsamples: number, seed: number, usePosKeep: boolean, racedef: RaceParams, uma1: HorseState, uma2: HorseState) {
+async function serialize(courseId: number, nsamples: number, seed: number, posKeepMode: PosKeepMode, racedef: RaceParams, uma1: HorseState, uma2: HorseState, pacer: HorseState, pacerSpeedUpRate: number) {
 	const json = JSON.stringify({
 		courseId,
 		nsamples,
 		seed,
-		usePosKeep,
+		posKeepMode,
 		racedef: racedef.toJS(),
 		uma1: uma1.toJS(),
-		uma2: uma2.toJS()
+		uma2: uma2.toJS(),
+		pacer: pacer.toJS(),
+		pacerSpeedUpRate
 	});
 	const enc = new TextEncoder();
 	const stringStream = new ReadableStream({
@@ -333,20 +337,30 @@ async function deserialize(hash) {
 					courseId: o.courseId,
 					nsamples: o.nsamples,
 					seed: o.seed || DEFAULT_SEED,  // field added later, could be undefined when loading state from existing links
-					usePosKeep: o.usePosKeep,
+					posKeepMode: o.posKeepMode != null ? o.posKeepMode : (o.usePosKeep ? PosKeepMode.Approximate : PosKeepMode.None),  // backward compatibility
 					racedef: new RaceParams(o.racedef),
-					uma1: new HorseState(o.uma1).set('skills', SkillSet(o.uma1.skills)),
-					uma2: new HorseState(o.uma2).set('skills', SkillSet(o.uma2.skills))
+					uma1: new HorseState(o.uma1)
+						.set('skills', SkillSet(o.uma1.skills))
+						.set('forcedSkillPositions', ImmMap(o.uma1.forcedSkillPositions || {})),
+					uma2: new HorseState(o.uma2)
+						.set('skills', SkillSet(o.uma2.skills))
+						.set('forcedSkillPositions', ImmMap(o.uma2.forcedSkillPositions || {})),
+					pacer: o.pacer ? new HorseState(o.pacer)
+						.set('skills', SkillSet(o.pacer.skills || []))
+						.set('forcedSkillPositions', ImmMap(o.pacer.forcedSkillPositions || {})) : new HorseState({strategy: 'Nige'}),
+					pacerSpeedUpRate: o.pacerSpeedUpRate != null ? o.pacerSpeedUpRate : 100
 				};
 			} catch (_) {
 				return {
 					courseId: DEFAULT_COURSE_ID,
 					nsamples: DEFAULT_SAMPLES,
 					seed: DEFAULT_SEED,
-					usePosKeep: true,
+					posKeepMode: PosKeepMode.Approximate,
 					racedef: new RaceParams(),
 					uma1: new HorseState(),
-					uma2: new HorseState()
+					uma2: new HorseState(),
+					pacer: new HorseState({strategy: 'Nige'}),
+					pacerSpeedUpRate: 100
 				};
 			}
 		} else {
@@ -355,15 +369,18 @@ async function deserialize(hash) {
 	}
 }
 
-const EMPTY_RESULTS_STATE = {courseId: DEFAULT_COURSE_ID, results: [], runData: null, chartData: null, displaying: ''};
-function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | string | {results: any, runData: any}) {
+const EMPTY_RESULTS_STATE = {courseId: DEFAULT_COURSE_ID, results: [], runData: null, chartData: null, displaying: '', rushedStats: null, spurtInfo: null, spurtStats: null};
+function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | string | {results: any, runData: any, rushedStats?: any, spurtInfo?: any, spurtStats?: any}) {
 	if (typeof o == 'number') {
 		return {
 			courseId: o,
 			results: [],
 			runData: null,
 			chartData: null,
-			displaying: ''
+			displaying: '',
+			rushedStats: null,
+			spurtInfo: null,
+			spurtStats: null
 		};
 	} else if (typeof o == 'string') {
 		postEvent('setChartData', {display: o});
@@ -372,7 +389,9 @@ function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | strin
 			results: state.results,
 			runData: state.runData,
 			chartData: state.runData != null ? state.runData[o] : null,
-			displaying: o
+			displaying: o,
+			rushedStats: state.rushedStats,
+			spurtInfo: state.spurtInfo
 		};
 	} else {
 		return {
@@ -380,20 +399,22 @@ function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | strin
 			results: o.results,
 			runData: o.runData,
 			chartData: o.runData[state.displaying || 'meanrun'],
-			displaying: state.displaying || 'meanrun'
+			displaying: state.displaying || 'meanrun',
+			rushedStats: o.rushedStats || null,
+			spurtInfo: o.spurtInfo || null,
+			spurtStats: o.spurtStats || null
 		};
 	}
 }
 
 function RacePresets(props) {
 	const id = useId();
-	const selectedIdx = presets.findIndex(p => p.courseId == props.courseId && p.racedef.equals(props.racedef));
 	return (
 		<Fragment>
 			<label for={id}>Preset:</label>
 			<select id={id} onChange={e => { const i = +e.currentTarget.value; i > -1 && props.set(presets[i].courseId, presets[i].racedef); }}>
 				<option value="-1"></option>
-				{presets.map((p,i) => <option value={i} selected={i == selectedIdx}>{p.name || (p.date.getFullYear() + '-' + (100 + p.date.getUTCMonth() + 1).toString().slice(-2) + (p.type == EventType.CM ? ' CM' : ' LOH'))}</option>)}
+				{presets.map((p,i) => <option value={i}>{p.date.getFullYear() + '-' + (100 + p.date.getUTCMonth() + 1).toString().slice(-2) + (p.type == EventType.CM ? ' CM' : ' LOH')}</option>)}
 			</select>
 		</Fragment>
 	);
@@ -402,7 +423,8 @@ function RacePresets(props) {
 const baseSkillsToTest = Object.keys(skilldata).filter(id => skilldata[id].rarity < 3);
 
 const enum Mode { Compare, Chart }
-const enum UiStateMsg { SetModeCompare, SetModeChart, SetCurrentIdx0, SetCurrentIdx1, ToggleExpand }
+const enum UiStateMsg { SetModeCompare, SetModeChart, SetCurrentIdx0, SetCurrentIdx1, SetCurrentIdx2, ToggleExpand }
+const enum PosKeepMode { None, Approximate, Virtual }
 
 const DEFAULT_UI_STATE = {mode: Mode.Compare, currentIdx: 0, expanded: false};
 
@@ -416,20 +438,83 @@ function nextUiState(state: typeof DEFAULT_UI_STATE, msg: UiStateMsg) {
 			return {...state, currentIdx: 0};
 		case UiStateMsg.SetCurrentIdx1:
 			return {...state, currentIdx: 1};
+		case UiStateMsg.SetCurrentIdx2:
+			return {...state, currentIdx: 2};
 		case UiStateMsg.ToggleExpand:
 			return {...state, expanded: !state.expanded};
 	}
 }
 
 function App(props) {
-	//const [language, setLanguage] = useLanguageSelect();
+	//const [language, setLanguage] = useLanguageSelect(); 
+	const [darkMode, toggleDarkMode] = useReducer(b=>!b, false);
 	const [skillsOpen, setSkillsOpen] = useState(false);
 	const [racedef, setRaceDef] = useState(() => DEFAULT_PRESET.racedef);
 	const [nsamples, setSamples] = useState(DEFAULT_SAMPLES);
 	const [seed, setSeed] = useState(DEFAULT_SEED);
-	const [usePosKeep, togglePosKeep] = useReducer((b,_) => !b, true);
+	const [posKeepMode, setPosKeepModeRaw] = useState(PosKeepMode.Approximate);
 	const [showHp, toggleShowHp] = useReducer((b,_) => !b, false);
-	const [{courseId, results, runData, chartData, displaying}, setSimState] = useReducer(updateResultsState, EMPTY_RESULTS_STATE);
+	
+	useEffect(() => { document.documentElement.classList.toggle('dark', darkMode);}, [darkMode]);
+	//fuck dark mode
+	
+	// Wrapper to handle mode changes and reset tab if needed
+	function setPosKeepMode(mode: PosKeepMode) {
+		setPosKeepModeRaw(mode);
+		// If switching away from Virtual mode while on the pacemaker tab (index 2), switch back to uma1
+		if (mode !== PosKeepMode.Virtual && currentIdx === 2) {
+			updateUiState(UiStateMsg.SetCurrentIdx0);
+		}
+	}
+
+	const [allowWitVariance, toggleWitVarience] = useReducer((b,_) => !b, true);
+	const [allowRushedUma1, toggleRushedUma1] = useReducer((b,_) => !b, true);
+	const [allowRushedUma2, toggleRushedUma2] = useReducer((b,_) => !b, true);
+	const [useEnhancedSpurt, toggleEnhancedSpurt] = useReducer((b,_) => !b, false);
+	const [allowDownhillUma1, toggleDownhillUma1] = useReducer((b,_) => !b, true);
+	const [allowDownhillUma2, toggleDownhillUma2] = useReducer((b,_) => !b, true);
+	const [skillCheckChance, toggleSkillCheckChance] = useReducer((b,_) => !b, true);
+	const [witVarToggle, toggleWitVar] = useReducer((b,_) => !b, true);
+	
+	
+	function handleWitToggle() {
+		const newState = !witVarToggle;
+		toggleWitVar();
+		
+		//wit var checks everything in the box!!!
+		if (newState) {
+			// Enable all features
+			if (!allowRushedUma1) toggleRushedUma1();
+			if (!allowRushedUma2) toggleRushedUma2();
+			if (!allowDownhillUma1) toggleDownhillUma1();
+			if (!allowDownhillUma2) toggleDownhillUma2();
+			if (!skillCheckChance) toggleSkillCheckChance();
+			if (!useEnhancedSpurt) toggleEnhancedSpurt();
+		} else {
+			// Disable all features
+			if (allowRushedUma1) toggleRushedUma1();
+			if (allowRushedUma2) toggleRushedUma2();
+			if (allowDownhillUma1) toggleDownhillUma1();
+			if (allowDownhillUma2) toggleDownhillUma2();
+			if (skillCheckChance) toggleSkillCheckChance();
+			if (useEnhancedSpurt) toggleEnhancedSpurt();
+		}
+	}
+	
+	// Fires if all individual wit check related toggles are on
+	useEffect(() => {
+		const allEnabled = allowRushedUma1 && allowRushedUma2 && allowDownhillUma1 && allowDownhillUma2 && skillCheckChance && useEnhancedSpurt;
+		const allDisabled = !allowRushedUma1 && !allowRushedUma2 && !allowDownhillUma1 && !allowDownhillUma2 && !skillCheckChance && !useEnhancedSpurt;
+		
+		// Only update wit toggle if all individual toggles are checkmarked
+		if (allEnabled && !witVarToggle) {
+			toggleWitVar();
+		} else if (allDisabled && witVarToggle) {
+			toggleWitVar();
+		}
+	}, [allowRushedUma1, allowRushedUma2, allowDownhillUma1, allowDownhillUma2, skillCheckChance, useEnhancedSpurt, witVarToggle]);
+	
+	const [{courseId, results, runData, chartData, displaying, rushedStats, spurtInfo, spurtStats}, setSimState] = useReducer(updateResultsState, EMPTY_RESULTS_STATE);
 	const setCourseId = setSimState;
 	const setResults = setSimState;
 	const setChartData = setSimState;
@@ -454,6 +539,8 @@ function App(props) {
 
 	const [uma1, setUma1] = useState(() => new HorseState());
 	const [uma2, setUma2] = useState(() => new HorseState());
+	const [pacer, setPacer] = useState(() => new HorseState({strategy: 'Nige'}));
+	const [pacerSpeedUpRate, setPacerSpeedUpRate] = useState(100); // 0-100%
 
 	const [{mode, currentIdx, expanded}, updateUiState] = useReducer(nextUiState, DEFAULT_UI_STATE);
 	function toggleExpand(e: Event) {
@@ -484,10 +571,12 @@ function App(props) {
 				setCourseId(o.courseId);
 				setSamples(o.nsamples);
 				setSeed(o.seed);
-				if (o.usePosKeep != usePosKeep) togglePosKeep(0);
+				setPosKeepModeRaw(o.posKeepMode);
 				setRaceDef(o.racedef);
 				setUma1(o.uma1);
 				setUma2(o.uma2);
+				setPacer(o.pacer);
+				setPacerSpeedUpRate(o.pacerSpeedUpRate);
 			});
 		}
 	}
@@ -499,7 +588,7 @@ function App(props) {
 
 	function copyStateUrl(e) {
 		e.preventDefault();
-		serialize(courseId, nsamples, seed, usePosKeep, racedef, uma1, uma2).then(hash => {
+		serialize(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, pacerSpeedUpRate).then(hash => {
 			const url = window.location.protocol + '//' + window.location.host + window.location.pathname;
 			window.navigator.clipboard.writeText(url + '#' + hash);
 		});
@@ -530,13 +619,14 @@ function App(props) {
 		worker1.postMessage({
 			msg: 'compare',
 			data: {
-				nsamples,
-				course,
-				racedef: racedefToParams(racedef),
-				uma1: uma1.toJS(),
-				uma2: uma2.toJS(),
-				options: {seed, usePosKeep}
-			}
+			nsamples,
+			course,
+			racedef: racedefToParams(racedef),
+			uma1: uma1.toJS(),
+			uma2: uma2.toJS(),
+			pacer: pacer.toJS(),
+			options: {seed, posKeepMode, allowRushedUma1, allowRushedUma2, allowDownhillUma1, allowDownhillUma2, useEnhancedSpurt, accuracyMode: useEnhancedSpurt, pacerSpeedUpRate, skillCheckChance}
+		}
 		});
 	}
 
@@ -551,8 +641,8 @@ function App(props) {
 		const skills2 = skills.slice(Math.floor(skills.length/2));
 		updateTableData('reset');
 		updateTableData(filler);
-		worker1.postMessage({msg: 'chart', data: {skills: skills1, course, racedef: params, uma, options: {seed, usePosKeep}}});
-		worker2.postMessage({msg: 'chart', data: {skills: skills2, course, racedef: params, uma, options: {seed, usePosKeep}}});
+		worker1.postMessage({msg: 'chart', data: {skills: skills1, course, racedef: params, uma, pacer: pacer.toJS(), options: {seed, posKeepMode, pacerSpeedUpRate, allowRushedUma1, allowDownhillUma1, useEnhancedSpurt, accuracyMode: useEnhancedSpurt, skillCheckChance}}});
+		worker2.postMessage({msg: 'chart', data: {skills: skills2, course, racedef: params, uma, pacer: pacer.toJS(), options: {seed, posKeepMode, pacerSpeedUpRate, allowRushedUma1, allowDownhillUma1, useEnhancedSpurt, accuracyMode: useEnhancedSpurt, skillCheckChance}}});
 	}
 
 	function basinnChartSelection(skillId) {
@@ -589,6 +679,11 @@ function App(props) {
 		document.getElementById('rtMouseOverBox').style.display = 'none';
 	}
 
+	function handleSkillDrag(skillId, umaIndex, newStart, newEnd){
+		console.log('handleSkillDrag called:', {skillId, umaIndex, newStart, newEnd});
+		// Just log for now - no comparison trigger
+	}
+
 	const mid = Math.floor(results.length / 2);
 	const median = results.length % 2 == 0 ? (results[mid-1] + results[mid]) / 2 : results[mid];
 	const mean = results.reduce((a,b) => a+b, 0) / results.length;
@@ -604,15 +699,31 @@ function App(props) {
 				type: RegionDisplayType.Textbox,
 				color: colors[i],
 				text: skillnames[id][0],
+				skillId: id,
+				umaIndex: i,
 				regions: [{start: ar[0], end: ar[1]}]
 			}));
 		});
+	});
+	
+	const rushedColors = [
+		{stroke: 'rgb(42, 119, 197)', fill: 'rgba(42, 119, 197, 0.8)'},  // Blue for Uma 1
+		{stroke: 'rgb(197, 42, 42)', fill: 'rgba(197, 42, 42, 0.8)'}     // Red for Uma 2
+	];
+	const rushedIndicators = chartData == null ? [] : (chartData.rushed || [[], []]).flatMap((rushArray,i) => {
+		return rushArray.map(ar => ({
+			type: RegionDisplayType.Textbox,
+			color: rushedColors[i],
+			text: 'Rushed',
+			regions: [{start: ar[0], end: ar[1]}]
+		}));
 	});
 
 	const umaTabs = (
 		<Fragment>
 			<div class={`umaTab ${currentIdx == 0 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx0)}>Umamusume 1</div>
-			{mode == Mode.Compare && <div class={`umaTab ${currentIdx == 1 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx1)}>Umamusume 2<div id="expandBtn" title="Expand panel" onClick={toggleExpand} /></div>}
+			{mode == Mode.Compare && <div class={`umaTab ${currentIdx == 1 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx1)}>Umamusume 2</div>}
+			{posKeepMode == PosKeepMode.Virtual && <div class={`umaTab ${currentIdx == 2 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx2)}>Virtual Pacemaker{mode == Mode.Compare && currentIdx == 1 && <div id="expandBtn" title="Expand panel" onClick={toggleExpand} />}</div>}
 		</Fragment>
 	);
 
@@ -644,6 +755,163 @@ function App(props) {
 						</tbody>
 					</table>
 					<div id="resultsHelp">Negative numbers mean <strong style="color:#2a77c5">Umamusume 1</strong> is faster, positive numbers mean <strong style="color:#c52a2a">Umamusume 2</strong> is faster.</div>
+					
+					{rushedStats && (rushedStats.uma1.frequency > 0 || rushedStats.uma2.frequency > 0) && (allowRushedUma1 || allowRushedUma2) && (
+						<table id="rushedStatsSummary" style="margin-top: 15px; width: 100%;">
+							<caption style="font-weight: bold; margin-bottom: 5px;">Rushed Status Statistics (across {nsamples} simulations)</caption>
+							<thead>
+								<tr>
+									<th></th>
+									<th style="color: #2a77c5">Uma 1</th>
+									<th style="color: #c52a2a">Uma 2</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr>
+									<th>Frequency</th>
+									<td style="color: #2a77c5">{allowRushedUma1 ? rushedStats.uma1.frequency.toFixed(1) + '%' : 'Disabled'}</td>
+									<td style="color: #c52a2a">{allowRushedUma2 ? rushedStats.uma2.frequency.toFixed(1) + '%' : 'Disabled'}</td>
+								</tr>
+								{allowRushedUma1 && rushedStats.uma1.frequency > 0 && (
+									<tr>
+										<th>Mean length</th>
+										<td style="color: #2a77c5">{rushedStats.uma1.mean.toFixed(1)} m</td>
+										<td style="color: #c52a2a">{allowRushedUma2 && rushedStats.uma2.frequency > 0 ? rushedStats.uma2.mean.toFixed(1) + ' m' : '—'}</td>
+									</tr>
+								)}
+								{allowRushedUma2 && rushedStats.uma2.frequency > 0 && !allowRushedUma1 && (
+									<tr>
+										<th>Mean length</th>
+										<td style="color: #2a77c5">—</td>
+										<td style="color: #c52a2a">{rushedStats.uma2.mean.toFixed(1)} m</td>
+									</tr>
+								)}
+								{(allowRushedUma1 && rushedStats.uma1.frequency > 0) || (allowRushedUma2 && rushedStats.uma2.frequency > 0) && (
+									<tr>
+										<th>Min length</th>
+										<td style="color: #2a77c5">{allowRushedUma1 && rushedStats.uma1.frequency > 0 ? rushedStats.uma1.min.toFixed(1) + ' m' : '—'}</td>
+										<td style="color: #c52a2a">{allowRushedUma2 && rushedStats.uma2.frequency > 0 ? rushedStats.uma2.min.toFixed(1) + ' m' : '—'}</td>
+									</tr>
+								)}
+								{(allowRushedUma1 && rushedStats.uma1.frequency > 0) || (allowRushedUma2 && rushedStats.uma2.frequency > 0) && (
+									<tr>
+										<th>Max length</th>
+										<td style="color: #2a77c5">{allowRushedUma1 && rushedStats.uma1.frequency > 0 ? rushedStats.uma1.max.toFixed(1) + ' m' : '—'}</td>
+										<td style="color: #c52a2a">{allowRushedUma2 && rushedStats.uma2.frequency > 0 ? rushedStats.uma2.max.toFixed(1) + ' m' : '—'}</td>
+									</tr>
+								)}
+							</tbody>
+						</table>
+					)}
+					
+					{spurtInfo && useEnhancedSpurt && (
+						<>
+							{spurtStats && (
+								<div style={{marginTop: '15px', marginBottom: '10px', textAlign: 'center'}}>
+									<div style={{display: 'inline-block', margin: '0 20px'}}>
+										<strong>Uma 1:</strong> Max Spurt Rate: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{spurtStats.uma1.maxSpurtRate.toFixed(1)}%</span> | 
+										Stamina Survival: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{spurtStats.uma1.staminaSurvivalRate.toFixed(1)}%</span>
+									</div>
+									<div style={{display: 'inline-block', margin: '0 20px'}}>
+										<strong>Uma 2:</strong> Max Spurt Rate: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{spurtStats.uma2.maxSpurtRate.toFixed(1)}%</span> | 
+										Stamina Survival: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{spurtStats.uma2.staminaSurvivalRate.toFixed(1)}%</span>
+									</div>
+								</div>
+							)}
+							<table id="spurtInfoSummary" style="margin-top: 15px; width: 100%;">
+								<caption style="font-weight: bold; margin-bottom: 5px;">Enhanced Spurt Calculator Analysis (Theoretical)</caption>
+							<thead>
+								<tr>
+									<th></th>
+									<th style="color: #2a77c5">Uma 1</th>
+									<th style="color: #c52a2a">Uma 2</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr>
+									<th>Max Spurt Possible?</th>
+									<td style="color: #2a77c5">{spurtInfo.uma1.maxSpurt ? '✓ Yes' : '✗ No'}</td>
+									<td style="color: #c52a2a">{spurtInfo.uma2.maxSpurt ? '✓ Yes' : '✗ No'}</td>
+								</tr>
+								<tr>
+									<th>Spurt Start Position</th>
+									<td style="color: #2a77c5">{spurtInfo.uma1.transition >= 0 ? spurtInfo.uma1.transition.toFixed(0) + ' m' : 'N/A'}</td>
+									<td style="color: #c52a2a">{spurtInfo.uma2.transition >= 0 ? spurtInfo.uma2.transition.toFixed(0) + ' m' : 'N/A'}</td>
+								</tr>
+								<tr>
+									<th>Spurt Speed</th>
+									<td style="color: #2a77c5">{spurtInfo.uma1.speed > 0 ? spurtInfo.uma1.speed.toFixed(2) + ' m/s' : 'N/A'}</td>
+									<td style="color: #c52a2a">{spurtInfo.uma2.speed > 0 ? spurtInfo.uma2.speed.toFixed(2) + ' m/s' : 'N/A'}</td>
+								</tr>
+								<tr>
+									<th>HP at Finish</th>
+									<td style="color: #2a77c5">{spurtInfo.uma1.hpRemaining.toFixed(0)}</td>
+									<td style="color: #c52a2a">{spurtInfo.uma2.hpRemaining.toFixed(0)}</td>
+								</tr>
+								<tr>
+									<th>Spurt Strategy</th>
+									<td style="color: #2a77c5; font-size: 0.9em">{spurtInfo.uma1.maxSpurt ? 'Full distance at max speed' : 'Optimal suboptimal speed'}</td>
+									<td style="color: #c52a2a; font-size: 0.9em">{spurtInfo.uma2.maxSpurt ? 'Full distance at max speed' : 'Optimal suboptimal speed'}</td>
+								</tr>
+								<tr>
+									<th>Skill Activation Rate</th>
+									<td style="color: #2a77c5">{spurtInfo.uma1.skillActivationRate.toFixed(1)}%</td>
+									<td style="color: #c52a2a">{spurtInfo.uma2.skillActivationRate.toFixed(1)}%</td>
+								</tr>
+								{(!spurtInfo.uma1.maxSpurt || !spurtInfo.uma2.maxSpurt) && (
+									<tr>
+										<th>Heal Skills Available</th>
+										<td style="color: #2a77c5; font-size: 0.85em">
+											{spurtInfo.uma1.healSkillsAvailable.length > 0 
+												? `${spurtInfo.uma1.healSkillsAvailable.length} skill(s)` 
+												: 'None'}
+										</td>
+										<td style="color: #c52a2a; font-size: 0.85em">
+											{spurtInfo.uma2.healSkillsAvailable.length > 0 
+												? `${spurtInfo.uma2.healSkillsAvailable.length} skill(s)` 
+												: 'None'}
+										</td>
+									</tr>
+								)}
+								{(!spurtInfo.uma1.maxSpurt && spurtInfo.uma1.healSkillsAvailable.length > 0) || 
+								 (!spurtInfo.uma2.maxSpurt && spurtInfo.uma2.healSkillsAvailable.length > 0) ? (
+									<tr>
+										<th>Heal Sufficiency</th>
+										<td style="color: #2a77c5; font-size: 0.85em">
+											{!spurtInfo.uma1.maxSpurt && spurtInfo.uma1.healSkillsAvailable.length > 0
+												? (() => {
+													const totalHeal = spurtInfo.uma1.healSkillsAvailable.reduce((sum, skill) => sum + skill.heal, 0);
+													const maxPossibleHeal = totalHeal * 4; // Max 4 corners
+													const sufficient = maxPossibleHeal >= spurtInfo.uma1.healNeeded;
+													const activationChance = spurtInfo.uma1.skillActivationRate;
+													return `Need ${spurtInfo.uma1.healNeeded.toFixed(0)} HP | Can heal ${maxPossibleHeal.toFixed(0)} HP max ${sufficient ? '✓' : '✗ Insufficient'}`;
+												})()
+												: spurtInfo.uma1.maxSpurt ? '—' : 'No heal skills'}
+										</td>
+										<td style="color: #c52a2a; font-size: 0.85em">
+											{!spurtInfo.uma2.maxSpurt && spurtInfo.uma2.healSkillsAvailable.length > 0
+												? (() => {
+													const totalHeal = spurtInfo.uma2.healSkillsAvailable.reduce((sum, skill) => sum + skill.heal, 0);
+													const maxPossibleHeal = totalHeal * 4; // Max 4 corners
+													const sufficient = maxPossibleHeal >= spurtInfo.uma2.healNeeded;
+													const activationChance = spurtInfo.uma2.skillActivationRate;
+													return `Need ${spurtInfo.uma2.healNeeded.toFixed(0)} HP | Can heal ${maxPossibleHeal.toFixed(0)} HP max ${sufficient ? '✓' : '✗ Insufficient'}`;
+												})()
+												: spurtInfo.uma2.maxSpurt ? '—' : 'No heal skills'}
+										</td>
+									</tr>
+								) : null}
+								</tbody>
+							</table>
+							<div style={{marginTop: '1em', padding: '0.75em', background: '#f5f5f5', borderRadius: '4px', fontSize: '0.85em', color: '#555'}}>
+								<strong>Note:</strong> The table above shows theoretical calculations based purely on stats. 
+								The rates above show actual simulation results across all runs.
+								"Max Spurt Rate" = % of runs that achieved max spurt speed. 
+								"Stamina Survival" = % of runs that finished with positive HP.
+							</div>
+						</>
+					)}
+					
 					<Histogram width={500} height={333} data={results} />
 				</div>
 				<div id="infoTables">
@@ -710,8 +978,9 @@ function App(props) {
 		<Language.Provider value={props.lang}>
 			<IntlProvider definition={strings}>
 				<div id="topPane" class={chartData ? 'hasResults' : ''}>
-					<RaceTrack courseid={courseId} width={960} height={240} xOffset={20} yOffset={15} yExtra={20} mouseMove={rtMouseMove} mouseLeave={rtMouseLeave} regions={skillActivations}>
+					<RaceTrack courseid={courseId} width={960} height={240} xOffset={20} yOffset={15} yExtra={20} mouseMove={rtMouseMove} mouseLeave={rtMouseLeave} onSkillDrag={handleSkillDrag} regions={[...skillActivations, ...rushedIndicators]}>
 						<VelocityLines data={chartData} courseDistance={course.distance} width={960} height={250} xOffset={20} showHp={showHp} />
+						
 						<g id="rtMouseOverBox" style="display:none">
 							<text id="rtV1" x="25" y="10" fill="#2a77c5" font-size="10px"></text>
 							<text id="rtV2" x="25" y="20" fill="#c52a2a" font-size="10px"></text>
@@ -736,21 +1005,86 @@ function App(props) {
 							<input type="number" id="seed" value={seed} onInput={(e) => setSeed(+e.currentTarget.value)} />
 							<button title="Randomize seed" onClick={() => setSeed(Math.floor(Math.random() * (-1 >>> 0)) >>> 0)}>🎲</button>
 						</div>
-						<div>
-							<label for="poskeep">Simulate pos keep</label>
-							<input type="checkbox" id="poskeep" checked={usePosKeep} onClick={togglePosKeep} />
-						</div>
+						<fieldset id="posKeepFieldset">
+							<legend>Position Keep:</legend>
+							<select id="poskeepmode" value={posKeepMode} onInput={(e) => setPosKeepMode(+e.currentTarget.value)}>
+								<option value={PosKeepMode.None}>None</option>
+								<option value={PosKeepMode.Approximate}>Approximate</option>
+								<option value={PosKeepMode.Virtual}>Virtual Pacemaker</option>
+							</select>
+							{posKeepMode == PosKeepMode.Approximate && (
+								<div id="pacemakerIndicator">
+									<span>Using default pacemaker</span>
+								</div>
+							)}
+							{posKeepMode == PosKeepMode.Virtual && (
+								<div id="pacemakerIndicator">
+									<span>Judged by virtual pacemaker</span>
+									<button onClick={() => updateUiState(UiStateMsg.SetCurrentIdx2)}>Configure</button>
+									<div id="speedUpRateControl">
+										<label for="speeduprate">Speed up mode probability: {pacerSpeedUpRate}%</label>
+										<input 
+											type="range" 
+											id="speeduprate" 
+											min="0" 
+											max="100" 
+											value={pacerSpeedUpRate} 
+											onInput={(e) => setPacerSpeedUpRate(+e.currentTarget.value)} 
+										/>
+									</div>
+								</div>
+							)}
+						</fieldset>
 						<div>
 							<label for="showhp">Show HP consumption</label>
 							<input type="checkbox" id="showhp" checked={showHp} onClick={toggleShowHp} />
 						</div>
+					<div style="border-top: 10px solid #ccccccff; padding: 20px; background-color: #a7fab2ff; margin-top: 15px; font-family: 'Inter','Noto Sans JP',system-ui,-apple-system,'Segoe UI',Roboto,'Hiragino Kaku Gothic ProN','Meiryo',sans-serif;">
+						<details style="margin-bottom: 10px;">
+							<summary style="font-weight: bold; color: #000000ff; cursor: pointer; user-select: none;" title="Controls all advanced features below">
+								Advanced Settings - {witVarToggle ? 'Enabled' : 'Disabled'}
+							</summary>
+							<div style="margin-left: 20px; margin-top: 10px; padding: 10px; background-color: #c7c7c7ff; border-radius: 4px; font-family: 'Inter','Noto Sans JP',system-ui,-apple-system,'Segoe UI',Roboto,'Hiragino Kaku Gothic ProN','Meiryo',sans-serif;">
+								<div style="margin-bottom: 8px;">
+									<label style="color: rgb(42, 119, 197); font-size: 14px;">Allow Rushed (Uma 1)</label>
+									<input type="checkbox" checked={allowRushedUma1} onClick={toggleRushedUma1} style="margin-left: 8px;" />
+						</div>
+								<div style="margin-bottom: 8px;">
+									<label style="color: rgb(197, 42, 42); font-size: 14px;">Allow Rushed (Uma 2)</label>
+									<input type="checkbox" checked={allowRushedUma2} onClick={toggleRushedUma2} style="margin-left: 8px;" />
+					</div>
+								<div style="margin-bottom: 8px;">
+									<label style="color: rgb(42, 119, 197); font-size: 14px;">Allow Downhill (Uma 1)</label>
+									<input type="checkbox" checked={allowDownhillUma1} onClick={toggleDownhillUma1} style="margin-left: 8px;" />
+				</div>
+								<div style="margin-bottom: 8px;">
+									<label style="color: rgb(197, 42, 42); font-size: 14px;">Allow Downhill (Uma 2)</label>
+									<input type="checkbox" checked={allowDownhillUma2} onClick={toggleDownhillUma2} style="margin-left: 8px;" />
+				</div>
+								<div style="margin-bottom: 8px;">
+									<label style="color: #333; font-size: 14px;">Skill Activations with Wit Check</label>
+									<input type="checkbox" checked={skillCheckChance} onClick={toggleSkillCheckChance} style="margin-left: 8px;" />
+				</div>
+								<div style="margin-bottom: 8px;">
+									<label style="color: #333; font-size: 14px;">Enhanced Spurt Calculator</label>
+									<input type="checkbox" checked={useEnhancedSpurt} onClick={toggleEnhancedSpurt} style="margin-left: 8px;" />
+								</div>
+								<div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #ddd;">
+									<button onClick={handleWitToggle} style="padding: 4px 12px; font-size: 12px; background-color: #007acc; color: white; border: none; border-radius: 3px; cursor: pointer;">
+										{witVarToggle ? 'Disable All' : 'Enable All'}
+									</button>
+								</div>
+							</div>
+						</details>
+					</div>
+
 						{
 							mode == Mode.Compare
 							? <button id="run" onClick={doComparison} tabindex={1}>COMPARE</button>
 							: <button id="run" onClick={doBasinnChart} tabindex={1}>RUN</button>
 						}
 						<a href="#" onClick={copyStateUrl}>Copy link</a>
-						<RacePresets courseId={courseId} racedef={racedef} set={(courseId, racedef) => { setCourseId(courseId); setRaceDef(racedef); }} />
+						<RacePresets set={(courseId, racedef) => { setCourseId(courseId); setRaceDef(racedef); }} />
 					</div>
 					<div id="buttonsRow">
 						<TrackSelect key={courseId} courseid={courseId} setCourseid={setCourseId} tabindex={2} />
@@ -782,6 +1116,11 @@ function App(props) {
 							{expanded ? 'Umamusume 2' : umaTabs}
 						</HorseDef>
 					</div>}
+					{posKeepMode == PosKeepMode.Virtual && <div class={!expanded && currentIdx == 2 ? 'selected' : ''}>
+						<HorseDef key={pacer.outfitId} state={pacer} setState={setPacer} courseDistance={course.distance} tabstart={() => 4 + (mode == Mode.Compare ? 2 : 1) * horseDefTabs()}>
+							{expanded ? 'Virtual Pacemaker' : umaTabs}
+						</HorseDef>
+					</div>}
 					{expanded && <div id="closeUmaOverlay" title="Close panel" onClick={toggleExpand}>✕</div>}
 				</div>
 				{popoverSkill && <BasinnChartPopover skillid={popoverSkill} results={tableData.get(popoverSkill).results} courseDistance={course.distance} />}
@@ -792,3 +1131,4 @@ function App(props) {
 
 initTelemetry();
 render(<App lang="en-ja" />, document.getElementById('app'));
+

@@ -32,3 +32,22 @@
 	stroke: white;
 	stroke-width: 2px;
 }
+
+.drag-textbox {
+	transition: opacity 0.2s ease;
+	cursor: grab !important;
+}
+
+.drag-textbox:hover {
+	opacity: 0.8;
+	cursor: grab !important;
+}
+
+.drag-textbox:active {
+	cursor: grabbing !important;
+	opacity: 0.6;
+}
+
+.drag-textbox text {
+	font-weight: bold;
+}
