@@ -422,8 +422,8 @@ function RacePresets(props) {
 
 const baseSkillsToTest = Object.keys(skilldata).filter(id => skilldata[id].rarity < 3);
 
-const enum Mode { Compare, Chart }
-const enum UiStateMsg { SetModeCompare, SetModeChart, SetCurrentIdx0, SetCurrentIdx1, SetCurrentIdx2, ToggleExpand }
+const enum Mode { Compare, Chart, UniquesChart }
+const enum UiStateMsg { SetModeCompare, SetModeChart, SetModeUniquesChart, SetCurrentIdx0, SetCurrentIdx1, SetCurrentIdx2, ToggleExpand }
 const enum PosKeepMode { None, Approximate, Virtual }
 
 const DEFAULT_UI_STATE = {mode: Mode.Compare, currentIdx: 0, expanded: false};
@@ -434,6 +434,8 @@ function nextUiState(state: typeof DEFAULT_UI_STATE, msg: UiStateMsg) {
 			return {...state, mode: Mode.Compare};
 		case UiStateMsg.SetModeChart:
 			return {...state, mode: Mode.Chart, currentIdx: 0, expanded: false};
+		case UiStateMsg.SetModeUniquesChart:
+			return {...state, mode: Mode.UniquesChart, currentIdx: 0, expanded: false};
 		case UiStateMsg.SetCurrentIdx0:
 			return {...state, currentIdx: 0};
 		case UiStateMsg.SetCurrentIdx1:
@@ -663,13 +665,36 @@ function App(props) {
 		});
 	}
 
+	function getUniqueSkills() {
+		return Object.keys(skilldata).filter(id => {
+			const skill = skilldata[id];
+			return skill.rarity >= 4 && id.startsWith('1');
+		});
+	}
+	
+	function removeUniqueSkills(uma) {
+		const uniqueSkills = getUniqueSkills();
+		const filteredSkills = uma.skills.filter(skillId => !uniqueSkills.includes(skillId));
+		return uma.set('skills', filteredSkills);
+	}
+
 	function doBasinnChart() {
 		postEvent('doBasinnChart', {});
 		const params = racedefToParams(racedef, uma1.strategy);
-		const skills = getActivateableSkills(baseSkillsToTest.filter(s => !uma1.skills.has(s) && (s[0] != '9' || !uma1.skills.has('1' + s.slice(1)))), uma1, course, params);
+
+		let skills, uma;
+		if (mode === Mode.UniquesChart) {
+			const uniqueSkills = getUniqueSkills();
+			skills = getActivateableSkills(uniqueSkills, uma1, course, params);
+			const umaWithoutUniques = removeUniqueSkills(uma1);
+			uma = umaWithoutUniques.toJS();
+		} else {
+			skills = getActivateableSkills(baseSkillsToTest.filter(s => !uma1.skills.has(s) && (s[0] != '9' || !uma1.skills.has('1' + s.slice(1)))), uma1, course, params);
+			uma = uma1.toJS();
+		}
+		
 		const filler = new Map();
 		skills.forEach(id => filler.set(id, getNullRow(id)));
-		const uma = uma1.toJS();
 		const skills1 = skills.slice(0,Math.floor(skills.length/2));
 		const skills2 = skills.slice(Math.floor(skills.length/2));
 		updateTableData('reset');
@@ -976,6 +1001,18 @@ function App(props) {
 				</div>
 			</div>
 		);
+	} else if (mode == Mode.UniquesChart && tableData.size > 0) {
+		resultsPane = (
+			<div id="resultsPaneWrapper">
+				<div id="resultsPane" class="mode-chart">
+					<BasinnChart data={Array.from(tableData.values())} hidden={new Set()}
+						onSelectionChange={basinnChartSelection}
+						onRunTypeChange={setChartData}
+						onDblClickRow={addSkillFromTable}
+						onInfoClick={showPopover} />
+				</div>
+			</div>
+		);
 	} else if (CC_GLOBAL) {
 		resultsPane = (
 			<div id="resultsPaneWrapper">
@@ -1010,6 +1047,10 @@ function App(props) {
 							<div>
 								<input type="radio" id="mode-chart" name="mode" value="chart" checked={mode == Mode.Chart} onClick={() => updateUiState(UiStateMsg.SetModeChart)} />
 								<label for="mode-chart">Skill chart</label>
+							</div>
+							<div>
+								<input type="radio" id="mode-uniques-chart" name="mode" value="uniques-chart" checked={mode == Mode.UniquesChart} onClick={() => updateUiState(UiStateMsg.SetModeUniquesChart)} />
+								<label for="mode-uniques-chart">Uniques chart</label>
 							</div>
 						</fieldset>
 						<label for="nsamples">Samples:</label>
