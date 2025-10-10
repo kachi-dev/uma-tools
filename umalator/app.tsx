@@ -678,21 +678,25 @@ function App(props) {
 			seed, 
 			posKeepMode, 
 			pacerSpeedUpRate, 
-			allowRushedUma1: simWitVariance ? allowRushedUma1 : false,
-			allowDownhillUma1: simWitVariance ? allowDownhillUma1 : false,
-			useEnhancedSpurt: simWitVariance ? useEnhancedSpurt : false,
-			accuracyMode: simWitVariance ? useEnhancedSpurt : false,
-			skillCheckChance: simWitVariance ? skillCheckChance : false
+			allowRushedUma1: false,
+			allowRushedUma2: false,
+			allowDownhillUma1: false,
+			allowDownhillUma2: false,
+			useEnhancedSpurt: false,
+			accuracyMode: false,
+			skillCheckChance: false
 		}}});
 		worker2.postMessage({msg: 'chart', data: {skills: skills2, course, racedef: params, uma, pacer: pacer.toJS(), options: {
 			seed, 
 			posKeepMode, 
 			pacerSpeedUpRate, 
-			allowRushedUma1: simWitVariance ? allowRushedUma1 : false,
-			allowDownhillUma1: simWitVariance ? allowDownhillUma1 : false,
-			useEnhancedSpurt: simWitVariance ? useEnhancedSpurt : false,
-			accuracyMode: simWitVariance ? useEnhancedSpurt : false,
-			skillCheckChance: simWitVariance ? skillCheckChance : false
+			allowRushedUma1: false,
+			allowRushedUma2: false,
+			allowDownhillUma1: false,
+			allowDownhillUma2: false,
+			useEnhancedSpurt: false,
+			accuracyMode: false,
+			skillCheckChance: false
 		}}});
 	}
 
