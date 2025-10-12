@@ -275,7 +275,7 @@ export function RaceTrack(props) {
 			return elems;
 		}, []);
 
-		const sections = course.straights.concat(course.corners.map(c => ({start: c.start, end: c.start + c.length}))).sort((a,b) => a.start - b.start);
+		const sections = course.straights.concat(course.corners.map(c => ({start: c.start, end: c.start + c.length, frontType: 0}))).sort((a,b) => a.start - b.start);
 
 		const phase1Start = Math.round(CourseHelpers.phaseStart(course.distance,1))
 		    , phase2Start = Math.round(CourseHelpers.phaseStart(course.distance,2))
@@ -478,6 +478,29 @@ export function RaceTrack(props) {
 					<svg x={props.xOffset} y={props.yOffset} width={props.width} height={props.height}>
 						{almostEverything}
 						{regions}
+						{props.posKeepLabels && props.posKeepLabels.map((label, index) => (
+							<g key={index} class="poskeep-label">
+								<text 
+									x={label.x + label.width / 2} 
+									y={5 + label.yOffset} 
+									fill={label.color.stroke}
+									font-size="10px"
+									font-weight="bold"
+									text-anchor="middle"
+									dominant-baseline="hanging"
+								>
+									{label.text}
+								</text>
+								<line 
+									x1={label.x} 
+									y1={5 + label.yOffset + 12} 
+									x2={label.x + label.width} 
+									y2={5 + label.yOffset + 12} 
+									stroke={label.color.stroke} 
+									stroke-width="2"
+								/>
+							</g>
+						))}
 						<line class="mouseoverLine" x1="-5" y1="0" x2="-5" y2="100%" stroke="rgb(121,64,22)" stroke-width="2" />
 						<text class="mouseoverText" x="-5" y="-5" fill="rgb(121,64,22)"></text>
 					</svg>

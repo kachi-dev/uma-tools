@@ -1,6 +1,6 @@
 import { CourseData } from '../uma-skill-tools/CourseData';
 import { RaceParameters, GroundCondition } from '../uma-skill-tools/RaceParameters';
-import { RaceSolver } from '../uma-skill-tools/RaceSolver';
+import { RaceSolver, PosKeepMode } from '../uma-skill-tools/RaceSolver';
 import { RaceSolverBuilder, Perspective, parseStrategy, parseAptitude } from '../uma-skill-tools/RaceSolverBuilder';
 import { EnhancedHpPolicy } from '../uma-skill-tools/EnhancedHpPolicy';
 import { GameHpPolicy } from '../uma-skill-tools/HpPolicy';
@@ -97,8 +97,6 @@ function calculateTheoreticalMaxSpurt(horse: any, course: CourseData, ground: Gr
 	};
 }
 
-const enum PosKeepMode { None, Approximate, Virtual }
-
 export function runComparison(nsamples: number, course: CourseData, racedef: RaceParameters, uma1: HorseState, uma2: HorseState, pacer: HorseState, options) {
 	// Pre-calculate heal skills from uma's skill lists before race starts
 	const uma1HealSkills = [];
@@ -151,7 +149,8 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		.season(racedef.season)
 		.time(racedef.time)
 		.useEnhancedSpurt(options.useEnhancedSpurt || false)
-		.accuracyMode(options.accuracyMode || false);
+		.accuracyMode(options.accuracyMode || false)
+		.posKeepMode(options.posKeepMode);
 	if (racedef.orderRange != null) {
 		standard
 			.order(racedef.orderRange[0], racedef.orderRange[1])
@@ -336,7 +335,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 	for (let i = 0; i < nsamples; ++i) {
 		const s1 = a.next(retry).value as RaceSolver;
 		const s2 = b.next(retry).value as RaceSolver;
-		const data = {t: [[], []], p: [[], []], v: [[], []], hp: [[], []], sk: [null,null], sdly: [0,0], rushed: [[], []]};
+		const data = {t: [[], []], p: [[], []], v: [[], []], hp: [[], []], sk: [null,null], sdly: [0,0], rushed: [[], []], posKeep: [[], []]};
 
 		while (s2.pos < course.distance) {
 			s2.step(1/15);
@@ -347,6 +346,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		}
 		data.sdly[ai] = s2.startDelay;
 		data.rushed[ai] = s2.rushedActivations.slice();
+		data.posKeep[ai] = s2.positionKeepActivations.slice();
 
 		while (s1.accumulatetime.t < s2.accumulatetime.t) {
 			s1.step(1/15);
@@ -366,6 +366,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		}
 		data.sdly[bi] = s1.startDelay;
 		data.rushed[bi] = s1.rushedActivations.slice();
+		data.posKeep[bi] = s1.positionKeepActivations.slice();
 
 		//implement dragging here
 

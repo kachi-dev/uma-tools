@@ -51,3 +51,10 @@
 .drag-textbox text {
 	font-weight: bold;
 }
+
+.poskeep-label text {
+	font-weight: bold;
+	paint-order: stroke;
+	stroke: white;
+	stroke-width: 1px;
+}

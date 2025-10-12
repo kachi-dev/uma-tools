@@ -5,7 +5,7 @@ import { Rule30CARng, SeededRng } from './Random';
 import { Conditions, random, immediate, noopRandom } from './ActivationConditions';
 import { ActivationSamplePolicy, ImmediatePolicy } from './ActivationSamplePolicy';
 import { getParser } from './ConditionParser';
-import { RaceSolver, RaceState, PendingSkill, DynamicCondition, SkillType, SkillRarity, SkillEffect, Perspective } from './RaceSolver';
+import { RaceSolver, RaceState, PendingSkill, DynamicCondition, SkillType, SkillRarity, SkillEffect, Perspective, PosKeepMode } from './RaceSolver';
 import { Mood, GroundCondition, Weather, Season, Time, Grade, RaceParameters } from './RaceParameters';
 import { GameHpPolicy, NoopHpPolicy } from './HpPolicy';
 import { EnhancedHpPolicy } from './EnhancedHpPolicy';
@@ -409,6 +409,7 @@ export class RaceSolverBuilder {
 	_accuracyMode: boolean
 	_skillCheckChance: boolean
 	_synchronizedSeed: number
+	_posKeepMode: PosKeepMode
 
 	constructor(readonly nsamples: number) {
 		this._course = null;
@@ -440,6 +441,7 @@ export class RaceSolverBuilder {
 		this._accuracyMode = false;
 		this._skillCheckChance = true;
 		this._synchronizedSeed = null;
+		this._posKeepMode = PosKeepMode.None;
 	}
 
 	seed(seed: number) {
@@ -704,6 +706,11 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
+	posKeepMode(mode: PosKeepMode) {
+		this._posKeepMode = mode;
+		return this;
+	}
+
 	onSkillActivate(cb: (state: RaceSolver, skillId: string) => void) {
 		this._onSkillActivate = cb;
 		return this;
@@ -735,6 +742,7 @@ export class RaceSolverBuilder {
 		clone._accuracyMode = this._accuracyMode;
 		clone._skillCheckChance = this._skillCheckChance;
 		clone._synchronizedSeed = this._synchronizedSeed;
+		clone._posKeepMode = this._posKeepMode;
 
 		// NB. GOTCHA: if asitame is enabled, it closes over *our* horse and mood data, and not the clone's
 		// this is assumed to be fine, since fork() is intended to be used after everything is added except skills,
@@ -813,7 +821,8 @@ export class RaceSolverBuilder {
 				disableDownhill: this._disableDownhill,
 				disableSectionModifier: this._disableSectionModifier,
 				skillCheckChance: this._skillCheckChance,
-				synchronizedSeed: this._synchronizedSeed
+				synchronizedSeed: this._synchronizedSeed,
+				posKeepMode: this._posKeepMode
 			}) : null;
 
 			const hpRng = new Rule30CARng(solverRng.int32());
@@ -834,8 +843,11 @@ export class RaceSolverBuilder {
 				disableDownhill: this._disableDownhill,
 				disableSectionModifier: this._disableSectionModifier,
 				skillCheckChance: this._skillCheckChance,
-				synchronizedSeed: this._synchronizedSeed
+				synchronizedSeed: this._synchronizedSeed,
+				posKeepMode: this._posKeepMode
 			});
+
+			this._synchronizedSeed += 1;
 
 			if (redo) {
 				--i;

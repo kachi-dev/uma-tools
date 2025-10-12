@@ -7,6 +7,7 @@ import { computePosition, flip } from '@floating-ui/dom';
 
 import { CourseHelpers } from '../uma-skill-tools/CourseData';
 import { RaceParameters, Mood, GroundCondition, Weather, Season, Time, Grade } from '../uma-skill-tools/RaceParameters';
+import { PosKeepMode } from '../uma-skill-tools/RaceSolver';
 import type { GameHpPolicy } from '../uma-skill-tools/HpPolicy';
 
 import { Language, LanguageSelect, useLanguageSelect } from '../components/Language';
@@ -424,7 +425,6 @@ const baseSkillsToTest = Object.keys(skilldata).filter(id => skilldata[id].rarit
 
 const enum Mode { Compare, Chart, UniquesChart }
 const enum UiStateMsg { SetModeCompare, SetModeChart, SetModeUniquesChart, SetCurrentIdx0, SetCurrentIdx1, SetCurrentIdx2, ToggleExpand }
-const enum PosKeepMode { None, Approximate, Virtual }
 
 const DEFAULT_UI_STATE = {mode: Mode.Compare, currentIdx: 0, expanded: false};
 
@@ -850,6 +850,59 @@ function App(props) {
 		}));
 	});
 
+	const posKeepColors = [
+		{stroke: 'rgb(42, 119, 197)', fill: 'rgba(42, 119, 197, 0.6)'},
+		{stroke: 'rgb(197, 42, 42)', fill: 'rgba(197, 42, 42, 0.6)'}
+	];
+	
+	const posKeepData = chartData == null ? [] : (chartData.posKeep || [[], []]).flatMap((posKeepArray,i) => {
+		return posKeepArray.map(ar => {
+			const stateName = ar[2] === 1 ? 'PU' : ar[2] === 2 ? 'PDM' : ar[2] === 3 ? 'SU' : ar[2] === 4 ? 'O' : 'Unknown';
+			return {
+				umaIndex: i,
+				text: stateName,
+				color: posKeepColors[i],
+				start: ar[0],
+				end: ar[1],
+				duration: ar[1] - ar[0]
+			};
+		});
+	});
+	
+	const posKeepLabels = [];
+	
+	const tempLabels = posKeepData.map(posKeep => ({
+		...posKeep,
+		x: posKeep.start / course.distance * 960,
+		width: posKeep.duration / course.distance * 960,
+		yOffset: 0
+	}));
+	
+	tempLabels.sort((a, b) => a.x - b.x);
+	
+	for (let i = 0; i < tempLabels.length; i++) {
+		const currentLabel = tempLabels[i];
+		let maxYOffset = 0;
+		
+		for (let j = 0; j < i; j++) {
+			const prevLabel = tempLabels[j];
+			
+			// Check if labels overlap horizontally
+			const padding = 10; // Add padding to prevent labels from being too close
+			const overlap = !(currentLabel.x + currentLabel.width + padding < prevLabel.x || 
+							 currentLabel.x > prevLabel.x + prevLabel.width + padding);
+			
+			if (overlap) {
+				// Labels overlap, need to offset vertically
+				maxYOffset = Math.max(maxYOffset, prevLabel.yOffset + 30); // 30px spacing
+			}
+		}
+		
+		currentLabel.yOffset = maxYOffset;
+		posKeepLabels.push(currentLabel);
+	}
+	
+
 	const umaTabs = (
 		<Fragment>
 			<div class={`umaTab ${currentIdx == 0 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx0)}>Umamusume 1</div>
@@ -1080,7 +1133,7 @@ function App(props) {
 		<Language.Provider value={props.lang}>
 			<IntlProvider definition={strings}>
 				<div id="topPane" class={chartData ? 'hasResults' : ''}>
-					<RaceTrack courseid={courseId} width={960} height={240} xOffset={20} yOffset={15} yExtra={20} mouseMove={rtMouseMove} mouseLeave={rtMouseLeave} onSkillDrag={handleSkillDrag} regions={[...skillActivations, ...rushedIndicators]} uma1={uma1} uma2={uma2} pacer={pacer}>
+					<RaceTrack courseid={courseId} width={960} height={240} xOffset={20} yOffset={15} yExtra={20} mouseMove={rtMouseMove} mouseLeave={rtMouseLeave} onSkillDrag={handleSkillDrag} regions={[...skillActivations, ...rushedIndicators]} posKeepLabels={posKeepLabels} uma1={uma1} uma2={uma2} pacer={pacer}>
 						<VelocityLines data={chartData} courseDistance={course.distance} width={960} height={250} xOffset={20} showHp={showHp} />
 						
 						<g id="rtMouseOverBox" style="display:none">
