@@ -677,28 +677,28 @@ function App(props) {
 		worker1.postMessage({
 			msg: 'compare',
 			data: {
-			nsamples,
-			course,
-			racedef: racedefToParams(racedef),
-			uma1: uma1.toJS(),
-			uma2: uma2.toJS(),
-			pacer: pacer.toJS(),
-			options: {
-				seed, 
-				posKeepMode, 
-				allowRushedUma1: simWitVariance ? allowRushedUma1 : false,
-				allowRushedUma2: simWitVariance ? allowRushedUma2 : false,
-				allowDownhillUma1: simWitVariance ? allowDownhillUma1 : false,
-				allowDownhillUma2: simWitVariance ? allowDownhillUma2 : false,
-				allowSectionModifierUma1: simWitVariance ? allowSectionModifierUma1 : false,
-				allowSectionModifierUma2: simWitVariance ? allowSectionModifierUma2 : false,
-				useEnhancedSpurt: false,
-				accuracyMode: false,
-				pacerSpeedUpRate, 
-				skillCheckChanceUma1: simWitVariance ? allowSkillCheckChanceUma1 : false,
-				skillCheckChanceUma2: simWitVariance ? allowSkillCheckChanceUma2 : false
+				nsamples,
+				course,
+				racedef: racedefToParams(racedef),
+				uma1: uma1.toJS(),
+				uma2: uma2.toJS(),
+				pacer: pacer.toJS(),
+				options: {
+					seed, 
+					posKeepMode, 
+					allowRushedUma1: simWitVariance ? allowRushedUma1 : false,
+					allowRushedUma2: simWitVariance ? allowRushedUma2 : false,
+					allowDownhillUma1: simWitVariance ? allowDownhillUma1 : false,
+					allowDownhillUma2: simWitVariance ? allowDownhillUma2 : false,
+					allowSectionModifierUma1: simWitVariance ? allowSectionModifierUma1 : false,
+					allowSectionModifierUma2: simWitVariance ? allowSectionModifierUma2 : false,
+					useEnhancedSpurt: false,
+					accuracyMode: false,
+					pacerSpeedUpRate, 
+					skillCheckChanceUma1: simWitVariance ? allowSkillCheckChanceUma1 : false,
+					skillCheckChanceUma2: simWitVariance ? allowSkillCheckChanceUma2 : false
+				}
 			}
-		}
 		});
 	}
 
@@ -736,36 +736,47 @@ function App(props) {
 		const skills2 = skills.slice(Math.floor(skills.length/2));
 		updateTableData('reset');
 		updateTableData(filler);
-		worker1.postMessage({msg: 'chart', data: {skills: skills1, course, racedef: params, uma, pacer: pacer.toJS(), options: {
-			seed, 
-			posKeepMode, 
-			pacerSpeedUpRate, 
-			allowRushedUma1: false,
-			allowRushedUma2: false,
-			allowDownhillUma1: false,
-			allowDownhillUma2: false,
-			allowSectionModifierUma1: false,
-			allowSectionModifierUma2: false,
-			useEnhancedSpurt: false,
-			accuracyMode: false,
-			skillCheckChanceUma1: false,
-			skillCheckChanceUma2: false
-		}}});
-		worker2.postMessage({msg: 'chart', data: {skills: skills2, course, racedef: params, uma, pacer: pacer.toJS(), options: {
-			seed, 
-			posKeepMode, 
-			pacerSpeedUpRate, 
-			allowRushedUma1: false,
-			allowRushedUma2: false,
-			allowDownhillUma1: false,
-			allowDownhillUma2: false,
-			allowSectionModifierUma1: false,
-			allowSectionModifierUma2: false,
-			useEnhancedSpurt: false,
-			accuracyMode: false,
-			skillCheckChanceUma1: false,
-			skillCheckChanceUma2: false
-		}}});
+		worker1.postMessage({
+			msg: 'chart', 
+			data: {
+				skills: skills1, course, racedef: params, uma, pacer: pacer.toJS(), options: {
+					seed, 
+					posKeepMode, 
+					pacerSpeedUpRate, 
+					allowRushedUma1: false,
+					allowRushedUma2: false,
+					allowDownhillUma1: false,
+					allowDownhillUma2: false,
+					allowSectionModifierUma1: false,
+					allowSectionModifierUma2: false,
+					useEnhancedSpurt: false,
+					accuracyMode: false,
+					skillCheckChanceUma1: false,
+					skillCheckChanceUma2: false
+				}
+			}
+		});
+		worker2.postMessage({
+			msg: 'chart', 
+			data: {
+				skills: skills2, course, racedef: params, uma, pacer: pacer.toJS(), 
+				options: {
+					seed, 
+					posKeepMode, 
+					pacerSpeedUpRate, 
+					allowRushedUma1: false,
+					allowRushedUma2: false,
+					allowDownhillUma1: false,
+					allowDownhillUma2: false,
+					allowSectionModifierUma1: false,
+					allowSectionModifierUma2: false,
+					useEnhancedSpurt: false,
+					accuracyMode: false,
+					skillCheckChanceUma1: false,
+					skillCheckChanceUma2: false
+				}
+			}
+		});
 	}
 
 	function basinnChartSelection(skillId) {
