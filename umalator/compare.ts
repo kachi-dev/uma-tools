@@ -187,8 +187,10 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 	}
 	
 	// Apply skill check chance toggle
-	if (options.skillCheckChance === false) {
+	if (options.skillCheckChanceUma1 === false) {
 		standard.skillCheckChance(false);
+	}
+	if (options.skillCheckChanceUma2 === false) {
 		compare.skillCheckChance(false);
 	}
 	// ensure skills common to the two umas are added in the same order regardless of what additional skills they have

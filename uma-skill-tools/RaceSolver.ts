@@ -199,9 +199,8 @@ export class RaceSolver {
 	course: CourseData
 	hp: HpPolicy
 	rng: PRNG
+	syncRng: PRNG
 	gorosiRng: PRNG
-	paceEffectRng: PRNG
-	posKeepRng: PRNG
 	rushedRng: PRNG
 	downhillRng: PRNG
 	wisdomRollRng: PRNG
@@ -287,7 +286,8 @@ export class RaceSolver {
 		disableDownhill?: boolean,
 		disableSectionModifier?: boolean,
 		speedUpProbability?: number,
-		skillCheckChance?: boolean
+		skillCheckChance?: boolean,
+		synchronizedSeed?: number,
 	}) {
 		// clone since green skills may modify the stat values
 		this.horse = Object.assign({}, params.horse);
@@ -298,9 +298,8 @@ export class RaceSolver {
 		this.pendingSkills = params.skills.slice();  // copy since we remove from it
 		this.pendingRemoval = new Set();
 		this.usedSkills = new Set();
+		this.syncRng = new Rule30CARng(params.synchronizedSeed != null ? params.synchronizedSeed : this.rng.int32());
 		this.gorosiRng = new Rule30CARng(this.rng.int32());
-		this.paceEffectRng = new Rule30CARng(this.rng.int32());
-		this.posKeepRng = new Rule30CARng(this.rng.int32());
 		this.rushedRng = new Rule30CARng(this.rng.int32());
 		this.downhillRng = new Rule30CARng(this.rng.int32());
 		this.wisdomRollRng = new Rule30CARng(this.rng.int32());
@@ -378,7 +377,7 @@ export class RaceSolver {
 		this.initHills();
 
 		// must come before the first round of skill activations so concen etc can modify it
-		this.startDelay = 0.1 * this.rng.random();
+		this.startDelay = 0.1 * this.syncRng.random();
 		if (this.pacer) {
 			this.pacer.startDelay = 0.0;
 			// NB. we skip updating the pacer in step() below if accumulatetime < dt so this effectively just synchronizes start times.
@@ -595,7 +594,7 @@ export class RaceSolver {
 			this.posKeepEffectStart = this.pos;
 			const min = this.posKeepMinThreshold;
 			const max = this.phase == 1 ? min + 0.5 * (this.posKeepMaxThreshold - min) : this.posKeepMaxThreshold;
-			this.posKeepEffectExitDistance = min + this.paceEffectRng.random() * (max - min);
+			this.posKeepEffectExitDistance = min + this.syncRng.random() * (max - min);
 			this.posKeepSpeedCoef = this.phase == 1 ? 0.945 : 0.915;
 		}
 	}
@@ -647,8 +646,8 @@ export class RaceSolver {
 	//WIT CHECK!!! + Speed-up probability check
 	rollthisSHIT(): boolean {
 		const witCheck = 20 * Math.log10(0.1 * this.horse.wisdom)
-		const passedWisdomCheck = (this.posKeepRng.random() * 100) < witCheck
-		const passedSpeedUpCheck = (this.posKeepRng.random() * 100) < this.speedUpProbability
+		const passedWisdomCheck = (this.syncRng.random() * 100) < witCheck
+		const passedSpeedUpCheck = (this.syncRng.random() * 100) < this.speedUpProbability
 		return passedWisdomCheck && passedSpeedUpCheck
 	
 	}

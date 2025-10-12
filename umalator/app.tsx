@@ -456,14 +456,16 @@ function WitVarianceSettingsPopup({
 	allowDownhillUma2, 
 	allowSectionModifierUma1,
 	allowSectionModifierUma2,
-	skillCheckChance, 
+	allowSkillCheckChanceUma1,
+	allowSkillCheckChanceUma2,
 	toggleRushedUma1,
 	toggleRushedUma2,
 	toggleDownhillUma1,
 	toggleDownhillUma2,
 	toggleSectionModifierUma1,
 	toggleSectionModifierUma2,
-	toggleSkillCheckChance
+	toggleSkillCheckChanceUma1,
+	toggleSkillCheckChanceUma2
 }) {
 	if (!show) return null;
 	
@@ -476,32 +478,56 @@ function WitVarianceSettingsPopup({
 				</div>
 				<div className="wit-variance-popup-content">
 					<div className="wit-variance-setting">
-						<label style={{color: 'rgb(42, 119, 197)'}}>Rushed State (Uma 1)</label>
-						<input type="checkbox" checked={allowRushedUma1} onChange={toggleRushedUma1} />
+						<label>Rushed State</label>
+						<div className="wit-variance-checkboxes">
+							<div className="wit-variance-checkbox-group">
+								<label style={{color: 'rgb(42, 119, 197)'}}>Uma 1</label>
+								<input type="checkbox" checked={allowRushedUma1} onChange={toggleRushedUma1} />
+							</div>
+							<div className="wit-variance-checkbox-group">
+								<label style={{color: 'rgb(197, 42, 42)'}}>Uma 2</label>
+								<input type="checkbox" checked={allowRushedUma2} onChange={toggleRushedUma2} />
+							</div>
+						</div>
 					</div>
 					<div className="wit-variance-setting">
-						<label style={{color: 'rgb(197, 42, 42)'}}>Rushed State (Uma 2)</label>
-						<input type="checkbox" checked={allowRushedUma2} onChange={toggleRushedUma2} />
+						<label>Downhill Mode</label>
+						<div className="wit-variance-checkboxes">
+							<div className="wit-variance-checkbox-group">
+								<label style={{color: 'rgb(42, 119, 197)'}}>Uma 1</label>
+								<input type="checkbox" checked={allowDownhillUma1} onChange={toggleDownhillUma1} />
+							</div>
+							<div className="wit-variance-checkbox-group">
+								<label style={{color: 'rgb(197, 42, 42)'}}>Uma 2</label>
+								<input type="checkbox" checked={allowDownhillUma2} onChange={toggleDownhillUma2} />
+							</div>
+						</div>
 					</div>
 					<div className="wit-variance-setting">
-						<label style={{color: 'rgb(42, 119, 197)'}}>Downhill Mode (Uma 1)</label>
-						<input type="checkbox" checked={allowDownhillUma1} onChange={toggleDownhillUma1} />
-					</div>
-					<div className="wit-variance-setting">
-						<label style={{color: 'rgb(197, 42, 42)'}}>Downhill Mode (Uma 2)</label>
-						<input type="checkbox" checked={allowDownhillUma2} onChange={toggleDownhillUma2} />
-					</div>
-					<div className="wit-variance-setting">
-						<label style={{color: 'rgb(42, 119, 197)'}}>Section Modifier (Uma 1)</label>
-						<input type="checkbox" checked={allowSectionModifierUma1} onChange={toggleSectionModifierUma1} />
-					</div>
-					<div className="wit-variance-setting">
-						<label style={{color: 'rgb(197, 42, 42)'}}>Section Modifier (Uma 2)</label>
-						<input type="checkbox" checked={allowSectionModifierUma2} onChange={toggleSectionModifierUma2} />
+						<label>Section Modifier</label>
+						<div className="wit-variance-checkboxes">
+							<div className="wit-variance-checkbox-group">
+								<label style={{color: 'rgb(42, 119, 197)'}}>Uma 1</label>
+								<input type="checkbox" checked={allowSectionModifierUma1} onChange={toggleSectionModifierUma1} />
+							</div>
+							<div className="wit-variance-checkbox-group">
+								<label style={{color: 'rgb(197, 42, 42)'}}>Uma 2</label>
+								<input type="checkbox" checked={allowSectionModifierUma2} onChange={toggleSectionModifierUma2} />
+							</div>
+						</div>
 					</div>
 					<div className="wit-variance-setting">
 						<label>Skill Check Chance</label>
-						<input type="checkbox" checked={skillCheckChance} onChange={toggleSkillCheckChance} />
+						<div className="wit-variance-checkboxes">
+							<div className="wit-variance-checkbox-group">
+								<label style={{color: 'rgb(42, 119, 197)'}}>Uma 1</label>
+								<input type="checkbox" checked={allowSkillCheckChanceUma1} onChange={toggleSkillCheckChanceUma1} />
+							</div>
+							<div className="wit-variance-checkbox-group">
+								<label style={{color: 'rgb(197, 42, 42)'}}>Uma 2</label>
+								<input type="checkbox" checked={allowSkillCheckChanceUma2} onChange={toggleSkillCheckChanceUma2} />
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -537,7 +563,8 @@ function App(props) {
 	const [allowDownhillUma2, toggleDownhillUma2] = useReducer((b,_) => !b, true);
 	const [allowSectionModifierUma1, toggleSectionModifierUma1] = useReducer((b,_) => !b, true);
 	const [allowSectionModifierUma2, toggleSectionModifierUma2] = useReducer((b,_) => !b, true);
-	const [skillCheckChance, toggleSkillCheckChance] = useReducer((b,_) => !b, true);
+	const [allowSkillCheckChanceUma1, toggleSkillCheckChanceUma1] = useReducer((b,_) => !b, true);
+	const [allowSkillCheckChanceUma2, toggleSkillCheckChanceUma2] = useReducer((b,_) => !b, true);
 	const [simWitVariance, toggleSimWitVariance] = useReducer((b,_) => !b, true);
 	const [showWitVarianceSettings, setShowWitVarianceSettings] = useState(false);
 	
@@ -668,7 +695,8 @@ function App(props) {
 				useEnhancedSpurt: false,
 				accuracyMode: false,
 				pacerSpeedUpRate, 
-				skillCheckChance: simWitVariance ? skillCheckChance : false
+				skillCheckChanceUma1: simWitVariance ? allowSkillCheckChanceUma1 : false,
+				skillCheckChanceUma2: simWitVariance ? allowSkillCheckChanceUma2 : false
 			}
 		}
 		});
@@ -720,7 +748,8 @@ function App(props) {
 			allowSectionModifierUma2: false,
 			useEnhancedSpurt: false,
 			accuracyMode: false,
-			skillCheckChance: false
+			skillCheckChanceUma1: false,
+			skillCheckChanceUma2: false
 		}}});
 		worker2.postMessage({msg: 'chart', data: {skills: skills2, course, racedef: params, uma, pacer: pacer.toJS(), options: {
 			seed, 
@@ -734,7 +763,8 @@ function App(props) {
 			allowSectionModifierUma2: false,
 			useEnhancedSpurt: false,
 			accuracyMode: false,
-			skillCheckChance: false
+			skillCheckChanceUma1: false,
+			skillCheckChanceUma2: false
 		}}});
 	}
 
@@ -1186,14 +1216,16 @@ function App(props) {
 					allowDownhillUma2={allowDownhillUma2}
 					allowSectionModifierUma1={allowSectionModifierUma1}
 					allowSectionModifierUma2={allowSectionModifierUma2}
-					skillCheckChance={skillCheckChance}
+					allowSkillCheckChanceUma1={allowSkillCheckChanceUma1}
+					allowSkillCheckChanceUma2={allowSkillCheckChanceUma2}
 					toggleRushedUma1={toggleRushedUma1}
 					toggleRushedUma2={toggleRushedUma2}
 					toggleDownhillUma1={toggleDownhillUma1}
 					toggleDownhillUma2={toggleDownhillUma2}
 					toggleSectionModifierUma1={toggleSectionModifierUma1}
 					toggleSectionModifierUma2={toggleSectionModifierUma2}
-					toggleSkillCheckChance={toggleSkillCheckChance}
+					toggleSkillCheckChanceUma1={toggleSkillCheckChanceUma1}
+					toggleSkillCheckChanceUma2={toggleSkillCheckChanceUma2}
 				/>
 			</IntlProvider>
 		</Language.Provider>

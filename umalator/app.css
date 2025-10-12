@@ -608,6 +608,31 @@ body {
 	transform: scale(1.1);
 }
 
+.wit-variance-checkboxes {
+	display: flex;
+	gap: 20px;
+	align-items: center;
+}
+
+.wit-variance-checkbox-group {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+}
+
+.wit-variance-checkbox-group label {
+	font-size: 12px;
+	font-weight: 600;
+	margin: 0;
+	flex: none;
+}
+
+.wit-variance-checkbox-group input[type="checkbox"] {
+	margin: 0;
+	transform: scale(1.2);
+}
+
 .dark .wit-variance-popup {
 	background: var(--card);
 	border: 1px solid var(--border);

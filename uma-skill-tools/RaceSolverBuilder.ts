@@ -408,6 +408,7 @@ export class RaceSolverBuilder {
 	_useEnhancedSpurt: boolean
 	_accuracyMode: boolean
 	_skillCheckChance: boolean
+	_synchronizedSeed: number
 
 	constructor(readonly nsamples: number) {
 		this._course = null;
@@ -438,10 +439,12 @@ export class RaceSolverBuilder {
 		this._useEnhancedSpurt = false;
 		this._accuracyMode = false;
 		this._skillCheckChance = true;
+		this._synchronizedSeed = null;
 	}
 
 	seed(seed: number) {
 		this._rng = new Rule30CARng(seed);
+		this._synchronizedSeed = this._rng.int32();
 		return this;
 	}
 
@@ -536,7 +539,7 @@ export class RaceSolverBuilder {
 		}
 	}
 
-	useDefaultPacer(openingLegAccel: boolean = true) {
+	useDefaultPacer(openingLegAccel: boolean = false) {
 		if (this._isNige()) {
 			return this;
 		}
@@ -731,6 +734,7 @@ export class RaceSolverBuilder {
 		clone._useEnhancedSpurt = this._useEnhancedSpurt;
 		clone._accuracyMode = this._accuracyMode;
 		clone._skillCheckChance = this._skillCheckChance;
+		clone._synchronizedSeed = this._synchronizedSeed;
 
 		// NB. GOTCHA: if asitame is enabled, it closes over *our* horse and mood data, and not the clone's
 		// this is assumed to be fine, since fork() is intended to be used after everything is added except skills,
@@ -804,7 +808,12 @@ export class RaceSolverBuilder {
 				hp: NoopHpPolicy,
 				skills: pacerSkills,
 				rng: pacerRng,
-				speedUpProbability: this._pacerSpeedUpRate
+				speedUpProbability: this._pacerSpeedUpRate,
+				disableRushed: this._disableRushed,
+				disableDownhill: this._disableDownhill,
+				disableSectionModifier: this._disableSectionModifier,
+				skillCheckChance: this._skillCheckChance,
+				synchronizedSeed: this._synchronizedSeed
 			}) : null;
 
 			const hpRng = new Rule30CARng(solverRng.int32());
@@ -824,7 +833,8 @@ export class RaceSolverBuilder {
 				disableRushed: this._disableRushed,
 				disableDownhill: this._disableDownhill,
 				disableSectionModifier: this._disableSectionModifier,
-				skillCheckChance: this._skillCheckChance
+				skillCheckChance: this._skillCheckChance,
+				synchronizedSeed: this._synchronizedSeed
 			});
 
 			if (redo) {
