@@ -716,6 +716,8 @@ function App(props) {
 			allowRushedUma2: false,
 			allowDownhillUma1: false,
 			allowDownhillUma2: false,
+			allowSectionModifierUma1: false,
+			allowSectionModifierUma2: false,
 			useEnhancedSpurt: false,
 			accuracyMode: false,
 			skillCheckChance: false
@@ -728,6 +730,8 @@ function App(props) {
 			allowRushedUma2: false,
 			allowDownhillUma1: false,
 			allowDownhillUma2: false,
+			allowSectionModifierUma1: false,
+			allowSectionModifierUma2: false,
 			useEnhancedSpurt: false,
 			accuracyMode: false,
 			skillCheckChance: false
