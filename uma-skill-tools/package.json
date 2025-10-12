@@ -10,6 +10,7 @@
   "license": "GPL-3.0-or-later",
   "devDependencies": {
     "@types/node": "^18.0.0",
+    "@types/seedrandom": "^3.0.8",
     "@types/tape": "^4.13.2",
     "fast-check": "^3.0.1",
     "tape": "^5.5.3",
@@ -19,6 +20,7 @@
   "dependencies": {
     "commander": "^9.3.0",
     "google-auth-library": "^8.9.0",
-    "google-spreadsheet": "^4.1.0"
+    "google-spreadsheet": "^4.1.0",
+    "seedrandom": "^3.0.5"
   }
 }

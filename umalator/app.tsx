@@ -454,14 +454,16 @@ function WitVarianceSettingsPopup({
 	allowRushedUma2, 
 	allowDownhillUma1, 
 	allowDownhillUma2, 
+	allowSectionModifierUma1,
+	allowSectionModifierUma2,
 	skillCheckChance, 
-	useEnhancedSpurt,
 	toggleRushedUma1,
 	toggleRushedUma2,
 	toggleDownhillUma1,
 	toggleDownhillUma2,
-	toggleSkillCheckChance,
-	toggleEnhancedSpurt
+	toggleSectionModifierUma1,
+	toggleSectionModifierUma2,
+	toggleSkillCheckChance
 }) {
 	if (!show) return null;
 	
@@ -490,12 +492,16 @@ function WitVarianceSettingsPopup({
 						<input type="checkbox" checked={allowDownhillUma2} onChange={toggleDownhillUma2} />
 					</div>
 					<div className="wit-variance-setting">
-						<label>Skill Check Chance</label>
-						<input type="checkbox" checked={skillCheckChance} onChange={toggleSkillCheckChance} />
+						<label style={{color: 'rgb(42, 119, 197)'}}>Section Modifier (Uma 1)</label>
+						<input type="checkbox" checked={allowSectionModifierUma1} onChange={toggleSectionModifierUma1} />
 					</div>
 					<div className="wit-variance-setting">
-						<label>Enhanced Spurt Calculator</label>
-						<input type="checkbox" checked={useEnhancedSpurt} onChange={toggleEnhancedSpurt} />
+						<label style={{color: 'rgb(197, 42, 42)'}}>Section Modifier (Uma 2)</label>
+						<input type="checkbox" checked={allowSectionModifierUma2} onChange={toggleSectionModifierUma2} />
+					</div>
+					<div className="wit-variance-setting">
+						<label>Skill Check Chance</label>
+						<input type="checkbox" checked={skillCheckChance} onChange={toggleSkillCheckChance} />
 					</div>
 				</div>
 			</div>
@@ -527,9 +533,10 @@ function App(props) {
 
 	const [allowRushedUma1, toggleRushedUma1] = useReducer((b,_) => !b, true);
 	const [allowRushedUma2, toggleRushedUma2] = useReducer((b,_) => !b, true);
-	const [useEnhancedSpurt, toggleEnhancedSpurt] = useReducer((b,_) => !b, false);
 	const [allowDownhillUma1, toggleDownhillUma1] = useReducer((b,_) => !b, true);
 	const [allowDownhillUma2, toggleDownhillUma2] = useReducer((b,_) => !b, true);
+	const [allowSectionModifierUma1, toggleSectionModifierUma1] = useReducer((b,_) => !b, true);
+	const [allowSectionModifierUma2, toggleSectionModifierUma2] = useReducer((b,_) => !b, true);
 	const [skillCheckChance, toggleSkillCheckChance] = useReducer((b,_) => !b, true);
 	const [simWitVariance, toggleSimWitVariance] = useReducer((b,_) => !b, true);
 	const [showWitVarianceSettings, setShowWitVarianceSettings] = useState(false);
@@ -656,8 +663,10 @@ function App(props) {
 				allowRushedUma2: simWitVariance ? allowRushedUma2 : false,
 				allowDownhillUma1: simWitVariance ? allowDownhillUma1 : false,
 				allowDownhillUma2: simWitVariance ? allowDownhillUma2 : false,
-				useEnhancedSpurt: simWitVariance ? useEnhancedSpurt : false,
-				accuracyMode: simWitVariance ? useEnhancedSpurt : false,
+				allowSectionModifierUma1: simWitVariance ? allowSectionModifierUma1 : false,
+				allowSectionModifierUma2: simWitVariance ? allowSectionModifierUma2 : false,
+				useEnhancedSpurt: false,
+				accuracyMode: false,
 				pacerSpeedUpRate, 
 				skillCheckChance: simWitVariance ? skillCheckChance : false
 			}
@@ -845,7 +854,7 @@ function App(props) {
 					<div id="resultsHelp">Negative numbers mean <strong style="color:#2a77c5">Umamusume 1</strong> is faster, positive numbers mean <strong style="color:#c52a2a">Umamusume 2</strong> is faster.</div>
 					
 					
-					{spurtInfo && useEnhancedSpurt && (
+					{spurtInfo && false && (
 						<>
 							{spurtStats && (
 								<div style={{marginTop: '15px', marginBottom: '10px', textAlign: 'center'}}>
@@ -1171,14 +1180,16 @@ function App(props) {
 					allowRushedUma2={allowRushedUma2}
 					allowDownhillUma1={allowDownhillUma1}
 					allowDownhillUma2={allowDownhillUma2}
+					allowSectionModifierUma1={allowSectionModifierUma1}
+					allowSectionModifierUma2={allowSectionModifierUma2}
 					skillCheckChance={skillCheckChance}
-					useEnhancedSpurt={useEnhancedSpurt}
 					toggleRushedUma1={toggleRushedUma1}
 					toggleRushedUma2={toggleRushedUma2}
 					toggleDownhillUma1={toggleDownhillUma1}
 					toggleDownhillUma2={toggleDownhillUma2}
+					toggleSectionModifierUma1={toggleSectionModifierUma1}
+					toggleSectionModifierUma2={toggleSectionModifierUma2}
 					toggleSkillCheckChance={toggleSkillCheckChance}
-					toggleEnhancedSpurt={toggleEnhancedSpurt}
 				/>
 			</IntlProvider>
 		</Language.Provider>

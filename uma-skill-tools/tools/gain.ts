@@ -39,13 +39,10 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 	const triggers = [];
 	const seed = ('seed' in cliOptions ? cliOptions.seed : Math.floor(Math.random() * (-1 >>> 0))) >>> 0;
 	const rng = new Rule30CARng(seed);
-	// need two copies of an identical rng so that random factors will be deterministic between both solver instances
-	const solverRngSeed = rng.int32();
-	const solverRng1 = new Rule30CARng(solverRngSeed);
-	const solverRng2 = new Rule30CARng(solverRngSeed);
-	const pacerRngSeed = rng.int32();
-	const pacerRng1 = new Rule30CARng(pacerRngSeed);
-	const pacerRng2 = new Rule30CARng(pacerRngSeed);
+	const solverRng1 = new Rule30CARng(rng.int32());
+	const solverRng2 = new Rule30CARng(rng.int32());
+	const pacerRng1 = new Rule30CARng(rng.int32());
+	const pacerRng2 = new Rule30CARng(rng.int32());
 
 	// TODO bugged since this will be affected by strategy aptitude—will be fixed once we ditch this mess and use
 	// RaceSolverBuilder for gain.ts
@@ -101,24 +98,24 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 
 	const gain = [];
 	let min = Infinity, max = 0,
-	    minconf = {i: 0, seedhi: 0, seedlo: 0, pacerseedhi: 0, pacerseedlo: 0},
-	    maxconf = {i: 0, seedhi: 0, seedlo: 0, pacerseedhi: 0, pacerseedlo: 0};
+	    minconf = {i: 0},
+	    maxconf = {i: 0};
 	const dt = cliOptions.timestep;
 	for (let i = 0; i < nsamples; ++i) {
-		const seedhi = solverRng1.hi, seedlo = solverRng1.lo, pacerseedhi = pacerRng1.hi, pacerseedlo = pacerRng1.lo;
-		const skillCheckRolls = [];
+		const skillCheckRolls1 = [];
+		const skillCheckRolls2 = [];
 		for (let i = 0; i < defSkills.length + cliSkills.length + debuffs.length; ++i) {
-			skillCheckRolls.push(solverRng1.random());
-			solverRng2.random();  // have to keep them in sync
+			skillCheckRolls1.push(solverRng1.random());
+			skillCheckRolls2.push(solverRng2.random());
 		}
-		function wisdomCheck(sd: SkillData, i: number) {
-			return sd.rarity == SkillRarity.Unique || skillCheckRolls[i] <= skillActivationChance;
+		function wisdomCheck1(sd: SkillData, i: number) {
+			return sd.rarity == SkillRarity.Unique || skillCheckRolls1[i] <= skillActivationChance;
 		}
 
 		const skills1 = [];
-		defSkills.filter(wisdomCheck).forEach((sd,sdi) => addSkill(skills1, sd, triggers[sdi], i));
+		defSkills.filter(wisdomCheck1).forEach((sd,sdi) => addSkill(skills1, sd, triggers[sdi], i));
 		cliSkills
-			.filter((sd,sdi) => wisdomCheck(sd, sdi + defSkills.length))
+			.filter((sd,sdi) => wisdomCheck1(sd, sdi + defSkills.length))
 			.forEach((sd,sdi) => addSkill(skills1, sd, triggers[sdi + defSkills.length], i));
 		const s = new RaceSolver({horse: testHorse, course, hp: NoopHpPolicy, skills: skills1, pacer: getPacer(pacerRng1), rng: solverRng1});
 
@@ -126,10 +123,14 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 			s.step(dt);
 		}
 
+		function wisdomCheck2(sd: SkillData, i: number) {
+			return sd.rarity == SkillRarity.Unique || skillCheckRolls2[i] <= skillActivationChance;
+		}
+
 		const skills2 = [];
-		defSkills.filter(wisdomCheck).forEach((sd,sdi) => addSkill(skills2, sd, triggers[sdi], i));
+		defSkills.filter(wisdomCheck2).forEach((sd,sdi) => addSkill(skills2, sd, triggers[sdi], i));
 		debuffs
-			.filter((sd,sdi) => wisdomCheck(sd, sdi + defSkills.length + cliSkills.length))
+			.filter((sd,sdi) => wisdomCheck2(sd, sdi + defSkills.length + cliSkills.length))
 			.forEach((sd,sdi) => addSkill(skills2, sd, triggers[sdi + defSkills.length + cliSkills.length], i));
 		const s2 = new RaceSolver({horse, course, hp: NoopHpPolicy, skills: skills2, pacer: getPacer(pacerRng2), rng: solverRng2});
 		while (s2.accumulatetime.t < s.accumulatetime.t) {
@@ -140,29 +141,12 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 		if (diff < min) {
 			min = diff;
 			minconf.i = i;
-			minconf.seedhi = seedhi;
-			minconf.seedlo = seedlo;
-			minconf.pacerseedhi = pacerseedhi;
-			minconf.pacerseedlo = pacerseedlo;
 		}
 		if (diff > max) {
 			max = diff;
 			maxconf.i = i;
-			maxconf.seedhi = seedhi;
-			maxconf.seedlo = seedlo;
-			maxconf.pacerseedhi = pacerseedhi;
-			maxconf.pacerseedlo = pacerseedlo;
 		}
 
-		if (solverRng1.hi != solverRng2.hi || solverRng1.lo != solverRng2.lo || pacerRng1.hi != pacerRng2.hi || pacerRng1.lo != pacerRng2.lo) {
-			console.log('CONSISTENCY ERROR');
-			console.log(solverRng1);
-			console.log(solverRng2);
-			console.log(pacerRng1);
-			console.log(pacerRng2);
-			console.log('on iteration ' + i);
-			throw 1;
-		}
 	}
 	gain.sort((a,b) => a - b);
 
@@ -206,21 +190,13 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 
 		console.log('');
 
-		const conf = Buffer.alloc(7 * 4);
+		const conf = Buffer.alloc(3 * 4);
 		const conf32 = new Int32Array(conf.buffer);
 		conf32[0] = seed;
 		conf32[1] = nsamples;
 		conf32[2] = minconf.i;
-		conf32[3] = minconf.seedhi >>> 0;
-		conf32[4] = minconf.seedlo >>> 0;
-		conf32[5] = minconf.pacerseedhi >>> 0;
-		conf32[6] = minconf.pacerseedlo >>> 0;
 		console.log('min configuration: ' + conf.toString('base64'))
 		conf32[2] = maxconf.i;
-		conf32[3] = maxconf.seedhi >>> 0;
-		conf32[4] = maxconf.seedlo >>> 0;
-		conf32[5] = maxconf.pacerseedhi >>> 0;
-		conf32[6] = maxconf.pacerseedlo >>> 0;
 		console.log('max configuration: ' + conf.toString('base64'));
 	}
 });

@@ -179,6 +179,13 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		compare.disableDownhill();
 	}
 	
+	if (options.allowSectionModifierUma1 === false) {
+		standard.disableSectionModifier();
+	}
+	if (options.allowSectionModifierUma2 === false) {
+		compare.disableSectionModifier();
+	}
+	
 	// Apply skill check chance toggle
 	if (options.skillCheckChance === false) {
 		standard.skillCheckChance(false);

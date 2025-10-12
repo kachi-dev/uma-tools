@@ -202,6 +202,9 @@ export class RaceSolver {
 	gorosiRng: PRNG
 	paceEffectRng: PRNG
 	posKeepRng: PRNG
+	rushedRng: PRNG
+	downhillRng: PRNG
+	wisdomRollRng: PRNG
 	timers: Timer[]
 	startDash: boolean
 	startDelay: number
@@ -282,6 +285,7 @@ export class RaceSolver {
 		onSkillDeactivate?: (s: RaceSolver, skillId: string) => void,
 		disableRushed?: boolean,
 		disableDownhill?: boolean,
+		disableSectionModifier?: boolean,
 		speedUpProbability?: number,
 		skillCheckChance?: boolean
 	}) {
@@ -297,6 +301,9 @@ export class RaceSolver {
 		this.gorosiRng = new Rule30CARng(this.rng.int32());
 		this.paceEffectRng = new Rule30CARng(this.rng.int32());
 		this.posKeepRng = new Rule30CARng(this.rng.int32());
+		this.rushedRng = new Rule30CARng(this.rng.int32());
+		this.downhillRng = new Rule30CARng(this.rng.int32());
+		this.wisdomRollRng = new Rule30CARng(this.rng.int32());
 		this.timers = [];
 		this.accumulatetime = this.getNewTimer();
 		// bit of a hack because implementing post_number is surprisingly annoying, since we don't have RaceParameters.numUmas available here
@@ -394,8 +401,11 @@ export class RaceSolver {
 		this.lastSpurtTransition = -1;
 
 		this.sectionModifier = Array.from({length: 24}, () => {
+			if (params.disableSectionModifier) {
+				return 0.0;
+			}
 			const max = this.horse.wisdom / 5500.0 * Math.log10(this.horse.wisdom * 0.1);
-			const factor = (max - 0.65 + this.rng.random() * 0.65) / 100.0;
+			const factor = (max - 0.65 + this.wisdomRollRng.random() * 0.65) / 100.0;
 			return baseSpeed(this.course) * factor;
 		});
 		this.sectionModifier.push(0.0);  // last tick after the race is done, or in a comparison in case one uma runs off the end of the track
@@ -442,16 +452,16 @@ export class RaceSolver {
 		// Formula: RushedChance = (6.5 / log10(0.1 * WizStat + 1))²%
 		const wisdomStat = this.horse.wisdom;
 		const rushedChance = Math.pow(6.5 / Math.log10(0.1 * wisdomStat + 1), 2) / 100;
-		
+
 		// Check if horse has 自制心 (Self-Control) skill - ID 202161
 		// This reduces rushed chance by flat 3%
 		const hasSelfControl = this.pendingSkills.some(s => s.skillId === '202161');
 		const finalRushedChance = Math.max(0, rushedChance - (hasSelfControl ? 0.03 : 0));
 		
 		// Roll for rushed state
-		if (this.rng.random() < finalRushedChance) {
+		if (this.rushedRng.random() < finalRushedChance) {
 			// Determine which section (2-9) the rushed state activates in
-			this.rushedSection = 2 + this.rng.uniform(8);  // Random int from 2 to 9
+			this.rushedSection = 2 + this.rushedRng.uniform(8);  // Random int from 2 to 9
 			this.rushedEnterPosition = this.sectionLength * this.rushedSection;
 		}
 	}
@@ -674,14 +684,14 @@ export class RaceSolver {
 		if (!this.disableDownhill && isOnDownhill) {
 			if (this.downhillModeStart === null) {
 				// Check for entry: Wisdom * 0.0004 chance each second (matching Kotlin implementation)
-				console.log(this.rng.random() < this.horse.wisdom * 0.0004)
-				if (this.rng.random() < this.horse.wisdom * 0.0004) {
+				console.log(this.downhillRng.random() < this.horse.wisdom * 0.0004)
+				if (this.downhillRng.random() < this.horse.wisdom * 0.0004) {
 					this.downhillModeStart = currentFrame;
 					this.isDownhillMode = true;
 				}
 			} else {
 				// Check for exit: 20% chance each second to exit downhill mode
-				if (this.rng.random() < 0.2) {
+				if (this.downhillRng.random() < 0.2) {
 					this.downhillModeStart = null;
 					this.isDownhillMode = false;
 				}
@@ -811,7 +821,7 @@ export class RaceSolver {
 
 	checkWisdomForSkill(skill: PendingSkill): boolean {
 		// Check if horse's wisdom meets the requirement
-		return this.rng.random() <= Math.max(100-9000/this.horse.wisdom,20) * 0.01;
+		return this.wisdomRollRng.random() <= Math.max(100-9000/this.horse.wisdom,20) * 0.01;
 	}
 
 

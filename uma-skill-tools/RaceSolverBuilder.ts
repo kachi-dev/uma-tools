@@ -1,7 +1,7 @@
 import { HorseParameters, Strategy, Aptitude } from './HorseTypes';
 import { CourseData, CourseHelpers, DistanceType } from './CourseData';
 import { Region, RegionList } from './Region';
-import { Rule30CARng } from './Random';
+import { Rule30CARng, SeededRng } from './Random';
 import { Conditions, random, immediate, noopRandom } from './ActivationConditions';
 import { ActivationSamplePolicy, ImmediatePolicy } from './ActivationSamplePolicy';
 import { getParser } from './ConditionParser';
@@ -395,7 +395,7 @@ export class RaceSolverBuilder {
 	_pacerSkills: PendingSkill[]
 	_pacerSkillIds: string[]
 	_pacerSpeedUpRate: number
-	_rng: Rule30CARng
+	_rng: SeededRng
 	_parser: {parse: any, tokenize: any}
 	_skills: {id: string, p: Perspective}[]
 	_samplePolicyOverride: Map<string, ActivationSamplePolicy>
@@ -404,6 +404,7 @@ export class RaceSolverBuilder {
 	_onSkillDeactivate: (state: RaceSolver, skillId: string) => void
 	_disableRushed: boolean
 	_disableDownhill: boolean
+	_disableSectionModifier: boolean
 	_useEnhancedSpurt: boolean
 	_accuracyMode: boolean
 	_skillCheckChance: boolean
@@ -433,6 +434,7 @@ export class RaceSolverBuilder {
 		this._onSkillDeactivate = null;
 		this._disableRushed = false;
 		this._disableDownhill = false;
+		this._disableSectionModifier = false;
 		this._useEnhancedSpurt = false;
 		this._accuracyMode = false;
 		this._skillCheckChance = true;
@@ -679,6 +681,11 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
+	disableSectionModifier() {
+		this._disableSectionModifier = true;
+		return this;
+	}
+
 	skillCheckChance(enabled: boolean = true) {
 		this._skillCheckChance = enabled;
 		return this;
@@ -713,13 +720,14 @@ export class RaceSolverBuilder {
 		clone._pacerSkills = this._pacerSkills.slice();  // sharing the skill objects is fine but see the note below
 		clone._pacerSkillIds = this._pacerSkillIds.slice();
 		clone._pacerSpeedUpRate = this._pacerSpeedUpRate;
-		clone._rng = new Rule30CARng(this._rng.lo, this._rng.hi);
+		clone._rng = new Rule30CARng(this._rng.int32());
 		clone._parser = this._parser;
 		clone._skills = this._skills.slice();
 		clone._onSkillActivate = this._onSkillActivate;
 		clone._onSkillDeactivate = this._onSkillDeactivate;
 		clone._disableRushed = this._disableRushed;
 		clone._disableDownhill = this._disableDownhill;
+		clone._disableSectionModifier = this._disableSectionModifier;
 		clone._useEnhancedSpurt = this._useEnhancedSpurt;
 		clone._accuracyMode = this._accuracyMode;
 		clone._skillCheckChance = this._skillCheckChance;
@@ -778,9 +786,6 @@ export class RaceSolverBuilder {
 				effects: sd.effects
 			}));
 
-			const backupPacerRng = new Rule30CARng(pacerRng.lo, pacerRng.hi);
-			const backupSolverRng = new Rule30CARng(solverRng.lo, solverRng.hi);
-
 			// Build pacer skills for this sample
 			const pacerSkills = pacerSkillData.length > 0
 				? pacerSkillData.map((sd, sdi) => ({
@@ -818,13 +823,12 @@ export class RaceSolverBuilder {
 				onSkillDeactivate: this._onSkillDeactivate,
 				disableRushed: this._disableRushed,
 				disableDownhill: this._disableDownhill,
+				disableSectionModifier: this._disableSectionModifier,
 				skillCheckChance: this._skillCheckChance
 			});
 
 			if (redo) {
 				--i;
-				pacerRng = backupPacerRng;
-				solverRng = backupSolverRng;
 			}
 		}
 	}
