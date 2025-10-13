@@ -112,6 +112,10 @@ export function UmaSelector(props) {
 				<img src="/uma-tools/icons/utx_ico_umamusume_00.png" />
 			</div>
 			<div class="umaEpithet"><span>{props.value && u.outfits[props.value]}</span></div>
+			<div class="resetButtons">
+				{props.onReset && <button className="resetUmaButton" onClick={props.onReset} title="Reset this horse to default stats and skills">Reset</button>}
+				{props.onResetAll && <button className="resetUmaButton" onClick={props.onResetAll} title="Reset all horses to default stats and skills">Reset All</button>}
+			</div>
 			<div class="umaSelectWrapper">
 				<input type="text" class="umaSelectInput" value={query.input} tabindex={props.tabindex} onInput={handleInput} onKeyDown={handleKeyDown} onFocus={() => setOpen(true)} onBlur={handleBlur} ref={input} />
 				<ul class={`umaSuggestions ${open ? 'open' : ''}`} onMouseDown={handleClick} ref={suggestionsContainer}>
@@ -184,6 +188,38 @@ export function AptitudeSelect(props){
 	);
 }
 
+export function MoodSelect(props){
+	const [open, setOpen] = useState(false);
+	const moodValues = [
+		{value: 2, icon: 'utx_ico_motivation_m_04', label: 'Great'},
+		{value: 1, icon: 'utx_ico_motivation_m_03', label: 'Good'},
+		{value: 0, icon: 'utx_ico_motivation_m_02', label: 'Normal'},
+		{value: -1, icon: 'utx_ico_motivation_m_01', label: 'Bad'},
+		{value: -2, icon: 'utx_ico_motivation_m_00', label: 'Awful'}
+	];
+	
+	function setMood(e) {
+		e.stopPropagation();
+		props.setM(+e.currentTarget.dataset.mood);
+		setOpen(false);
+	}
+	
+	return (
+		<div class="horseMoodSelect" tabindex={props.tabindex} onClick={() => setOpen(!open)} onBlur={setOpen.bind(null, false)}>
+			<span>
+				<img src={`/uma-tools/icons/global/${moodValues.find(m => m.value === props.m)?.icon}.png`} />
+			</span>
+			<ul style={open ? "display:block" : "display:none"}>
+				{moodValues.map(mood => 
+					<li key={mood.value} data-mood={mood.value} onClick={setMood}>
+						<img src={`/uma-tools/icons/global/${mood.icon}.png`} title={mood.label} />
+					</li>
+				)}
+			</ul>
+		</div>
+	);
+}
+
 export function StrategySelect(props) {
 	if (CC_GLOBAL) {
 		return (
@@ -251,6 +287,10 @@ export function HorseDef(props) {
 			state.set('outfitId', id)
 				.set('skills', newSkills)
 		);
+	}
+
+	function resetThisHorse() {
+		setState(new HorseState());
 	}
 
 	function openSkillPicker(e) {
@@ -339,7 +379,7 @@ export function HorseDef(props) {
 	return (
 		<div class="horseDef">
 			<div class="horseDefHeader">{props.children}</div>
-			<UmaSelector value={umaId} select={setUma} tabindex={tabnext()} />
+			<UmaSelector value={umaId} select={setUma} tabindex={tabnext()} onReset={resetThisHorse} onResetAll={props.onResetAll} />
 			<div class="horseParams">
 				<div class="horseParamHeader"><img src="/uma-tools/icons/status_00.png" /><span>Speed</span></div>
 				<div class="horseParamHeader"><img src="/uma-tools/icons/status_01.png" /><span>Stamina</span></div>
@@ -360,6 +400,10 @@ export function HorseDef(props) {
 				<div>
 					<span>Distance aptitude:</span>
 					<AptitudeSelect a={state.distanceAptitude} setA={setter('distanceAptitude')} tabindex={tabnext()} />
+				</div>
+				<div>
+					<span>Mood:</span>
+					<MoodSelect m={state.mood} setM={setter('mood')} tabindex={tabnext()} />
 				</div>
 				<div>
 					<span>{CC_GLOBAL ? 'Style:' : 'Strategy:'}</span>

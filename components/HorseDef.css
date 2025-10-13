@@ -25,6 +25,7 @@
 	grid-template-columns: 120px 360px;
 	grid-template-rows: repeat(2, 60px);
 	padding: 0 50px 10px 50px;
+	position: relative;
 }
 
 .umaSelectorIconsBox {
@@ -181,9 +182,10 @@
 
 .horseAptitudes {
 	display: grid;
-	grid-template-columns: repeat(2, 210px);
+	grid-template-columns: repeat(3, 210px);
 	gap: 8px 12px;
 	margin: 0 25px;
+	position: relative;
 }
 
 .horseAptitudes > div {
@@ -198,6 +200,36 @@
 	padding: 0 8px;
 	position: relative;
 }
+
+.resetUmaButton {
+	background: linear-gradient(rgb(168, 227, 5), rgb(97, 174, 22)) padding-box, linear-gradient(rgb(173, 219, 60), rgb(85, 143, 24)) border-box;
+	border: 2px solid transparent;
+	border-radius: 20px;
+	box-shadow: 0px 2px 0 rgb(180,178,192);
+	box-sizing: border-box;
+	color: white;
+	cursor: pointer;
+	font-size: 0.9em;
+	font-weight: bold;
+	padding: 4px 12px;
+	transition: all 0.2s;
+}
+
+.resetUmaButton:hover {
+	background: linear-gradient(rgb(178, 237, 15), rgb(107, 184, 32)) padding-box, linear-gradient(rgb(183, 229, 70), rgb(95, 153, 34)) border-box;
+	box-shadow: 0px 3px 0 rgb(180,178,192);
+	transform: translateY(-1px);
+}
+
+.resetButtons {
+	position: absolute;
+	bottom: 8px;
+	right: 25px;
+	display: flex;
+	gap: 8px;
+	z-index: 10;
+}
+
 
 .horseAptitudeSelect {
 	display: inline-block;
@@ -236,6 +268,61 @@
 
 .horseAptitudeSelect img {
 	height: 1.2em;
+}
+
+.horseMoodSelect {
+	display: inline-block;
+	position: absolute;
+	right: 10px;
+	top: 4px;
+	width: 3em;
+	height: 1.2em;
+	cursor: pointer;
+}
+
+.horseMoodSelect > span {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+.horseMoodSelect > span > img {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+}
+
+.horseMoodSelect > ul {
+	position: absolute;
+	top: 100%;
+	right: 0;
+	background: white;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+	list-style: none;
+	margin: 0;
+	padding: 4px 0;
+	min-width: 3.5em;
+	z-index: 1000;
+}
+
+.horseMoodSelect > ul > li {
+	padding: 4px 8px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.horseMoodSelect > ul > li:hover {
+	background: #f0f0f0;
+}
+
+.horseMoodSelect > ul > li > img {
+	width: 3em;
+	height: 1.2em;
+	object-fit: contain;
 }
 
 .horseStrategySelect {

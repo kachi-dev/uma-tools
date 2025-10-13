@@ -24,6 +24,7 @@ export interface HorseDesc {
 	distanceAptitude: string | Aptitude
 	surfaceAptitude: string | Aptitude
 	strategyAptitude: string | Aptitude
+	mood: Mood
 }
 
 const GroundSpeedModifier = Object.freeze([
@@ -179,7 +180,7 @@ function adjustOvercap(stat: number) {
 }
 
 export function buildBaseStats(horseDesc: HorseDesc, mood: Mood) {
-	const motivCoef = 1 + 0.02 * mood;
+	const motivCoef = 1 + 0.02 * horseDesc.mood;
 
 	return Object.freeze({
 		speed: adjustOvercap(horseDesc.speed) * motivCoef,
@@ -753,12 +754,12 @@ export class RaceSolverBuilder {
 	}
 
 	*build() {
-		let horse = buildBaseStats(this._horse, this._raceParams.mood);
+		let horse = buildBaseStats(this._horse, this._horse.mood);
 		let solverRng = new Rule30CARng(this._rng.int32());
 		let pacerRng = new Rule30CARng(this._rng.int32());  // need this even if _pacer is null in case we forked from/to something with a pacer
 															// (to keep the rngs in sync)
 
-		const pacerBaseHorse = this._pacer ? buildBaseStats(this._pacer, this._raceParams.mood) : null;
+		const pacerBaseHorse = this._pacer ? buildBaseStats(this._pacer, this._pacer.mood) : null;
 		const pacerHorse = this._pacer ? buildAdjustedStats(pacerBaseHorse, this._course, this._raceParams.groundCondition) : null;
 
 		const wholeCourse = new RegionList();

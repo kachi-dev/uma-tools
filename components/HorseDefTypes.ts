@@ -2,6 +2,7 @@ import { Record, Map as ImmMap } from 'immutable';
 import { SortedSet } from 'immutable-sorted';
 
 import skill_meta from '../skill_meta.json';
+import { Mood } from '../uma-skill-tools/RaceParameters';
 
 function skillmeta(id: string) {
 	// handle the fake skills (e.g., variations of Sirius unique) inserted by make_skill_data with ids like 100701-1
@@ -28,6 +29,7 @@ export class HorseState extends Record({
 	distanceAptitude: 'S',
 	surfaceAptitude: 'A',
 	strategyAptitude: 'A',
+	mood: 2 as Mood,
 	skills: SkillSet([]),
 	// Map of skillId -> forced position (in meters). If a skill is in this map, it will be forced to activate at that position.
 	forcedSkillPositions: ImmMap()

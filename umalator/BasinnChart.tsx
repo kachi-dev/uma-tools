@@ -28,7 +28,7 @@ function skillmeta(id: string) {
 
 export function getActivateableSkills(skills: string[], horse: HorseState, course: CourseData, racedef: RaceParameters) {
 	const parser = getParser();
-	const h2 = buildBaseStats(horse, racedef.mood);
+	const h2 = buildBaseStats(horse, horse.mood);
 	const wholeCourse = new RegionList();
 	wholeCourse.push(new Region(0, course.distance));
 	return skills.filter(id => {

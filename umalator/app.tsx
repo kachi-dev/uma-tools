@@ -404,6 +404,37 @@ async function deserialize(hash) {
 	}
 }
 
+async function saveToLocalStorage(courseId: number, nsamples: number, seed: number, posKeepMode: PosKeepMode, racedef: RaceParams, uma1: HorseState, uma2: HorseState, pacer: HorseState, pacerSpeedUpRate: number, witVarianceSettings: {
+	allowRushedUma1: boolean,
+	allowRushedUma2: boolean,
+	allowDownhillUma1: boolean,
+	allowDownhillUma2: boolean,
+	allowSectionModifierUma1: boolean,
+	allowSectionModifierUma2: boolean,
+	allowSkillCheckChanceUma1: boolean,
+	allowSkillCheckChanceUma2: boolean,
+	simWitVariance: boolean
+}) {
+	try {
+		const hash = await serialize(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, pacerSpeedUpRate, witVarianceSettings);
+		localStorage.setItem('umalator-settings', hash);
+	} catch (error) {
+		console.warn('Failed to save settings to localStorage:', error);
+	}
+}
+
+async function loadFromLocalStorage() {
+	try {
+		const hash = localStorage.getItem('umalator-settings');
+		if (hash) {
+			return await deserialize(hash);
+		}
+	} catch (error) {
+		console.warn('Failed to load settings from localStorage:', error);
+	}
+	return null;
+}
+
 const EMPTY_RESULTS_STATE = {courseId: DEFAULT_COURSE_ID, results: [], runData: null, chartData: null, displaying: '', rushedStats: null, spurtInfo: null, spurtStats: null};
 function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | string | {results: any, runData: any, rushedStats?: any, spurtInfo?: any, spurtStats?: any}) {
 	if (typeof o == 'number') {
@@ -606,6 +637,34 @@ function App(props) {
 		toggleSimWitVariance(null);
 	}
 	
+	function autoSaveSettings() {
+		saveToLocalStorage(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, pacerSpeedUpRate, {
+			allowRushedUma1,
+			allowRushedUma2,
+			allowDownhillUma1,
+			allowDownhillUma2,
+			allowSectionModifierUma1,
+			allowSectionModifierUma2,
+			allowSkillCheckChanceUma1,
+			allowSkillCheckChanceUma2,
+			simWitVariance
+		});
+	}
+
+	function resetUmas() {
+		setUma1(new HorseState());
+		setUma2(new HorseState());
+		if (posKeepMode === PosKeepMode.Virtual) {
+			setPacer(new HorseState({strategy: 'Nige'}));
+		}
+	}
+	
+	function resetAllUmas() {
+		setUma1(new HorseState());
+		setUma2(new HorseState());
+		setPacer(new HorseState({strategy: 'Nige'}));
+	}
+	
 	const [{courseId, results, runData, chartData, displaying, rushedStats, spurtInfo, spurtStats}, setSimState] = useReducer(updateResultsState, EMPTY_RESULTS_STATE);
 	const setCourseId = setSimState;
 	const setResults = setSimState;
@@ -683,6 +742,33 @@ function App(props) {
 					if (settings.simWitVariance !== simWitVariance) toggleSimWitVariance(null);
 				}
 			});
+		} else {
+			loadFromLocalStorage().then(o => {
+				if (o) {
+					setCourseId(o.courseId);
+					setSamples(o.nsamples);
+					setSeed(o.seed);
+					setPosKeepModeRaw(o.posKeepMode);
+					setRaceDef(o.racedef);
+					setUma1(o.uma1);
+					setUma2(o.uma2);
+					setPacer(o.pacer);
+					setPacerSpeedUpRate(o.pacerSpeedUpRate);
+					
+					if (o.witVarianceSettings) {
+						const settings = o.witVarianceSettings;
+						if (settings.allowRushedUma1 !== allowRushedUma1) toggleRushedUma1(null);
+						if (settings.allowRushedUma2 !== allowRushedUma2) toggleRushedUma2(null);
+						if (settings.allowDownhillUma1 !== allowDownhillUma1) toggleDownhillUma1(null);
+						if (settings.allowDownhillUma2 !== allowDownhillUma2) toggleDownhillUma2(null);
+						if (settings.allowSectionModifierUma1 !== allowSectionModifierUma1) toggleSectionModifierUma1(null);
+						if (settings.allowSectionModifierUma2 !== allowSectionModifierUma2) toggleSectionModifierUma2(null);
+						if (settings.allowSkillCheckChanceUma1 !== allowSkillCheckChanceUma1) toggleSkillCheckChanceUma1(null);
+						if (settings.allowSkillCheckChanceUma2 !== allowSkillCheckChanceUma2) toggleSkillCheckChanceUma2(null);
+						if (settings.simWitVariance !== simWitVariance) toggleSimWitVariance(null);
+					}
+				}
+			});
 		}
 	}
 
@@ -690,6 +776,11 @@ function App(props) {
 		loadState();
 		window.addEventListener('hashchange', loadState);
 	}, []);
+
+	// Auto-save settings whenever they change
+	useEffect(() => {
+		autoSaveSettings();
+	}, [courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, pacerSpeedUpRate, allowRushedUma1, allowRushedUma2, allowDownhillUma1, allowDownhillUma2, allowSectionModifierUma1, allowSectionModifierUma2, allowSkillCheckChanceUma1, allowSkillCheckChanceUma2, simWitVariance]);
 
 	function copyStateUrl(e) {
 		e.preventDefault();
@@ -1311,7 +1402,7 @@ function App(props) {
 				{expanded && <div id="umaPane" />}
 				<div id={expanded ? 'umaOverlay' : 'umaPane'}>
 					<div class={!expanded && currentIdx == 0 ? 'selected' : ''}>
-						<HorseDef key={uma1.outfitId} state={uma1} setState={setUma1} courseDistance={course.distance} tabstart={() => 4}>
+						<HorseDef key={uma1.outfitId} state={uma1} setState={setUma1} courseDistance={course.distance} tabstart={() => 4} onResetAll={resetAllUmas}>
 							{expanded ? 'Umamusume 1' : umaTabs}
 						</HorseDef>
 					</div>
@@ -1322,12 +1413,12 @@ function App(props) {
 							<div id="swapUmas" title="Swap umas" onClick={swapUmas}>⮂</div>
 						</div>}
 					{mode == Mode.Compare && <div class={!expanded && currentIdx == 1 ? 'selected' : ''}>
-						<HorseDef key={uma2.outfitId} state={uma2} setState={setUma2} courseDistance={course.distance} tabstart={() => 4 + horseDefTabs()}>
+						<HorseDef key={uma2.outfitId} state={uma2} setState={setUma2} courseDistance={course.distance} tabstart={() => 4 + horseDefTabs()} onResetAll={resetAllUmas}>
 							{expanded ? 'Umamusume 2' : umaTabs}
 						</HorseDef>
 					</div>}
 					{posKeepMode == PosKeepMode.Virtual && <div class={!expanded && currentIdx == 2 ? 'selected' : ''}>
-						<HorseDef key={pacer.outfitId} state={pacer} setState={setPacer} courseDistance={course.distance} tabstart={() => 4 + (mode == Mode.Compare ? 2 : 1) * horseDefTabs()}>
+						<HorseDef key={pacer.outfitId} state={pacer} setState={setPacer} courseDistance={course.distance} tabstart={() => 4 + (mode == Mode.Compare ? 2 : 1) * horseDefTabs()} onResetAll={resetAllUmas}>
 							{expanded ? 'Virtual Pacemaker' : umaTabs}
 						</HorseDef>
 					</div>}

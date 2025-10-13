@@ -302,6 +302,7 @@ body {
 #umaPane {
 	grid-row: 1 / 3;
 	width: 700px;  /* needed for when this is a placeholder to consume grid space when uma pane is expanded */
+	position: relative;
 }
 
 #umaPane > div {

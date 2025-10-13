@@ -121,7 +121,7 @@ const normalParser = getParser();
 
 function calcRows(builder, skillids, thresholds: number[]) {
 	const dt = options.timestep;
-	const horse = buildBaseStats(builder._horse, builder._mood);
+	const horse = buildBaseStats(builder._horse, builder._horse.mood);
 	const rows = skillids.map(id => {
 		const b1 = builder.fork();
 		const b2 = b1.fork();
