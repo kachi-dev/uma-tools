@@ -335,7 +335,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 	for (let i = 0; i < nsamples; ++i) {
 		const s1 = a.next(retry).value as RaceSolver;
 		const s2 = b.next(retry).value as RaceSolver;
-		const data = {t: [[], []], p: [[], []], v: [[], []], hp: [[], []], sk: [null,null], sdly: [0,0], rushed: [[], []], posKeep: [[], []]};
+		const data = {t: [[], []], p: [[], []], v: [[], []], hp: [[], []], pacerGap: [[], []], sk: [null,null], sdly: [0,0], rushed: [[], []], posKeep: [[], []], };
 
 		while (s2.pos < course.distance) {
 			s2.step(1/15);
@@ -343,6 +343,8 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 			data.p[ai].push(s2.pos);
 			data.v[ai].push(s2.currentSpeed + (s2.modifiers.currentSpeed.acc + s2.modifiers.currentSpeed.err));
 			data.hp[ai].push((s2.hp as any).hp);
+			data.pacerGap[ai].push(s2.getDistanceToPacer());
+			
 		}
 		data.sdly[ai] = s2.startDelay;
 		data.rushed[ai] = s2.rushedActivations.slice();
@@ -354,6 +356,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 			data.p[bi].push(s1.pos);
 			data.v[bi].push(s1.currentSpeed + (s1.modifiers.currentSpeed.acc + s1.modifiers.currentSpeed.err));
 			data.hp[bi].push((s1.hp as any).hp);
+			data.pacerGap[bi].push(s1.getDistanceToPacer());
 		}
 		// run the rest of the way to have data for the chart
 		const pos1 = s1.pos;
@@ -363,6 +366,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 			data.p[bi].push(s1.pos);
 			data.v[bi].push(s1.currentSpeed + (s1.modifiers.currentSpeed.acc + s1.modifiers.currentSpeed.err));
 			data.hp[bi].push((s1.hp as any).hp);
+			data.pacerGap[bi].push(s1.getDistanceToPacer());
 		}
 		data.sdly[bi] = s1.startDelay;
 		data.rushed[bi] = s1.rushedActivations.slice();

@@ -16,6 +16,7 @@ import { RaceTrack, TrackSelect, RegionDisplayType } from '../components/RaceTra
 import { HorseState, SkillSet } from '../components/HorseDefTypes';
 import { HorseDef, horseDefTabs } from '../components/HorseDef';
 import { TRACKNAMES_ja, TRACKNAMES_en } from '../strings/common';
+import { RaceState } from '../uma-skill-tools/RaceSolver';
 
 import { getActivateableSkills, getNullRow, BasinnChart } from './BasinnChart';
 
@@ -807,6 +808,10 @@ function App(props) {
 		const i0 = binSearch(chartData.p[0], x), i1 = binSearch(chartData.p[1], x);
 		document.getElementById('rtV1').textContent = `${chartData.v[0][i0].toFixed(2)} m/s  t=${chartData.t[0][i0].toFixed(2)} s  (${chartData.hp[0][i0].toFixed(0)} hp remaining)`;
 		document.getElementById('rtV2').textContent = `${chartData.v[1][i1].toFixed(2)} m/s  t=${chartData.t[1][i1].toFixed(2)} s  (${chartData.hp[1][i1].toFixed(0)} hp remaining)`;
+		const pacegap1 = chartData.pacerGap?.[0]?.[i0];
+		const pacegap2 = chartData.pacerGap?.[1]?.[i1];
+		document.getElementById('rtV1').textContent += ` gap towards pacemaker=${pacegap1.toFixed(2)} m`;
+		document.getElementById('rtV2').textContent += ` gap towards pacemaker=${pacegap2.toFixed(2)} m`;
 	}
 
 	function rtMouseLeave() {
@@ -1150,6 +1155,8 @@ function App(props) {
 						<g id="rtMouseOverBox" style="display:none">
 							<text id="rtV1" x="25" y="10" fill="#2a77c5" font-size="10px"></text>
 							<text id="rtV2" x="25" y="20" fill="#c52a2a" font-size="10px"></text>
+							<text id="pd1" x="25" y="10" fill="#2a77c5" font-size="10px"></text>
+							<text id="pd2" x="25" y="20" fill="#c52a2a" font-size="10px"></text>
 						</g>
 					</RaceTrack>
 					<div id="runPane">
