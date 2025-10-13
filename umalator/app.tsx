@@ -810,8 +810,14 @@ function App(props) {
 		document.getElementById('rtV2').textContent = `${chartData.v[1][i1].toFixed(2)} m/s  t=${chartData.t[1][i1].toFixed(2)} s  (${chartData.hp[1][i1].toFixed(0)} hp remaining)`;
 		const pacegap1 = chartData.pacerGap?.[0]?.[i0];
 		const pacegap2 = chartData.pacerGap?.[1]?.[i1];
-		document.getElementById('rtV1').textContent += ` gap towards pacemaker=${pacegap1.toFixed(2)} m`;
-		document.getElementById('rtV2').textContent += ` gap towards pacemaker=${pacegap2.toFixed(2)} m`;
+		if (pacegap1 != null) {
+			const label1 = pacegap1 >= 0 ? 'behind' : 'ahead';
+			document.getElementById('rtV1').textContent += `  Pace: ${Math.abs(pacegap1).toFixed(2)} m ${label1}`;
+		}
+		if (pacegap2 != null) {
+			const label2 = pacegap2 >= 0 ? 'behind' : 'ahead';
+			document.getElementById('rtV2').textContent += `  Pace: ${Math.abs(pacegap2).toFixed(2)} m ${label2}`;
+		}
 	}
 
 	function rtMouseLeave() {
