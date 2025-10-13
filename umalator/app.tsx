@@ -285,7 +285,17 @@ function racedefToParams({mood, ground, weather, season, time, grade}: RaceParam
 	};
 }
 
-async function serialize(courseId: number, nsamples: number, seed: number, posKeepMode: PosKeepMode, racedef: RaceParams, uma1: HorseState, uma2: HorseState, pacer: HorseState, pacerSpeedUpRate: number) {
+async function serialize(courseId: number, nsamples: number, seed: number, posKeepMode: PosKeepMode, racedef: RaceParams, uma1: HorseState, uma2: HorseState, pacer: HorseState, pacerSpeedUpRate: number, witVarianceSettings: {
+	allowRushedUma1: boolean,
+	allowRushedUma2: boolean,
+	allowDownhillUma1: boolean,
+	allowDownhillUma2: boolean,
+	allowSectionModifierUma1: boolean,
+	allowSectionModifierUma2: boolean,
+	allowSkillCheckChanceUma1: boolean,
+	allowSkillCheckChanceUma2: boolean,
+	simWitVariance: boolean
+}) {
 	const json = JSON.stringify({
 		courseId,
 		nsamples,
@@ -295,7 +305,8 @@ async function serialize(courseId: number, nsamples: number, seed: number, posKe
 		uma1: uma1.toJS(),
 		uma2: uma2.toJS(),
 		pacer: pacer.toJS(),
-		pacerSpeedUpRate
+		pacerSpeedUpRate,
+		witVarianceSettings
 	});
 	const enc = new TextEncoder();
 	const stringStream = new ReadableStream({
@@ -350,7 +361,18 @@ async function deserialize(hash) {
 					pacer: o.pacer ? new HorseState(o.pacer)
 						.set('skills', SkillSet(o.pacer.skills || []))
 						.set('forcedSkillPositions', ImmMap(o.pacer.forcedSkillPositions || {})) : new HorseState({strategy: 'Nige'}),
-					pacerSpeedUpRate: o.pacerSpeedUpRate != null ? o.pacerSpeedUpRate : 100
+					pacerSpeedUpRate: o.pacerSpeedUpRate != null ? o.pacerSpeedUpRate : 100,
+					witVarianceSettings: o.witVarianceSettings || {
+						allowRushedUma1: true,
+						allowRushedUma2: true,
+						allowDownhillUma1: true,
+						allowDownhillUma2: true,
+						allowSectionModifierUma1: true,
+						allowSectionModifierUma2: true,
+						allowSkillCheckChanceUma1: true,
+						allowSkillCheckChanceUma2: true,
+						simWitVariance: true
+					}
 				};
 			} catch (_) {
 				return {
@@ -362,7 +384,18 @@ async function deserialize(hash) {
 					uma1: new HorseState(),
 					uma2: new HorseState(),
 					pacer: new HorseState({strategy: 'Nige'}),
-					pacerSpeedUpRate: 100
+					pacerSpeedUpRate: 100,
+					witVarianceSettings: {
+						allowRushedUma1: true,
+						allowRushedUma2: true,
+						allowDownhillUma1: true,
+						allowDownhillUma2: true,
+						allowSectionModifierUma1: true,
+						allowSectionModifierUma2: true,
+						allowSkillCheckChanceUma1: true,
+						allowSkillCheckChanceUma2: true,
+						simWitVariance: true
+					}
 				};
 			}
 		} else {
@@ -636,6 +669,19 @@ function App(props) {
 				setUma2(o.uma2);
 				setPacer(o.pacer);
 				setPacerSpeedUpRate(o.pacerSpeedUpRate);
+				
+				if (o.witVarianceSettings) {
+					const settings = o.witVarianceSettings;
+					if (settings.allowRushedUma1 !== allowRushedUma1) toggleRushedUma1(null);
+					if (settings.allowRushedUma2 !== allowRushedUma2) toggleRushedUma2(null);
+					if (settings.allowDownhillUma1 !== allowDownhillUma1) toggleDownhillUma1(null);
+					if (settings.allowDownhillUma2 !== allowDownhillUma2) toggleDownhillUma2(null);
+					if (settings.allowSectionModifierUma1 !== allowSectionModifierUma1) toggleSectionModifierUma1(null);
+					if (settings.allowSectionModifierUma2 !== allowSectionModifierUma2) toggleSectionModifierUma2(null);
+					if (settings.allowSkillCheckChanceUma1 !== allowSkillCheckChanceUma1) toggleSkillCheckChanceUma1(null);
+					if (settings.allowSkillCheckChanceUma2 !== allowSkillCheckChanceUma2) toggleSkillCheckChanceUma2(null);
+					if (settings.simWitVariance !== simWitVariance) toggleSimWitVariance(null);
+				}
 			});
 		}
 	}
@@ -647,7 +693,17 @@ function App(props) {
 
 	function copyStateUrl(e) {
 		e.preventDefault();
-		serialize(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, pacerSpeedUpRate).then(hash => {
+		serialize(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, pacerSpeedUpRate, {
+			allowRushedUma1,
+			allowRushedUma2,
+			allowDownhillUma1,
+			allowDownhillUma2,
+			allowSectionModifierUma1,
+			allowSectionModifierUma2,
+			allowSkillCheckChanceUma1,
+			allowSkillCheckChanceUma2,
+			simWitVariance
+		}).then(hash => {
 			const url = window.location.protocol + '//' + window.location.host + window.location.pathname;
 			window.navigator.clipboard.writeText(url + '#' + hash);
 		});
