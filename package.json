@@ -18,7 +18,6 @@
     "posthog-js": "^1.257.0",
     "preact": "^10.18.1",
     "preact-i18n": "^2.4.0-preactx",
-    "seedrandom": "^3.0.5",
     "unassert-cli": "github:unassert-js/unassert-cli"
   }
 }
