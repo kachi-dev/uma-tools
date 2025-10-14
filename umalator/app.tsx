@@ -957,8 +957,11 @@ function App(props) {
 		document.getElementById('rtV2').textContent = `${chartData.v[1][i1].toFixed(2)} m/s  t=${chartData.t[1][i1].toFixed(2)} s  (${chartData.hp[1][i1].toFixed(0)} hp remaining)`;
 		const pacegap1 = chartData.pacerGap?.[0]?.[i0];
 		const pacegap2 = chartData.pacerGap?.[1]?.[i1];
+		console.log("pacegap1, ", pacegap1);
+		console.log("pacegap2, ", pacegap2);
 		document.getElementById('rtV1').textContent += ` gap towards pacemaker=${pacegap1.toFixed(2)} m`;
 		document.getElementById('rtV2').textContent += ` gap towards pacemaker=${pacegap2.toFixed(2)} m`;
+	
 	}
 
 	function rtMouseLeave() {
