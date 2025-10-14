@@ -57,4 +57,9 @@
 	paint-order: stroke;
 	stroke: white;
 	stroke-width: 1px;
+	filter: drop-shadow(0.5px 0.5px 1px rgba(0, 0, 0, 0.3)) opacity(1) !important;
+}
+
+.poskeep-label line {
+	filter: drop-shadow(0.5px 0.5px 1px rgba(0, 0, 0, 0.3)) opacity(1) !important;
 }

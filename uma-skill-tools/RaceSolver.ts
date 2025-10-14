@@ -400,7 +400,8 @@ export class RaceSolver {
 		this.initHills();
 
 		// must come before the first round of skill activations so concen etc can modify it
-		this.startDelay = 0.1 * this.syncRng.random();
+		this.startDelay = 0.1 * (this.posKeepMode === PosKeepMode.Virtual ? this.rng.random() : this.syncRng.random());
+
 		if (this.pacer) {
 			this.pacer.startDelay = 0.0;
 			// NB. we skip updating the pacer in step() below if accumulatetime < dt so this effectively just synchronizes start times.
@@ -637,6 +638,7 @@ export class RaceSolver {
 				if (this.posKeepNextTimer.t < 0) { return; }
 
 				if (this.canSpeedUp()) {
+					this.positionKeepActivations.push([this.pos, 0, PositionKeepState.SpeedUp]);
 					this.positionKeepState = PositionKeepState.SpeedUp;
 					this.posKeepExitPosition = this.pos + Math.floor(this.sectionLength);
 				}
@@ -646,6 +648,7 @@ export class RaceSolver {
 			}
 			else {
 				if (this.pos >= this.posKeepExitPosition) {
+					this.positionKeepActivations[this.positionKeepActivations.length - 1][1] = this.pos;
 					this.positionKeepState = PositionKeepState.None;
 					this.posKeepNextTimer.t = -3;
 				}
@@ -823,16 +826,18 @@ export class RaceSolver {
 		
 		
 		if (!this.disableDownhill && isOnDownhill) {
+			// Keep rng synced for the virtual pacemaker so that it's the same pacer for both umas
+			const rng = (this.posKeepMode === PosKeepMode.Virtual && !this.pacer) ? this.syncRng.random() : this.downhillRng.random();
+
 			if (this.downhillModeStart === null) {
 				// Check for entry: Wisdom * 0.0004 chance each second (matching Kotlin implementation)
-				console.log(this.downhillRng.random() < this.horse.wisdom * 0.0004)
-				if (this.downhillRng.random() < this.horse.wisdom * 0.0004) {
+				if (rng < this.horse.wisdom * 0.0004) {
 					this.downhillModeStart = currentFrame;
 					this.isDownhillMode = true;
 				}
 			} else {
 				// Check for exit: 20% chance each second to exit downhill mode
-				if (this.downhillRng.random() < 0.2) {
+				if (rng < 0.2) {
 					this.downhillModeStart = null;
 					this.isDownhillMode = false;
 				}
