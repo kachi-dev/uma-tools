@@ -24,14 +24,15 @@ export function IntroText(props) {
 	return (
 		<div id="introtext">
 			<h1>WELCOME TO VFalator!!!</h1>
-			<h2>WARNING: PLEASE USE THIS ONLY IF YOU KNOW WHAT YOU ARE DOING!!!</h2>
+			<h2 className="warning-text">Warning: the enhancements made to this umalator fork enables usage of the tool as a more comprehensive race simulator, to simulate raw skill length differences without RNG factors <strong>set 'Position Keep' to 'Approximate'</strong> and <strong>turn off 'Wit Variance'</strong></h2>
 			<details>
 				<summary>Credits</summary>
 					<h1>Transparent Dino</h1>
-					<p>Enhanced Spurt calculator (taken from me1080), Virtual Pacemaker, Downhills, Rushed</p>
+					<p>Enhanced Spurt calculator (taken from mee1080), Virtual Pacemaker, Downhills, Rushed</p>
 					<h1>jechtoff2dudes</h1>
 					<p>Frontrunner Overtake/Speedup mode, Dragging Skill Markers, Downhills, Skill Activation check</p>
-					
+					<h1>Kachi</h1>
+					<p>Fixing all the bugs and UI issues, mood, UI improvements, rewriting poskeep, reworking RNG, uniques chart (utools at home)</p>
 			</details>
 
 

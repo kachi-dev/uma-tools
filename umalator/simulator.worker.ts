@@ -73,6 +73,7 @@ function runChart({skills, course, racedef, uma, pacer, options}) {
 	update = run1Round(200, skills, course, racedef, uma_, pacer_, options);
 	mergeResultSets(results, update);
 	postMessage({type: 'chart', results});
+	postMessage({type: 'chart-complete'});
 }
 
 function runCompare({nsamples, course, racedef, uma1, uma2, pacer, options}) {
@@ -92,6 +93,7 @@ function runCompare({nsamples, course, racedef, uma1, uma2, pacer, options}) {
 	}
 	results = runComparison(nsamples, course, racedef, uma1_, uma2_, pacer_, options);
 	postMessage({type: 'compare', results});
+	postMessage({type: 'compare-complete'});
 }
 
 self.addEventListener('message', function (e) {

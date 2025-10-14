@@ -607,6 +607,7 @@ function App(props) {
 	const [racedef, setRaceDef] = useState(() => DEFAULT_PRESET.racedef);
 	const [nsamples, setSamples] = useState(DEFAULT_SAMPLES);
 	const [seed, setSeed] = useState(DEFAULT_SEED);
+	const [isSimulationRunning, setIsSimulationRunning] = useState(false);
 	const [posKeepMode, setPosKeepModeRaw] = useState(PosKeepMode.Approximate);
 	const [showHp, toggleShowHp] = useReducer((b,_) => !b, false);
 	
@@ -630,7 +631,7 @@ function App(props) {
 	const [allowSectionModifierUma2, toggleSectionModifierUma2] = useReducer((b,_) => !b, true);
 	const [allowSkillCheckChanceUma1, toggleSkillCheckChanceUma1] = useReducer((b,_) => !b, true);
 	const [allowSkillCheckChanceUma2, toggleSkillCheckChanceUma2] = useReducer((b,_) => !b, true);
-	const [simWitVariance, toggleSimWitVariance] = useReducer((b,_) => !b, true);
+	const [simWitVariance, toggleSimWitVariance] = useReducer((b,_) => !b, false);
 	const [showWitVarianceSettings, setShowWitVarianceSettings] = useState(false);
 	
 	function handleSimWitVarianceToggle() {
@@ -710,6 +711,10 @@ function App(props) {
 					break;
 				case 'chart':
 					updateTableData(results);
+					break;
+				case 'compare-complete':
+				case 'chart-complete':
+					setIsSimulationRunning(false);
 					break;
 			}
 		});
@@ -822,10 +827,42 @@ function App(props) {
 
 	function doComparison() {
 		postEvent('doComparison', {});
+		setIsSimulationRunning(true);
 		worker1.postMessage({
 			msg: 'compare',
 			data: {
 				nsamples,
+				course,
+				racedef: racedefToParams(racedef),
+				uma1: uma1.toJS(),
+				uma2: uma2.toJS(),
+				pacer: pacer.toJS(),
+				options: {
+					seed, 
+					posKeepMode, 
+					allowRushedUma1: simWitVariance ? allowRushedUma1 : false,
+					allowRushedUma2: simWitVariance ? allowRushedUma2 : false,
+					allowDownhillUma1: simWitVariance ? allowDownhillUma1 : false,
+					allowDownhillUma2: simWitVariance ? allowDownhillUma2 : false,
+					allowSectionModifierUma1: simWitVariance ? allowSectionModifierUma1 : false,
+					allowSectionModifierUma2: simWitVariance ? allowSectionModifierUma2 : false,
+					useEnhancedSpurt: false,
+					accuracyMode: false,
+					pacerSpeedUpRate, 
+					skillCheckChanceUma1: simWitVariance ? allowSkillCheckChanceUma1 : false,
+					skillCheckChanceUma2: simWitVariance ? allowSkillCheckChanceUma2 : false
+				}
+			}
+		});
+	}
+
+	function doRunOnce() {
+		postEvent('doRunOnce', {});
+		setIsSimulationRunning(true);
+		worker1.postMessage({
+			msg: 'compare',
+			data: {
+				nsamples: 1,
 				course,
 				racedef: racedefToParams(racedef),
 				uma1: uma1.toJS(),
@@ -865,6 +902,7 @@ function App(props) {
 
 	function doBasinnChart() {
 		postEvent('doBasinnChart', {});
+		setIsSimulationRunning(true);
 		const params = racedefToParams(racedef, uma1.strategy);
 
 		let skills, uma;
@@ -1335,6 +1373,16 @@ function App(props) {
 								<label for="mode-uniques-chart">Uniques chart</label>
 							</div>
 						</fieldset>
+						{
+							mode == Mode.Compare
+							? <button id="run" onClick={doComparison} tabindex={1} disabled={isSimulationRunning}>COMPARE</button>
+							: <button id="run" onClick={doBasinnChart} tabindex={1} disabled={isSimulationRunning}>RUN</button>
+						}
+						{
+							mode == Mode.Compare
+							? <button id="runOnce" onClick={doRunOnce} tabindex={1} disabled={isSimulationRunning}>Run Once</button>
+							: null
+						}
 						<label for="nsamples">Samples:</label>
 						<input type="number" id="nsamples" min="1" max="10000" value={nsamples} onInput={(e) => setSamples(+e.currentTarget.value)} />
 						<label for="seed">Seed:</label>
@@ -1392,11 +1440,6 @@ function App(props) {
 							</button>
 						</div>
 
-						{
-							mode == Mode.Compare
-							? <button id="run" onClick={doComparison} tabindex={1}>COMPARE</button>
-							: <button id="run" onClick={doBasinnChart} tabindex={1}>RUN</button>
-						}
 						<a href="#" onClick={copyStateUrl}>Copy link</a>
 						<RacePresets set={(courseId, racedef) => { setCourseId(courseId); setRaceDef(racedef); }} />
 					</div>

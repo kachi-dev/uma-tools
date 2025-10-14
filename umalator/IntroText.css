@@ -16,6 +16,10 @@
 	font-weight: bold;
 }
 
+.warning-text {
+	color: red;
+}
+
 #sourcelinks {
 	font-size: 0.85em;
 }

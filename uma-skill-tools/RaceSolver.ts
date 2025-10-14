@@ -563,7 +563,10 @@ export class RaceSolver {
 			}
 		}
 
-		if (this.pos < this.posKeepEnd && this.pacer != null) {
+		// In Virtual Pacemaker mode, we want to keep the pacer going until the end of the race
+		// This will let us see *when* an uma overtakes the pacer even after poskeep ends - and also later add some data
+		// around '% 1st frequency' for front runners where we want to know how often they can get Rod
+		if ((this.pos < this.posKeepEnd || this.posKeepMode === PosKeepMode.Virtual) && this.pacer != null) {
 			this.pacer.step(dt);
 		}
 
@@ -592,16 +595,29 @@ export class RaceSolver {
 		this.modifiers.oneFrameAccel = 0.0;
 	}
 
+	// In Virtual Pacemaker mode, we care about the effects of position keep and the way
+	// umas react during poskeep based on their wit
+	//
+	// In Approximate mode, we don't really care about poskeep - it's just a way to give out
+	// PDM/PUM early-race to mimic what actually happens in game so we limit poskeep to 5 sections
+	// and use synced rng to make skill comparison possible.
 	speedUpOvertakeWitCheck(): boolean {
-		return this.syncRng.random() < 0.2 * Math.log10(0.1 * this.horse.wisdom);
+		const rng = this.posKeepMode === PosKeepMode.Virtual ? this.rng.random() : this.syncRng.random();
+		return rng < 0.2 * Math.log10(0.1 * this.horse.wisdom);
 	}
 
 	paceUpWitCheck(): boolean {
-		return this.syncRng.random() < 0.15 * Math.log10(0.1 * this.horse.wisdom);
+		const rng = this.posKeepMode === PosKeepMode.Virtual ? this.rng.random() : this.syncRng.random();
+		return rng < 0.15 * Math.log10(0.1 * this.horse.wisdom);
 	}
 
 	canSpeedUp(): boolean {
-		return this.speedUpOvertakeWitCheck() && (this.syncRng.random() * 100) < this.speedUpProbability
+		// This is used by the pacemaker, so we need to use syncRng to ensure the same pacemaker rolls
+		// are used for both umas.
+		//
+		// It's a cheap way of simulating as if both umas are in the 'same race' without actually simulating
+		// a full lobby of umas.
+		return this.syncRng.random() < 0.2 * Math.log10(0.1 * this.horse.wisdom) && (this.syncRng.random() * 100) < this.speedUpProbability
 	}
 
 	applyPositionKeepStates() {
