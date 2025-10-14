@@ -563,11 +563,8 @@ export class RaceSolver {
 				return;
 			}
 		}
-
-		// In Virtual Pacemaker mode, we want to keep the pacer going until the end of the race
-		// This will let us see *when* an uma overtakes the pacer even after poskeep ends - and also later add some data
-		// around '% 1st frequency' for front runners where we want to know how often they can get Rod
-		if ((this.pos < this.posKeepEnd || this.posKeepMode === PosKeepMode.Virtual) && this.pacer != null) {
+		
+		if (this.pacer != null) {
 			this.pacer.step(dt);
 		}
 

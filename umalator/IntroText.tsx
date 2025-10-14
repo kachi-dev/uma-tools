@@ -25,6 +25,7 @@ export function IntroText(props) {
 		<div id="introtext">
 			<h1>WELCOME TO VFalator!!!</h1>
 			<h2 className="warning-text">Warning: the enhancements made to this umalator fork enables usage of the tool as a more comprehensive race simulator, to simulate raw skill length differences without RNG factors <strong>set 'Position Keep' to 'Approximate'</strong> and <strong>turn off 'Wit Variance'</strong></h2>
+			<p className="warning-text">Raw skill length comparisons, as per the original umalator, have been battle-tested on JP and remain largely accurate. New additions such as Wit Variance and Virtual Pacemaker are experimental and results with these features should be taken with a grain of salt.</p>
 			<details>
 				<summary>Credits</summary>
 					<h1>Transparent Dino</h1>
