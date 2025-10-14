@@ -966,10 +966,10 @@ function App(props) {
 		console.log("pacegap1, ", pacegap1);
 		console.log("pacegap2, ", pacegap2);
 		if (pacegap1 !== undefined) {
-			document.getElementById('rtV1').textContent += ` gap towards pacemaker=${pacegap1.toFixed(2)} m`;
+			document.getElementById('rtV1').textContent += ` gap towards pacemaker= ${pacegap1.toFixed(2)} m`;
 		}
 		if (pacegap2 !== undefined) {
-			document.getElementById('rtV2').textContent += ` gap towards pacemaker=${pacegap2.toFixed(2)} m`;
+			document.getElementById('rtV2').textContent += ` gap towards pacemaker= ${pacegap2.toFixed(2)} m`;
 		}
 	
 	}
