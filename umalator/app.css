@@ -93,7 +93,9 @@ body {
 	grid-template-columns: 960px auto;
 	align-items: start;
 	width: fit-content;
-	height: 300px;
+	/* Allow right pane to grow without overlapping content below */
+	height: auto;
+	min-height: 300px;
 	position: relative;
 	padding-bottom: 60px;
 }
@@ -104,6 +106,8 @@ body {
 	justify-content: flex-start;
 	align-self: start;
 	margin-left: 35px;
+	/* no ui bugs here */
+	max-width: 360px;
 }
 
 #seedWrapper {
@@ -197,6 +201,8 @@ body {
 
 #resultsPaneWrapper {
 	display: flex;
+	/* might cause a fatass white space*/
+	clear: both;
 }
 
 #resultsPane {
@@ -204,6 +210,8 @@ body {
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
+	/* Add spacing so the right pane controls don't collide with tables */
+	margin-top: 8px;
 }
 
 #resultsPane.mode-chart {
