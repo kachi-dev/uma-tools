@@ -387,7 +387,6 @@ body {
 }
 
 #infoTables > table td {
-	margin-top: 250px;
 	font-family: monospace;
 	width: 160px;
 }
