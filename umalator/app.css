@@ -342,7 +342,8 @@ body {
 }
 
 #infoTables {
-	margin-top: 250px;
+	padding-top: 180px;
+	margin: 0 auto;
 	min-width: 300px;
 }
 
