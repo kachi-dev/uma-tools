@@ -7244,7 +7244,7 @@
     "110011": {
         "alternatives": [
             {
-                "baseDuration": 50000,
+                "baseDuration": 0,
                 "condition": "phase==1&order>=2&order_rate<=70&activate_count_middle>=2",
                 "effects": [
                     {
