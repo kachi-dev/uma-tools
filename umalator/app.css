@@ -342,7 +342,7 @@ body {
 }
 
 #infoTables {
-	margin-top: 250px;
+	margin: 0 auto;
 	min-width: 300px;
 }
 
@@ -378,6 +378,7 @@ body {
 }
 
 #infoTables > table th {
+	margin-top: 250px;
 	color: rgb(121, 64, 22);
 	font-weight: bold;
 	overflow: hidden;
@@ -388,6 +389,12 @@ body {
 #infoTables > table td {
 	font-family: monospace;
 	width: 160px;
+}
+
+#infoTables caption {
+	margin: 8px 0; 
+	font-weight: bold;
+	margin-top: 250px;
 }
 
 #umaPane {
