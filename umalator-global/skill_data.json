@@ -7248,9 +7248,9 @@
                 "condition": "phase==1&order>=2&order_rate<=70&activate_count_middle>=2",
                 "effects": [
                     {
-                        "modifier": 3500,
+                        "modifier": 550,
                         "target": 1,
-                        "type": 27
+                        "type": 9
                     }
                 ],
                 "precondition": ""
