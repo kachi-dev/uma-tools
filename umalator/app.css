@@ -121,14 +121,9 @@ body {
 }
 
 #run {
-	background: none;
-	border: 1px solid rgb(148, 150, 189);
 	background: linear-gradient(135deg, #3b82f6, #1d4ed8);
 	border: 2px solid #1e40af;
 	border-radius: 8px;
-	font-size: 1.6em;
-	margin-top: 10px;
-	padding: 24px;
 	color: white;
 	cursor: pointer;
 	font-size: 1.2em;
@@ -347,6 +342,7 @@ body {
 }
 
 #infoTables {
+	margin-top: 50px;
 	margin: 0 auto;
 	min-width: 300px;
 }
