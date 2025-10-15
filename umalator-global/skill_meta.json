@@ -5,6 +5,12 @@
         "iconId": "20013",
         "order": 10
     },
+    "110011": {
+        "baseCost": 0,
+        "groupId": 10001,
+        "iconId": "20013",
+        "order": 10
+    },
     "110041": {
         "baseCost": 0,
         "groupId": 10001,
