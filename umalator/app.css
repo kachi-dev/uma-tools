@@ -123,10 +123,98 @@ body {
 #run {
 	background: none;
 	border: 1px solid rgb(148, 150, 189);
+	background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+	border: 2px solid #1e40af;
 	border-radius: 8px;
 	font-size: 1.6em;
 	margin-top: 10px;
 	padding: 24px;
+	color: white;
+	cursor: pointer;
+	font-size: 1.2em;
+	font-weight: 600;
+	margin: 10px 0 6px 0;
+	padding: 12px 24px;
+	transition: all 0.2s ease;
+	box-shadow: 0 3px 8px rgba(59, 130, 246, 0.3);
+	width: 100%;
+}
+
+#run:hover {
+	background: linear-gradient(135deg, #2563eb, #1e3a8a);
+	border-color: #1e3a8a;
+	transform: translateY(-2px);
+	box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}
+
+#run:active {
+	background: linear-gradient(135deg, #1d4ed8, #1e3a8a);
+	border-color: #1e3a8a;
+	transform: translateY(0);
+	box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+#run:disabled {
+	background: linear-gradient(135deg, #9ca3af, #6b7280);
+	border-color: #6b7280;
+	color: #d1d5db;
+	cursor: not-allowed;
+	opacity: 0.6;
+	transform: none;
+	box-shadow: 0 2px 4px rgba(107, 114, 128, 0.2);
+}
+
+#run:disabled:hover {
+	background: linear-gradient(135deg, #9ca3af, #6b7280);
+	border-color: #6b7280;
+	transform: none;
+	box-shadow: 0 2px 4px rgba(107, 114, 128, 0.2);
+}
+
+#runOnce {
+	background: linear-gradient(135deg, #6b7280, #4b5563);
+	border: 2px solid #374151;
+	border-radius: 6px;
+	color: white;
+	cursor: pointer;
+	font-size: 0.9em;
+	font-weight: 500;
+	margin: 0 0 10px 0;
+	padding: 8px 16px;
+	transition: all 0.2s ease;
+	box-shadow: 0 2px 6px rgba(107, 114, 128, 0.3);
+	width: 100%;
+}
+
+#runOnce:hover {
+	background: linear-gradient(135deg, #4b5563, #374151);
+	border-color: #1f2937;
+	transform: translateY(-1px);
+	box-shadow: 0 3px 8px rgba(107, 114, 128, 0.4);
+}
+
+#runOnce:active {
+	background: linear-gradient(135deg, #374151, #1f2937);
+	border-color: #111827;
+	transform: translateY(0);
+	box-shadow: 0 1px 4px rgba(107, 114, 128, 0.3);
+}
+
+#runOnce:disabled {
+	background: linear-gradient(135deg, #9ca3af, #6b7280);
+	border-color: #6b7280;
+	color: #d1d5db;
+	cursor: not-allowed;
+	opacity: 0.6;
+	transform: none;
+	box-shadow: 0 1px 3px rgba(107, 114, 128, 0.2);
+}
+
+#runOnce:disabled:hover {
+	background: linear-gradient(135deg, #9ca3af, #6b7280);
+	border-color: #6b7280;
+	transform: none;
+	box-shadow: 0 1px 3px rgba(107, 114, 128, 0.2);
 }
 
 #rtMouseOverBox > text {
