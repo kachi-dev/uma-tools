@@ -400,7 +400,8 @@ export class RaceSolver {
 		this.initHills();
 
 		// must come before the first round of skill activations so concen etc can modify it
-		this.startDelay = 0.1 * this.syncRng.random();
+		this.startDelay = 0.1 * (this.posKeepMode === PosKeepMode.Virtual ? this.rng.random() : this.syncRng.random());
+
 		if (this.pacer) {
 			this.pacer.startDelay = 0.0;
 			// NB. we skip updating the pacer in step() below if accumulatetime < dt so this effectively just synchronizes start times.
@@ -562,8 +563,8 @@ export class RaceSolver {
 				return;
 			}
 		}
-
-		if (this.pos < this.posKeepEnd && this.pacer != null) {
+		
+		if (this.pacer != null) {
 			this.pacer.step(dt);
 		}
 
@@ -592,22 +593,29 @@ export class RaceSolver {
 		this.modifiers.oneFrameAccel = 0.0;
 	}
 
-	getDistanceToPacer(): number {
-		if (this.pacer === null) {
-			return 0;
-		}
-		return this.pacer.pos - this.pos;
-	}
+	// In Virtual Pacemaker mode, we care about the effects of position keep and the way
+	// umas react during poskeep based on their wit
+	//
+	// In Approximate mode, we don't really care about poskeep - it's just a way to give out
+	// PDM/PUM early-race to mimic what actually happens in game so we limit poskeep to 5 sections
+	// and use synced rng to make skill comparison possible.
 	speedUpOvertakeWitCheck(): boolean {
-		return this.syncRng.random() < 0.2 * Math.log10(0.1 * this.horse.wisdom);
+		const rng = this.posKeepMode === PosKeepMode.Virtual ? this.rng.random() : this.syncRng.random();
+		return rng < 0.2 * Math.log10(0.1 * this.horse.wisdom);
 	}
 
 	paceUpWitCheck(): boolean {
-		return this.syncRng.random() < 0.15 * Math.log10(0.1 * this.horse.wisdom);
+		const rng = this.posKeepMode === PosKeepMode.Virtual ? this.rng.random() : this.syncRng.random();
+		return rng < 0.15 * Math.log10(0.1 * this.horse.wisdom);
 	}
 
 	canSpeedUp(): boolean {
-		return this.speedUpOvertakeWitCheck() && (this.syncRng.random() * 100) < this.speedUpProbability
+		// This is used by the pacemaker, so we need to use syncRng to ensure the same pacemaker rolls
+		// are used for both umas.
+		//
+		// It's a cheap way of simulating as if both umas are in the 'same race' without actually simulating
+		// a full lobby of umas.
+		return this.syncRng.random() < 0.2 * Math.log10(0.1 * this.horse.wisdom) && (this.syncRng.random() * 100) < this.speedUpProbability
 	}
 
 	applyPositionKeepStates() {
@@ -627,6 +635,7 @@ export class RaceSolver {
 				if (this.posKeepNextTimer.t < 0) { return; }
 
 				if (this.canSpeedUp()) {
+					this.positionKeepActivations.push([this.pos, 0, PositionKeepState.SpeedUp]);
 					this.positionKeepState = PositionKeepState.SpeedUp;
 					this.posKeepExitPosition = this.pos + Math.floor(this.sectionLength);
 				}
@@ -636,6 +645,7 @@ export class RaceSolver {
 			}
 			else {
 				if (this.pos >= this.posKeepExitPosition) {
+					this.positionKeepActivations[this.positionKeepActivations.length - 1][1] = this.pos;
 					this.positionKeepState = PositionKeepState.None;
 					this.posKeepNextTimer.t = -3;
 				}
@@ -813,16 +823,18 @@ export class RaceSolver {
 		
 		
 		if (!this.disableDownhill && isOnDownhill) {
+			// Keep rng synced for the virtual pacemaker so that it's the same pacer for both umas
+			const rng = (this.posKeepMode === PosKeepMode.Virtual && !this.pacer) ? this.syncRng.random() : this.downhillRng.random();
+
 			if (this.downhillModeStart === null) {
 				// Check for entry: Wisdom * 0.0004 chance each second (matching Kotlin implementation)
-				console.log(this.downhillRng.random() < this.horse.wisdom * 0.0004)
-				if (this.downhillRng.random() < this.horse.wisdom * 0.0004) {
+				if (rng < this.horse.wisdom * 0.0004) {
 					this.downhillModeStart = currentFrame;
 					this.isDownhillMode = true;
 				}
 			} else {
 				// Check for exit: 20% chance each second to exit downhill mode
-				if (this.downhillRng.random() < 0.2) {
+				if (rng < 0.2) {
 					this.downhillModeStart = null;
 					this.isDownhillMode = false;
 				}
@@ -951,9 +963,6 @@ export class RaceSolver {
 	}
 
 	checkWisdomForSkill(skill: PendingSkill): boolean {
-		if (skill.rarity === SkillRarity.Unique) {
-			return true;
-		}
 		// Check if horse's wisdom meets the requirement
 		return this.wisdomRollRng.random() <= Math.max(100-9000/this.horse.wisdom,20) * 0.01;
 	}
