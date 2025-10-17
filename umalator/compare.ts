@@ -365,10 +365,6 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 			else if (!s2Finished) {
 				s2Finished = true;
 
-				if (!s1Finished) {
-					posDifference = s2.pos - s1.pos;
-				}
-
 				data.sdly[ai] = s2.startDelay;
 				data.rushed[ai] = s2.rushedActivations.slice();
 				data.posKeep[ai] = s2.positionKeepActivations.slice();
@@ -389,16 +385,22 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 			}
 			else if (!s1Finished) {
 				s1Finished = true;
-				
-				if (!s2Finished) {
-					posDifference = s2.pos - s1.pos;
-				}
 
 				data.sdly[bi] = s1.startDelay;
 				data.rushed[bi] = s1.rushedActivations.slice();
 				data.posKeep[bi] = s1.positionKeepActivations.slice();
 				data.pacerPosKeep[bi] = pacer ? pacer.positionKeepActivations.slice() : [];
 			}
+		}
+
+		// ai took less time to finish (less frames to finish)
+		if (data.p[ai].length <= data.p[bi].length) {
+			let aiFrames = data.p[ai].length;
+			posDifference = data.p[ai][aiFrames - 1] - data.p[bi][aiFrames - 1];
+		}
+		else {
+			let biFrames = data.p[bi].length;
+			posDifference = data.p[ai][biFrames - 1] - data.p[bi][biFrames - 1];
 		}
 
 		if (pacer && pacer.pos < course.distance) {
