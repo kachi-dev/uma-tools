@@ -951,7 +951,7 @@ export class RaceSolver {
 				this.pendingRemoval.delete(s.skillId);
 			} else if (this.pos >= s.trigger.start && s.extraCondition(this)) {
 				// Check wisdom for skill activation if enabled
-				if (this.skillCheckChance && !this.checkWisdomForSkill(s)) {
+				if (this.skillCheckChance && !this.checkWisdomForSkill(s) && s.rarity != SkillRarity.Unique && !this.isGreen(s)) {
 					// Skill fails due to low wisdom
 					this.pendingSkills.splice(i,1);
 				} else {
@@ -965,6 +965,10 @@ export class RaceSolver {
 	checkWisdomForSkill(skill: PendingSkill): boolean {
 		// Check if horse's wisdom meets the requirement
 		return this.wisdomRollRng.random() <= Math.max(100-9000/this.horse.wisdom,20) * 0.01;
+	}
+
+	isGreen(skill: {effects: {type: number}[]}): boolean {
+		return skill.effects.length > 0 && skill.effects.every(ef => ef.type > SkillType.WisdomUp);
 	}
 
 
