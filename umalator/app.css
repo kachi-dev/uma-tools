@@ -1,0 +1,790 @@
+@font-face {
+	font-family: "Inter";
+	src: local("Inter"), url("/uma-tools/fonts/Inter-VariableFont_opsz,wght.ttf") format("truetype");
+}
+
+@font-face {
+	font-family: "Noto Sans JP";
+	src: local("Noto Sans JP"), url("/uma-tools/fonts/NotoSansJP-VariableFont_wght.ttf") format("truetype");
+}
+
+body {
+	font-family: Inter, "Noto Sans JP", sans-serif;
+}
+
+#app {
+	display: grid;
+	gap: 20px;
+	grid-template-columns: auto 1fr;
+	grid-template-rows: auto 1fr;
+	height: 98vh;
+}
+
+#posKeepFieldset {
+	border: 1px solid rgb(148, 150, 189);
+	border-radius: 8px;
+	padding: 8px;
+	margin: 5px 0;
+}
+
+#posKeepFieldset legend {
+	padding: 0 5px;
+}
+
+#posKeepFieldset select {
+	background: none;
+	border: 1px solid rgb(148, 150, 189);
+	border-radius: 4px;
+	padding: 4px 8px;
+	width: 100%;
+	margin-bottom: 5px;
+}
+
+#pacemakerIndicator {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-top: 8px;
+	font-size: 0.9em;
+}
+
+#pacemakerIndicator span {
+	color: rgb(121, 64, 22);
+	font-size: 0.95em;
+}
+
+#pacemakerIndicator button {
+	background: none;
+	border: 1px solid rgb(148, 150, 189);
+	border-radius: 8px;
+	color: rgb(121, 64, 22);
+	cursor: pointer;
+	font-weight: 500;
+	padding: 8px 16px;
+	transition: background 0.2s;
+}
+
+#pacemakerIndicator button:hover {
+	background: rgb(248, 248, 248);
+}
+
+#speedUpRateControl {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	margin-top: 10px;
+	padding-top: 10px;
+	border-top: 1px solid rgb(224, 214, 204);
+}
+
+#speedUpRateControl label {
+	font-size: 0.85em;
+	color: rgb(121, 64, 22);
+	font-weight: 500;
+}
+
+#speedUpRateControl input[type="range"] {
+	width: 100%;
+	cursor: pointer;
+}
+
+#topPane {
+	display: grid;
+	grid-template-columns: 960px auto;
+	align-items: start;
+	width: fit-content;
+	/* FUCK OVERLAPPING */
+	height: auto;
+	min-height: 300px;
+	position: relative;
+	padding-bottom: 60px;
+}
+
+#runPane {
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-start;
+	align-self: start;
+	margin-left: 35px;
+	/* no ui bugs here */
+	max-width: 360px;
+}
+
+#seedWrapper {
+	display: flex;
+	width: 177px;
+}
+
+#seed {
+	flex: 1 1 auto;
+	width: 130px;
+}
+
+#run {
+	background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+	border: 2px solid #1e40af;
+	border-radius: 8px;
+	color: white;
+	cursor: pointer;
+	font-size: 1.2em;
+	font-weight: 600;
+	margin: 10px 0 6px 0;
+	padding: 12px 24px;
+	transition: all 0.2s ease;
+	box-shadow: 0 3px 8px rgba(59, 130, 246, 0.3);
+	width: 100%;
+}
+
+#run:hover {
+	background: linear-gradient(135deg, #2563eb, #1e3a8a);
+	border-color: #1e3a8a;
+	transform: translateY(-2px);
+	box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}
+
+#run:active {
+	background: linear-gradient(135deg, #1d4ed8, #1e3a8a);
+	border-color: #1e3a8a;
+	transform: translateY(0);
+	box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+#run:disabled {
+	background: linear-gradient(135deg, #9ca3af, #6b7280);
+	border-color: #6b7280;
+	color: #d1d5db;
+	cursor: not-allowed;
+	opacity: 0.6;
+	transform: none;
+	box-shadow: 0 2px 4px rgba(107, 114, 128, 0.2);
+}
+
+#run:disabled:hover {
+	background: linear-gradient(135deg, #9ca3af, #6b7280);
+	border-color: #6b7280;
+	transform: none;
+	box-shadow: 0 2px 4px rgba(107, 114, 128, 0.2);
+}
+
+#runOnce {
+	background: linear-gradient(135deg, #6b7280, #4b5563);
+	border: 2px solid #374151;
+	border-radius: 6px;
+	color: white;
+	cursor: pointer;
+	font-size: 0.9em;
+	font-weight: 500;
+	margin: 0 0 10px 0;
+	padding: 8px 16px;
+	transition: all 0.2s ease;
+	box-shadow: 0 2px 6px rgba(107, 114, 128, 0.3);
+	width: 100%;
+}
+
+#runOnce:hover {
+	background: linear-gradient(135deg, #4b5563, #374151);
+	border-color: #1f2937;
+	transform: translateY(-1px);
+	box-shadow: 0 3px 8px rgba(107, 114, 128, 0.4);
+}
+
+#runOnce:active {
+	background: linear-gradient(135deg, #374151, #1f2937);
+	border-color: #111827;
+	transform: translateY(0);
+	box-shadow: 0 1px 4px rgba(107, 114, 128, 0.3);
+}
+
+#runOnce:disabled {
+	background: linear-gradient(135deg, #9ca3af, #6b7280);
+	border-color: #6b7280;
+	color: #d1d5db;
+	cursor: not-allowed;
+	opacity: 0.6;
+	transform: none;
+	box-shadow: 0 1px 3px rgba(107, 114, 128, 0.2);
+}
+
+#runOnce:disabled:hover {
+	background: linear-gradient(135deg, #9ca3af, #6b7280);
+	border-color: #6b7280;
+	transform: none;
+	box-shadow: 0 1px 3px rgba(107, 114, 128, 0.2);
+}
+
+#rtMouseOverBox > text {
+	paint-order: stroke;
+	stroke: #fff;
+	stroke-width: 3px;
+}
+
+#buttonsRow {
+	align-items: center;
+	display: flex;
+	gap: 50px;
+	margin-bottom: 10px;
+	margin-left: 20px;
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	width: 960px;
+}
+
+.trackSelect > select {
+	background: none;
+	border: 1px solid rgb(148, 150, 189);
+	border-radius: 0 8px 8px 0;
+	padding: 0.7em;
+}
+
+.trackSelect > select:first-child {
+	border-radius: 8px 0 0 8px;
+	border-right: none;
+}
+
+#buttonsRow > div {
+	display: flex;
+}
+
+#buttonsRowSpace {
+	flex: 1;
+}
+
+.groundSelect {
+	background: inherit;
+	border: none;
+	color: rgb(121, 64, 22);
+	font-size: 1.2em;
+	font-weight: bold;
+	padding: 0;
+	text-align: right;
+}
+
+.weatherSelect {
+	display: flex;
+	margin-left: 5px;
+}
+
+#buttonsRow img {
+	height: 2em;
+}
+
+#buttonsRow img:not(.selected) {
+	filter: grayscale(0.9);
+}
+
+.hasResults .racetrackView > svg text:not(.mouseoverText) {
+	filter: opacity(0.3);
+}
+
+.racetrackView .textbox text {
+	filter: none !important;  /* TODO */
+	font-weight: bold;
+}
+
+#resultsPaneWrapper {
+	display: flex;
+	/* might cause a fatass white space*/
+	clear: both;
+}
+
+#resultsPane {
+	align-items: center;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	/* Add spacing so the right pane controls don't collide with tables */
+	margin-top: 8px;
+}
+
+#resultsPane.mode-chart {
+	width: 980px;
+}
+
+#resultsHelp {
+	color: rgb(121, 64, 22);
+	font-size: 0.7em;
+	margin-top: 0.5em;
+}
+
+#resultsSummary {
+	border-spacing: 15px 0;
+}
+
+#resultsSummary > tfoot th {
+	color: rgb(121, 64, 22);
+	cursor: pointer;
+	font-size: 0.9em;
+}
+
+#resultsSummary > tfoot th.selected {
+	text-decoration: underline;
+}
+
+#resultsSummary > tbody td {
+	background: rgb(248, 248, 248);
+	border: 2px solid rgb(224, 214, 204);
+	border-radius: 100px;
+	color: rgb(121, 64, 22);
+	cursor: pointer;
+	font-size: 2em;
+	font-weight: normal;
+	height: 64px;
+	line-height: 0.8em;
+	padding: 36px 20px 20px 20px;
+	text-align: center;
+	width: 80px;
+}
+
+#resultsSummary .unit-basinn {
+	display: block;
+	font-size: 0.5em;
+}
+
+#infoTables {
+	margin: 0 auto;
+	padding-right: 165px;
+	min-width: 150px;
+}
+
+#infoTables > table {
+	border-collapse: collapse;
+	width: 100%;
+}
+
+#infoTables tbody {
+	border-bottom: 1px solid rgb(121, 64, 22);
+	display: block;
+	width: 380px;
+	padding-top: 10px;
+}
+
+#infoTables tbody:last-child {
+	border: none;
+	height: 150px;  /* TODO this is a bit arbitrary */
+	overflow-x: hidden;
+	overflow-y: auto;
+}
+
+/* cant have normal margins on table elements for some reason */
+#infoTables tbody::before, #infoTables tbody::after {
+	content: '';
+	display: block;
+	height: 5px;
+}
+
+#infoTables caption{
+	padding-right: 50px;
+	padding-bottom: 5px;
+	font-weight: bold;
+	
+
+}
+
+#infoTables > table tr {
+	display: table;
+	table-layout: fixed;
+	width: 380px;
+}
+
+#infoTables > table th {
+	color: rgb(121, 64, 22);
+	font-weight: bold;
+	overflow: hidden;
+	text-align: left;
+	text-wrap: nowrap;
+}
+
+#infoTables > table td {
+	font-family: monospace;
+	width: 160px;
+}
+
+#umaPane {
+	grid-row: 1 / 3;
+	width: 700px;  /* needed for when this is a placeholder to consume grid space when uma pane is expanded */
+	position: relative;
+}
+
+#umaPane > div {
+	display: none;
+	height: 100%;
+}
+
+#umaPane > div.selected {
+	display: block;
+}
+
+#umaPane .horseDef {
+	border-top: none;
+}
+
+#umaPane .horseDefHeader {
+	background: none;
+	display: flex;
+	padding: 0;
+	text-align: left;
+}
+
+.umaTab {
+	background: linear-gradient(white, rgb(228, 227, 234));
+	color: rgb(121,64,22);
+	flex-basis: 0;
+	flex-grow: 1;
+	outline: 2px solid rgb(216, 217, 220);
+	padding: 6px 0 6px 20px;
+}
+
+.umaTab:first-child {
+	border-top-left-radius: 12px;
+}
+
+.umaTab:last-child {
+	border-top-right-radius: 12px;
+}
+
+.umaTab.selected {
+	background: linear-gradient(rgb(153, 219, 68), rgb(112, 190, 18));
+	color: white;
+	outline: 2px solid rgb(170, 221, 154);
+	z-index: 1;
+}
+
+#expandBtn {
+	background: linear-gradient(#99db44,#70be12);
+	border: 2px solid rgb(170,221,154);
+	border-radius: 6px;
+	cursor: default;
+	float: right;
+	height: 34px;
+	margin: 8px 10px 0 0;
+	position: relative;
+	width: 34px;
+}
+
+#expandBtn::after {
+	border-right: 2px solid white;
+	border-top: 2px solid white;
+	content: "";
+	display: block;
+	height: 15px;
+	left: 4px;
+	position: absolute;
+	top: 8px;
+	transform: rotate(45deg);
+	width: 15px;
+}
+
+.selected > #expandBtn {
+	background: linear-gradient(#fff,#e4e3ea);
+	border: 2px solid rgb(216,217,220);
+}
+
+.selected > #expandBtn::after {
+	border-right: 2px solid rgb(121,64,22);
+	border-top: 2px solid rgb(121,64,22);
+}
+
+#umaOverlay {
+	background: white;
+	border: 1px solid rgb(148, 150, 189);
+	border-left: none;
+	border-radius: 0 12px 12px 0;
+	display: flex;
+	gap: 30px;
+    height: calc(100vh - 18px);
+    /* please work or ill delete that fuckass button */
+    left: auto;
+	margin-left: 2px;
+	padding: 6px;
+    position: fixed;
+	top: 0;
+    /* Hopefully doesnt make it expand any longer */
+    right: 0;
+    width: 100vw;
+	overflow-x: auto;
+	overflow-y: auto;
+	z-index: 9999;
+    justify-content: flex-start;
+}
+
+ 
+#umaOverlay > * {
+    flex: 0 0 auto;
+}
+
+#closeUmaOverlay {
+	color: rgb(148, 150, 189);
+	cursor: default;
+	font-size: 2em;
+	height: 2em;
+	
+
+	/* Made the close button much more accessible*/
+	position: fixed;
+	right: 12px;
+	top: 12px;
+	z-index: 10000;
+	cursor: pointer;
+}
+
+#copyUmaButtons {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	justify-content: center;
+}
+
+#copyUmaButtons > div {
+	background: linear-gradient(rgb(255, 255, 255), rgb(228, 224, 233));
+	border: 2px solid rgb(181, 174, 187);
+	border-radius: 8px;
+	height: 60px;
+	line-height: 60px;
+	position: relative;
+	width: 60px;
+}
+
+#copyUmaButtons > div::after {
+	border-top: 2px solid rgb(121, 64, 22);
+	border-right: 2px solid rgb(121, 64, 22);
+	content: '';
+	display: block;
+	height: 30px;
+	position: absolute;
+	width: 30px;
+}
+
+#copyUmaToRight::after {
+	left: 15px;
+	top: 25px;
+	transform: rotate(45deg) translate(-15px,0);
+}
+
+#copyUmaToLeft::after {
+	bottom: 25px;
+	right: 15px;
+	transform: rotate(-135deg) translate(-15px,0);
+}
+
+#swapUmas {
+	color: rgb(121, 64, 22);
+	font-size: 36px;
+	text-align: center;
+}
+
+#swapUmas::after {
+	display: none !important;
+}
+
+.basinnChartPopover {
+	background: white;
+	border: 2px solid rgb(181, 174, 187);
+	border-radius: 6px;
+	display: flex;
+	height: 333px;
+	left: 0;
+	padding: 10px;
+	position: absolute;
+	top: 0;
+	width: 845px;
+}
+
+.basinnChartPopover .expandedSkill {
+	width: 345px;
+}
+
+:root {
+  --bg: #ffffff;
+  --fg: #111827;
+  --muted: #374151;
+  --card: #f9fafb;
+  --border: #e5e7eb;
+}
+.dark {
+  --bg: #0b1020;
+  --fg: #e5e7eb;
+  --muted: #9ca3af;
+  --card: #121a2a;
+  --border: #1f2937;
+}
+
+.wit-variance-settings-btn {
+	background: none;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	padding: 4px;
+	cursor: pointer;
+	font-size: 14px;
+	transition: background-color 0.2s;
+	width: 24px;
+	height: 24px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin-left: 8px;
+}
+
+.wit-variance-settings-btn:hover {
+	background-color: #f0f0f0;
+}
+
+.wit-variance-settings-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+	background-color: #f5f5f5;
+}
+
+.wit-variance-settings-btn:disabled:hover {
+	background-color: #f5f5f5;
+}
+
+.wit-variance-popup-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+}
+
+.wit-variance-popup {
+	background: white;
+	border-radius: 8px;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+	min-width: 400px;
+	max-width: 500px;
+	max-height: 80vh;
+	overflow: hidden;
+}
+
+.wit-variance-popup-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 16px 20px;
+	border-bottom: 1px solid #e5e7eb;
+	background-color: #f9fafb;
+}
+
+.wit-variance-popup-header h3 {
+	margin: 0;
+	font-size: 18px;
+	font-weight: 600;
+	color: #111827;
+}
+
+.wit-variance-popup-close {
+	background: none;
+	border: none;
+	font-size: 24px;
+	cursor: pointer;
+	color: #6b7280;
+	padding: 0;
+	width: 32px;
+	height: 32px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 4px;
+	transition: background-color 0.2s;
+}
+
+.wit-variance-popup-close:hover {
+	background-color: #e5e7eb;
+	color: #374151;
+}
+
+.wit-variance-popup-content {
+	padding: 20px;
+	max-height: 60vh;
+	overflow-y: auto;
+}
+
+.wit-variance-setting {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 16px;
+	padding: 8px 0;
+	border-bottom: 1px solid #f3f4f6;
+}
+
+.wit-variance-setting:last-child {
+	border-bottom: none;
+	margin-bottom: 0;
+}
+
+.wit-variance-setting label {
+	font-size: 14px;
+	font-weight: 500;
+	color: #374151;
+	flex: 1;
+}
+
+.wit-variance-setting input[type="checkbox"] {
+	margin-left: 12px;
+	transform: scale(1.1);
+}
+
+.wit-variance-checkboxes {
+	display: flex;
+	gap: 20px;
+	align-items: center;
+}
+
+.wit-variance-checkbox-group {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+}
+
+.wit-variance-checkbox-group label {
+	font-size: 12px;
+	font-weight: 600;
+	margin: 0;
+	flex: none;
+}
+
+.wit-variance-checkbox-group input[type="checkbox"] {
+	margin: 0;
+	transform: scale(1.2);
+}
+
+.dark .wit-variance-popup {
+	background: var(--card);
+	border: 1px solid var(--border);
+}
+
+.dark .wit-variance-popup-header {
+	background-color: var(--bg);
+	border-bottom-color: var(--border);
+}
+
+.dark .wit-variance-popup-header h3 {
+	color: var(--fg);
+}
+
+.dark .wit-variance-popup-close {
+	color: var(--muted);
+}
+
+.dark .wit-variance-popup-close:hover {
+	background-color: var(--border);
+	color: var(--fg);
+}
+
+.dark .wit-variance-setting {
+	border-bottom-color: var(--border);
+}
+
+.dark .wit-variance-setting label {
+	color: var(--fg);
+}
+
+body { background: var(--bg); color: var(--fg); }
