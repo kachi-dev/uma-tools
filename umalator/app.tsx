@@ -969,7 +969,7 @@ function App(props) {
 			data: {
 				skills: skills1, course, racedef: params, uma, pacer: pacer.toJS(), options: {
 					seed, 
-					posKeepMode, 
+					posKeepMode: PosKeepMode.Approximate, 
 					pacerSpeedUpRate, 
 					allowRushedUma1: false,
 					allowRushedUma2: false,
@@ -990,7 +990,7 @@ function App(props) {
 				skills: skills2, course, racedef: params, uma, pacer: pacer.toJS(), 
 				options: {
 					seed, 
-					posKeepMode, 
+					posKeepMode: PosKeepMode.Approximate, 
 					pacerSpeedUpRate, 
 					allowRushedUma1: false,
 					allowRushedUma2: false,
@@ -1174,8 +1174,8 @@ function App(props) {
 	const umaTabs = (
 		<Fragment>
 			<div class={`umaTab ${currentIdx == 0 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx0)}>Umamusume 1</div>
-			{mode == Mode.Compare && <div class={`umaTab ${currentIdx == 1 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx1)}>Umamusume 2</div>}
-			{posKeepMode == PosKeepMode.Virtual && <div class={`umaTab ${currentIdx == 2 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx2)}>Virtual Pacemaker{mode == Mode.Compare && currentIdx == 1 && <div id="expandBtn" title="Expand panel" onClick={toggleExpand} />}</div>}
+			{mode == Mode.Compare && <div class={`umaTab ${currentIdx == 1 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx1)}>Umamusume 2{posKeepMode != PosKeepMode.Virtual && <div id="expandBtn" title="Expand panel" onClick={toggleExpand} />}</div>}
+			{posKeepMode == PosKeepMode.Virtual && <div class={`umaTab ${currentIdx == 2 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx2)}>Virtual Pacemaker<div id="expandBtn" title="Expand panel" onClick={toggleExpand} /></div>}
 		</Fragment>
 	);
 
