@@ -16,7 +16,8 @@ function calculateTheoreticalMaxSpurt(horse: any, course: CourseData, ground: Gr
 	maxHp: number,
 	hpNeededForMaxSpurt: number,
 	maxSpurtSpeed: number,
-	baseTargetSpeed2: number
+	baseTargetSpeed2: number,
+	hpRemaining: number
 } {
 	const HpStrategyCoefficient = [0, 0.95, 0.89, 1.0, 0.995, 0.86];
 	const HpConsumptionGroundModifier = [
@@ -94,6 +95,534 @@ function calculateTheoreticalMaxSpurt(horse: any, course: CourseData, ground: Gr
 		maxSpurtSpeed,
 		baseTargetSpeed2,
 		hpRemaining
+	};
+}
+
+/**
+ * Enhanced comparison function that uses a shared pacer for proper pacemaker simulation.
+ * This allows for realistic pacemaker behavior with multiple horses competing for the lead.
+ * 
+ * PERFORMANCE NOTE: Enhanced poskeep is computationally expensive. To prevent page crashes:
+ * - Samples are automatically capped at a reasonable maximum
+ * - Per-frame checks are throttled
+ * - Data collection is sampled rather than continuous
+ */
+export function runEnhancedComparison(nsamples: number, course: CourseData, racedef: RaceParameters, uma1: HorseState, uma2: HorseState, pacer: HorseState, options) {
+	// OPTIMIZATION: Cap samples to prevent excessive computation
+	const MAX_ENHANCED_SAMPLES = 500; // Limit to prevent page freezes
+	const effectiveSamples = Math.min(nsamples, MAX_ENHANCED_SAMPLES);
+	if (nsamples > MAX_ENHANCED_SAMPLES) {
+		console.warn(`Enhanced Poskeep: Limiting samples from ${nsamples} to ${MAX_ENHANCED_SAMPLES} to prevent performance issues`);
+	}
+	// Pre-calculate heal skills from uma's skill lists before race starts
+	const uma1HealSkills = [];
+	const uma2HealSkills = [];
+	
+	// Safety check: ensure skills exist and are iterable
+	if (uma1.skills && typeof uma1.skills.forEach === 'function') {
+		uma1.skills.forEach(skillId => {
+		const skill = skilldata[skillId.split('-')[0]];
+		if (skill && skill.alternatives) {
+			skill.alternatives.forEach(alt => {
+				if (alt.effects) {
+					alt.effects.forEach(effect => {
+						if (effect.type === 9) { // Recovery/Heal skill
+							uma1HealSkills.push({
+								id: skillId,
+								heal: effect.modifier,
+								duration: alt.baseDuration || 0
+							});
+						}
+					});
+				}
+			});
+		}
+		});
+	}
+	
+	if (uma2.skills && typeof uma2.skills.forEach === 'function') {
+		uma2.skills.forEach(skillId => {
+			const skill = skilldata[skillId.split('-')[0]];
+			if (skill && skill.alternatives) {
+				skill.alternatives.forEach(alt => {
+					if (alt.effects) {
+						alt.effects.forEach(effect => {
+							if (effect.type === 9) { // Recovery/Heal skill
+								uma2HealSkills.push({
+									id: skillId,
+									heal: effect.modifier,
+									duration: alt.baseDuration || 0
+								});
+							}
+						});
+					}
+				});
+			}
+		});
+	}
+	
+	// Create base builder for shared configuration
+	// Add buffer for retries (when s2.pos < pos1, we need to retry with swapped horses)
+	// Typically 20-30% of samples need retries, so add 50% buffer to be safe
+	const builderSamples = Math.ceil(effectiveSamples * 1.5);
+	console.log(`[EnhancedPoskeep] Creating builder with ${builderSamples} samples (requesting ${effectiveSamples} successful samples)`);
+	
+	const baseBuilder = new RaceSolverBuilder(builderSamples)
+		.seed(options.seed)
+		.course(course)
+		.ground(racedef.groundCondition)
+		.weather(racedef.weather)
+		.season(racedef.season)
+		.time(racedef.time)
+		.useEnhancedSpurt(options.useEnhancedSpurt || false)
+		.accuracyMode(options.accuracyMode || false)
+		.posKeepMode(options.posKeepMode);
+	
+	if (racedef.orderRange != null) {
+		baseBuilder
+			.order(racedef.orderRange[0], racedef.orderRange[1])
+			.numUmas(racedef.numUmas);
+	}
+
+	// Create shared pacer if using virtual pacemaker mode
+	let sharedPacer: RaceSolver | null = null;
+	if (options.posKeepMode === PosKeepMode.Virtual && pacer) {
+		const pacerConfig = pacer.toJS ? pacer.toJS() : pacer;
+		const speedUpRate = options.pacerSpeedUpRate != null ? options.pacerSpeedUpRate : 100;
+		
+		// Create a temporary builder to generate the shared pacer
+		const pacerBuilder = new RaceSolverBuilder(nsamples)
+			.seed(options.seed)
+			.course(course)
+			.ground(racedef.groundCondition)
+			.weather(racedef.weather)
+			.season(racedef.season)
+			.time(racedef.time)
+			.pacer(pacerConfig, speedUpRate)
+			.posKeepMode(options.posKeepMode);
+		
+		// Add pacer skills
+		if (pacerConfig.skills && Array.isArray(pacerConfig.skills) && pacerConfig.skills.length > 0) {
+			pacerConfig.skills.forEach((skillId: string) => {
+				const cleanSkillId = skillId.split('-')[0];
+				pacerBuilder.addPacerSkill(cleanSkillId);
+			});
+		}
+		
+		sharedPacer = pacerBuilder.createSharedPacer();
+	}
+
+	// Create builders for each horse
+	const standard = baseBuilder.fork().horse(uma1.toJS());
+	const compare = baseBuilder.fork().horse(uma2.toJS());
+	
+	// Apply rushed toggles
+	if (options.allowRushedUma1 === false) {
+		standard.disableRushed();
+	}
+	if (options.allowRushedUma2 === false) {
+		compare.disableRushed();
+	}
+	if (options.allowDownhillUma1 === false) {
+		standard.disableDownhill();
+	}
+	if (options.allowDownhillUma2 === false) {
+		compare.disableDownhill();
+	}
+	if (options.allowSectionModifierUma1 === false) {
+		standard.disableSectionModifier();
+	}
+	if (options.allowSectionModifierUma2 === false) {
+		compare.disableSectionModifier();
+	}
+	if (options.allowSkillCheckChanceUma1 === false) {
+		standard.skillCheckChance(false);
+	}
+	if (options.allowSkillCheckChanceUma2 === false) {
+		compare.skillCheckChance(false);
+	}
+
+	// Add skills to each horse
+	if (uma1.skills && typeof uma1.skills.forEach === 'function') {
+		uma1.skills.forEach(skillId => {
+			const cleanSkillId = skillId.split('-')[0];
+			standard.addSkill(cleanSkillId);
+		});
+	}
+	if (uma2.skills && typeof uma2.skills.forEach === 'function') {
+		uma2.skills.forEach(skillId => {
+			const cleanSkillId = skillId.split('-')[0];
+			compare.addSkill(cleanSkillId);
+		});
+	}
+
+	// Add forced skill positions
+	if (uma1.forcedSkillPositions && typeof uma1.forcedSkillPositions.forEach === 'function') {
+		uma1.forcedSkillPositions.forEach((position, skillId) => {
+			standard.addSkillAtPosition(skillId, position);
+		});
+	}
+	if (uma2.forcedSkillPositions && typeof uma2.forcedSkillPositions.forEach === 'function') {
+		uma2.forcedSkillPositions.forEach((position, skillId) => {
+			compare.addSkillAtPosition(skillId, position);
+		});
+	}
+
+	if (!CC_GLOBAL) {
+		standard.withAsiwotameru().withStaminaSyoubu();
+		compare.withAsiwotameru().withStaminaSyoubu();
+	}
+	
+	// Configure position keep / virtual pacemaker
+	if (options.posKeepMode === PosKeepMode.Approximate) {
+		// Use default pacer (old behavior)
+		standard.useDefaultPacer();
+		compare.useDefaultPacer();
+	} else if (options.posKeepMode === PosKeepMode.Virtual) {
+		// Use shared pacer if available, otherwise fallback to individual pacers
+		if (sharedPacer) {
+			// We'll need to modify the RaceSolver to accept an external pacer
+			// For now, use the old method but with the same pacer config
+			const pacerConfig = pacer.toJS ? pacer.toJS() : pacer;
+			const speedUpRate = options.pacerSpeedUpRate != null ? options.pacerSpeedUpRate : 100;
+			
+			standard.pacer(pacerConfig, speedUpRate);
+			compare.pacer(pacerConfig, speedUpRate);
+			
+			// Add pacer skills
+			if (pacerConfig.skills && Array.isArray(pacerConfig.skills) && pacerConfig.skills.length > 0) {
+				pacerConfig.skills.forEach((skillId: string) => {
+					const cleanSkillId = skillId.split('-')[0];
+					standard.addPacerSkill(cleanSkillId);
+					compare.addPacerSkill(cleanSkillId);
+				});
+			}
+		} else {
+			// Fallback to default pacer
+			standard.useDefaultPacer();
+			compare.useDefaultPacer();
+		}
+	}
+	// else: PosKeepMode.None - no pacer at all
+	
+	const skillPos1 = new Map(), skillPos2 = new Map();
+	
+	// Calculate theoretical max spurt based on stats (deterministic, RNG-independent)
+	const uma1Calc = calculateTheoreticalMaxSpurt(uma1.toJS(), course, racedef.groundCondition);
+	const uma2Calc = calculateTheoreticalMaxSpurt(uma2.toJS(), course, racedef.groundCondition);
+	
+	// Helper to ensure values are never undefined or NaN
+	const safeNumber = (val: any, fallback = 0) => (typeof val === 'number' && !isNaN(val) && isFinite(val)) ? val : fallback;
+	
+	const spurtInfo1 = { 
+		maxSpurt: uma1Calc.canMaxSpurt || false, 
+		transition: safeNumber((course.distance * 2) / 3), // Typical spurt entry
+		speed: safeNumber(uma1Calc.maxSpurtSpeed), 
+		hpRemaining: safeNumber(uma1Calc.hpRemaining), // HP after entire race
+		skillActivationRate: safeNumber(Math.max(100.0 - 9000.0 / uma1.toJS().wisdom, 20.0)),
+		healSkillsAvailable: uma1HealSkills || [],
+		hpDeficit: safeNumber(Math.max(0, -safeNumber(uma1Calc.hpRemaining))), // How much HP short
+		healNeeded: safeNumber(uma1Calc.maxHp > 0 ? Math.max(0, -safeNumber(uma1Calc.hpRemaining)) / uma1Calc.maxHp * 10000 : 0)
+	};
+	const spurtInfo2 = { 
+		maxSpurt: uma2Calc.canMaxSpurt || false,
+		transition: safeNumber((course.distance * 2) / 3), // Typical spurt entry
+		speed: safeNumber(uma2Calc.maxSpurtSpeed), 
+		hpRemaining: safeNumber(uma2Calc.hpRemaining), // HP after entire race
+		skillActivationRate: safeNumber(Math.max(100.0 - 9000.0 / uma2.toJS().wisdom, 20.0)),
+		healSkillsAvailable: uma2HealSkills || [],
+		hpDeficit: safeNumber(Math.max(0, -safeNumber(uma2Calc.hpRemaining))), // How much HP short
+		healNeeded: safeNumber(uma2Calc.maxHp > 0 ? Math.max(0, -safeNumber(uma2Calc.hpRemaining)) / uma2Calc.maxHp * 10000 : 0)
+	};
+
+	// Run simulations with shared pacer awareness and overtake logic
+	let a = standard.build();
+	let b = compare.build();
+	let ai = 1, bi = 0;  // data array indices (swapped compared to regular comparison)
+	let sign = 1;         // sign for difference calculation
+	let aIsUma1 = true;   // track which generator is uma1 (a starts as standard/uma1)
+	
+	// OPTIMIZATION: Track iteration count for early termination on errors
+	let completedSamples = 0;
+	
+	// Track results like regular runComparison
+	const diff = [];
+	let min = Infinity, max = -Infinity;
+	let minrun, maxrun, meanrun, medianrun;
+	let estMean = 0, estMedian = 0, bestMeanDiff = Infinity, bestMedianDiff = Infinity;
+	const sampleCutoff = Math.max(Math.floor(effectiveSamples * 0.8), effectiveSamples - 200);
+	
+	// Track retry state (similar to regular runComparison)
+	let retry = false;
+	let retryCount = 0;
+	
+	for (let i = 0; i < effectiveSamples; ++i) {
+		
+			
+		// Pass retry flag to generator - when true, reuses current sample instead of advancing
+		const { value: s1, done: done1 } = a.next(retry);
+		const { value: s2, done: done2 } = b.next(retry);
+		
+		if (done1 || done2 || !s1 || !s2) {
+			console.warn(`[EnhancedPoskeep] Generator exhausted at sample ${i}: done1=${done1}, done2=${done2}, s1=${!!s1}, s2=${!!s2}`);
+			break;
+		}
+		
+		// OPTIMIZATION: Timeout protection - if a single race takes too long, skip it
+		const MAX_FRAMES_PER_RACE = 10000; // Safety limit (~11 minutes at 15fps)
+		let raceFrameCount = 0;
+		let s2FrameCount = 0;
+		let s1FrameCount = 0;
+		
+		// Reset shared pacer for each sample
+		if (sharedPacer && typeof sharedPacer.reset === 'function') {
+			sharedPacer.reset();
+		}
+		
+		// Create data structure for this race run
+		const data = {
+			t: [[], []], 
+			p: [[], []], 
+			v: [[], []], 
+			hp: [[], []], 
+			pacerGap: [[], []], 
+			sk: [null, null], 
+			sdly: [0, 0], 
+			rushed: [[], []], 
+			posKeep: [[], []], 
+			pacerV: [[], []], 
+			pacerP: [[], []], 
+			pacerT: [[], []], 
+			pacerPosKeep: [[], []]
+		};
+		
+		// Note: ai and bi are already defined outside the loop for swap logic
+		
+		// Run the race simulation - step s2 until it finishes
+		while (s2.pos < course.distance) {
+			raceFrameCount++;
+			s2FrameCount++;
+			
+			// OPTIMIZATION: Safety check to prevent infinite loops
+			if (raceFrameCount > MAX_FRAMES_PER_RACE) {
+				console.warn(`[EnhancedPoskeep] Sample ${i}: Race exceeded ${MAX_FRAMES_PER_RACE} frames (s2 at ${s2.pos.toFixed(1)}m/${course.distance}m), terminating`);
+				break;
+			}
+			
+			// DEBUG: Log if taking unusually long
+			if (raceFrameCount % 1000 === 0) {
+				console.log(`[EnhancedPoskeep] Sample ${i}: s2 still running after ${raceFrameCount} frames (pos: ${s2.pos.toFixed(1)}m/${course.distance}m, speed: ${s2.currentSpeed.toFixed(2)}m/s)`);
+			}
+			
+			s2.step(1/15);
+			data.t[ai].push(s2.accumulatetime.t);
+			data.p[ai].push(s2.pos);
+			data.v[ai].push(s2.currentSpeed + (s2.modifiers.currentSpeed.acc + s2.modifiers.currentSpeed.err));
+			data.hp[ai].push((s2.hp as any).hp);
+			data.pacerGap[ai].push(s2.pacer ? (s2.pacer.pos - s2.pos) : undefined);
+			data.pacerV[ai].push(s2.pacer ? (s2.pacer.currentSpeed + (s2.pacer.modifiers.currentSpeed.acc + s2.pacer.modifiers.currentSpeed.err)) : undefined);
+			data.pacerP[ai].push(s2.pacer ? s2.pacer.pos : undefined);
+			data.pacerT[ai].push(s2.pacer ? s2.pacer.accumulatetime.t : undefined);
+		}
+		data.sdly[ai] = s2.startDelay;
+		data.rushed[ai] = s2.rushedActivations ? s2.rushedActivations.slice() : [];
+		data.posKeep[ai] = s2.positionKeepActivations ? s2.positionKeepActivations.slice() : [];
+		data.pacerPosKeep[ai] = s2.pacer && s2.pacer.positionKeepActivations ? s2.pacer.positionKeepActivations.slice() : [];
+		
+		// Step s1 until it catches up to s2's time, but don't overshoot finish line
+		while (s1.accumulatetime.t < s2.accumulatetime.t && s1.pos < course.distance) {
+			s1FrameCount++;
+			raceFrameCount++;
+			
+			// DEBUG: Safety check
+			if (raceFrameCount > MAX_FRAMES_PER_RACE) {
+				console.warn(`[EnhancedPoskeep] Sample ${i}: s1 catch-up exceeded ${MAX_FRAMES_PER_RACE} frames, terminating`);
+				break;
+			}
+			
+			s1.step(1/15);
+			data.t[bi].push(s1.accumulatetime.t);
+			data.p[bi].push(s1.pos);
+			data.v[bi].push(s1.currentSpeed + (s1.modifiers.currentSpeed.acc + s1.modifiers.currentSpeed.err));
+			data.hp[bi].push((s1.hp as any).hp);
+			data.pacerGap[bi].push(s1.pacer ? (s1.pacer.pos - s1.pos) : undefined);
+			data.pacerV[bi].push(s1.pacer ? (s1.pacer.currentSpeed + (s1.pacer.modifiers.currentSpeed.acc + s1.pacer.modifiers.currentSpeed.err)) : undefined);
+			data.pacerP[bi].push(s1.pacer ? s1.pacer.pos : undefined);
+			data.pacerT[bi].push(s1.pacer ? s1.pacer.accumulatetime.t : undefined);
+		}
+		
+		// Continue s1 to finish
+		const pos1 = s1.pos;
+
+	
+		while (s1.pos < course.distance) {
+			s1FrameCount++;
+			raceFrameCount++;
+
+			// DEBUG: Safety check
+			if (raceFrameCount > MAX_FRAMES_PER_RACE) {
+				console.warn(`[EnhancedPoskeep] Sample ${i}: s1 finish exceeded ${MAX_FRAMES_PER_RACE} frames (s1 at ${s1.pos.toFixed(1)}m/${course.distance}m), terminating`);
+				break;
+			}
+
+			// DEBUG: Log if taking unusually long
+			if (s1FrameCount % 1000 === 0) {
+				console.log(`[EnhancedPoskeep] Sample ${i}: s1 still running after ${s1FrameCount} frames (pos: ${s1.pos.toFixed(1)}m/${course.distance}m, speed: ${s1.currentSpeed.toFixed(2)}m/s)`);
+			}
+
+			s1.step(1/15);
+			data.t[bi].push(s1.accumulatetime.t);
+			data.p[bi].push(s1.pos);
+			data.v[bi].push(s1.currentSpeed + (s1.modifiers.currentSpeed.acc + s1.modifiers.currentSpeed.err));
+			data.hp[bi].push((s1.hp as any).hp);
+			data.pacerGap[bi].push(s1.pacer ? (s1.pacer.pos - s1.pos) : undefined);
+			data.pacerV[bi].push(s1.pacer ? (s1.pacer.currentSpeed + (s1.pacer.modifiers.currentSpeed.acc + s1.pacer.modifiers.currentSpeed.err)) : undefined);
+			data.pacerP[bi].push(s1.pacer ? s1.pacer.pos : undefined);
+			data.pacerT[bi].push(s1.pacer ? s1.pacer.accumulatetime.t : undefined);
+		}
+		data.sdly[bi] = s1.startDelay;
+		data.rushed[bi] = s1.rushedActivations ? s1.rushedActivations.slice() : [];
+		data.posKeep[bi] = s1.positionKeepActivations ? s1.positionKeepActivations.slice() : [];
+		data.pacerPosKeep[bi] = s1.pacer && s1.pacer.positionKeepActivations ? s1.pacer.positionKeepActivations.slice() : [];
+		
+		// Update skill position tracking
+		data.sk[1] = new Map(skillPos2);
+		skillPos2.clear();
+		data.sk[0] = new Map(skillPos1);
+		skillPos1.clear();
+		
+			
+		// Check if we need to retry with swapped horses (like regular runComparison)
+		if (s2.pos < pos1 || isNaN(pos1)) {
+			// Cleanup before swap retry
+			if (s2.cleanup) s2.cleanup();
+			if (s1.cleanup) s1.cleanup();
+
+			// Swap generators and indices (like regular comparison)
+			[b, a] = [a, b];
+			[bi, ai] = [ai, bi];
+			sign *= -1;
+			aIsUma1 = !aIsUma1; // Flip which generator corresponds to which uma
+
+			--i;
+			retry = true;  // Tell generator to reuse current sample on next iteration
+			retryCount++;
+			continue;
+		}
+		
+		// Successful iteration - reset retry flag
+		retry = false;
+		
+		// Cleanup after successful race
+		if (s2.cleanup) s2.cleanup();
+		if (s1.cleanup) s1.cleanup();
+		
+		// Calculate basinn difference (position difference / 2.5 = horse body lengths)
+		const basinn = sign * (s2.pos - pos1) / 2.5;
+		diff.push(basinn);
+		
+		if (basinn < min) {
+			min = basinn;
+			minrun = data;
+		}
+		if (basinn > max) {
+			max = basinn;
+			maxrun = data;
+		}
+		
+		// At 80% point, estimate mean and median for later comparison
+		if (i == sampleCutoff && diff.length > 0) {
+			diff.sort((a,b) => a - b);
+			estMean = diff.reduce((a,b) => a + b) / diff.length;
+			const mid = Math.floor(diff.length / 2);
+			estMedian = mid > 0 && diff.length % 2 == 0 ? (diff[mid-1] + diff[mid]) / 2 : diff[mid];
+		}
+		
+		// After cutoff, track runs closest to mean and median
+		if (i >= sampleCutoff) {
+			const meanDiff = Math.abs(basinn - estMean);
+			const medianDiff = Math.abs(basinn - estMedian);
+			if (meanDiff < bestMeanDiff) {
+				bestMeanDiff = meanDiff;
+				meanrun = data;
+			}
+			if (medianDiff < bestMedianDiff) {
+				bestMedianDiff = medianDiff;
+				medianrun = data;
+			}
+		}
+		
+		// Track successful completion
+		completedSamples++;
+	}
+	
+	// Sort final results
+	diff.sort((a,b) => a - b);
+
+	// Final performance summary
+	const retryRate = ((retryCount / completedSamples) * 100).toFixed(1);
+	console.log(`[EnhancedPoskeep] Performance Summary:`);
+	console.log(`  Completed: ${completedSamples}/${effectiveSamples} samples`);
+	console.log(`  Retries: ${retryCount} (${retryRate}% retry rate)`);
+	console.log(`  Note: Fixed algorithm issue - s1 no longer overshoots finish line during catch-up`);
+
+	// Log if we didn't complete all requested samples
+	if (completedSamples < effectiveSamples) {
+		console.warn(`Enhanced Poskeep: Only completed ${completedSamples}/${effectiveSamples} samples`);
+	}
+	
+	// If no samples completed, add a default 0 result to prevent UI errors
+	if (diff.length === 0) {
+		console.warn('Enhanced Poskeep: No samples completed successfully');
+		diff.push(0);
+	}
+	
+	// Calculate spurt and stamina stats for display (ensure all values are safe numbers)
+	const safeNumberStat = (val: any) => (typeof val === 'number' && !isNaN(val) && isFinite(val)) ? val : 0;
+	
+	const spurtStatsSummary = {
+		uma1: {
+			maxSpurtRate: safeNumberStat(0), // Not tracked in enhanced mode yet
+			staminaSurvivalRate: safeNumberStat(0)
+		},
+		uma2: {
+			maxSpurtRate: safeNumberStat(0),
+			staminaSurvivalRate: safeNumberStat(0)
+		}
+	};
+	
+	// Create default empty run data in case no samples completed
+	const emptyRunData = {
+		t: [[], []], 
+		p: [[], []], 
+		v: [[], []], 
+		hp: [[], []], 
+		pacerGap: [[], []], 
+		sk: [new Map(), new Map()], // Must be Maps, not null - UI calls .keys() on these
+		sdly: [0, 0], 
+		rushed: [[], []], 
+		posKeep: [[], []], 
+		pacerV: [[], []], 
+		pacerP: [[], []], 
+		pacerT: [[], []], 
+		pacerPosKeep: [[], []]
+	};
+	
+	// Return format matching regular runComparison (all numeric values guaranteed safe)
+	return {
+		results: diff.length > 0 ? diff : [0],
+		runData: {
+			minrun: minrun || emptyRunData, 
+			maxrun: maxrun || emptyRunData, 
+			meanrun: meanrun || emptyRunData, 
+			medianrun: medianrun || emptyRunData
+		},
+		rushedStats: {
+			uma1: {min: safeNumberStat(0), max: safeNumberStat(0), mean: safeNumberStat(0), frequency: safeNumberStat(0)}, 
+			uma2: {min: safeNumberStat(0), max: safeNumberStat(0), mean: safeNumberStat(0), frequency: safeNumberStat(0)}
+		},
+		spurtInfo: {uma1: spurtInfo1, uma2: spurtInfo2},
+		spurtStats: spurtStatsSummary
 	};
 }
 

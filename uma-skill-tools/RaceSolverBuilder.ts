@@ -534,6 +534,64 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
+	/**
+	 * Creates a shared pacer that can be used by multiple RaceSolver instances.
+	 * This allows for proper pacemaker simulation with multiple horses.
+	 * @returns A shared pacer RaceSolver instance
+	 */
+	createSharedPacer(): RaceSolver | null {
+		if (!this._pacer) {
+			return null;
+		}
+
+		const pacerBaseHorse = buildBaseStats(this._pacer, this._pacer.mood);
+		const pacerHorse = buildAdjustedStats(pacerBaseHorse, this._course, this._raceParams.groundCondition);
+
+		const wholeCourse = new RegionList();
+		wholeCourse.push(new Region(0, this._course.distance));
+		Object.freeze(wholeCourse);
+
+		// Build pacer skills from IDs if provided
+		let pacerSkillData: SkillData[] = [];
+		let pacerTriggers: Region[][] = [];
+		if (this._pacerSkillIds.length > 0) {
+			const makePacerSkill = buildSkillData.bind(null, pacerBaseHorse, this._raceParams, this._course, wholeCourse, this._parser);
+			pacerSkillData = this._pacerSkillIds.flatMap(id => makePacerSkill(id, Perspective.Self));
+			pacerTriggers = pacerSkillData.map(sd => {
+				const sp = this._samplePolicyOverride.get(sd.skillId) || sd.samplePolicy;
+				return sp.sample(sd.regions, this.nsamples, this._rng);
+			});
+		}
+
+		// Create pacer skills for the first sample (we'll use the same pacer for all samples)
+		const pacerSkills = pacerSkillData.length > 0
+			? pacerSkillData.map((sd, sdi) => ({
+				skillId: sd.skillId,
+				perspective: sd.perspective,
+				rarity: sd.rarity,
+				trigger: pacerTriggers[sdi][0], // Use first sample
+				extraCondition: sd.extraCondition,
+				effects: sd.effects
+			}))
+			: this._pacerSkills;
+
+		const pacerRng = new Rule30CARng(this._rng.int32());
+		return new RaceSolver({
+			horse: pacerHorse,
+			course: this._course,
+			hp: NoopHpPolicy,
+			skills: pacerSkills,
+			rng: pacerRng,
+			speedUpProbability: this._pacerSpeedUpRate,
+			disableRushed: this._disableRushed,
+			disableDownhill: this._disableDownhill,
+			disableSectionModifier: this._disableSectionModifier,
+			skillCheckChance: this._skillCheckChance,
+			synchronizedSeed: this._synchronizedSeed,
+			posKeepMode: this._posKeepMode
+		});
+	}
+
 	_isNige() {
 		if (typeof this._horse.strategy == 'string') {
 			return this._horse.strategy.toUpperCase() == 'NIGE' || this._horse.strategy.toUpperCase() == 'OONIGE';

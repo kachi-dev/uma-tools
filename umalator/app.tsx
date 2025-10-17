@@ -725,6 +725,7 @@ function App(props) {
 	const [uma2, setUma2] = useState(() => new HorseState());
 	const [pacer, setPacer] = useState(() => new HorseState({strategy: 'Nige'}));
 	const [pacerSpeedUpRate, setPacerSpeedUpRate] = useState(100); // 0-100%
+	const [useEnhancedPoskeep, setUseEnhancedPoskeep] = useState(false);
 
 	const [{mode, currentIdx, expanded}, updateUiState] = useReducer(nextUiState, DEFAULT_UI_STATE);
 	function toggleExpand(e: Event) {
@@ -880,6 +881,7 @@ function App(props) {
 				options: {
 					seed, 
 					posKeepMode, 
+					useEnhancedPoskeep,
 					allowRushedUma1: simWitVariance ? allowRushedUma1 : false,
 					allowRushedUma2: simWitVariance ? allowRushedUma2 : false,
 					allowDownhillUma1: simWitVariance ? allowDownhillUma1 : false,
@@ -969,7 +971,7 @@ function App(props) {
 			data: {
 				skills: skills1, course, racedef: params, uma, pacer: pacer.toJS(), options: {
 					seed, 
-					posKeepMode: PosKeepMode.Approximate, 
+					posKeepMode, 
 					pacerSpeedUpRate, 
 					allowRushedUma1: false,
 					allowRushedUma2: false,
@@ -990,7 +992,7 @@ function App(props) {
 				skills: skills2, course, racedef: params, uma, pacer: pacer.toJS(), 
 				options: {
 					seed, 
-					posKeepMode: PosKeepMode.Approximate, 
+					posKeepMode, 
 					pacerSpeedUpRate, 
 					allowRushedUma1: false,
 					allowRushedUma2: false,
@@ -1039,18 +1041,20 @@ function App(props) {
 		const safeI0 = Math.max(0, Math.min(i0, chartData.v[0].length - 1));
 		const safeI1 = Math.max(0, Math.min(i1, chartData.v[1].length - 1));
 		
-		document.getElementById('rtV1').textContent = `${chartData.v[0][safeI0].toFixed(2)} m/s  t=${chartData.t[0][safeI0].toFixed(2)} s  (${chartData.hp[0][safeI0].toFixed(0)} hp remaining)`;
-		document.getElementById('rtV2').textContent = `${chartData.v[1][safeI1].toFixed(2)} m/s  t=${chartData.t[1][safeI1].toFixed(2)} s  (${chartData.hp[1][safeI1].toFixed(0)} hp remaining)`;
+	document.getElementById('rtV1').textContent = `${(chartData.v[0][safeI0] || 0).toFixed(2)} m/s  t=${(chartData.t[0][safeI0] || 0).toFixed(2)} s  (${(chartData.hp[0][safeI0] || 0).toFixed(0)} hp remaining)`;
+	document.getElementById('rtV2').textContent = `${(chartData.v[1][safeI1] || 0).toFixed(2)} m/s  t=${(chartData.t[1][safeI1] || 0).toFixed(2)} s  (${(chartData.hp[1][safeI1] || 0).toFixed(0)} hp remaining)`;
+	
+	// Only show pacer gap when position keep mode is enabled (not None)
+	if (posKeepMode !== PosKeepMode.None) {
 		const pacegap1 = chartData.pacerGap?.[0]?.[safeI0];
 		const pacegap2 = chartData.pacerGap?.[1]?.[safeI1];
-		console.log("pacegap1, ", pacegap1);
-		console.log("pacegap2, ", pacegap2);
 		if (pacegap1 !== undefined) {
-			document.getElementById('rtV1').textContent += ` gap towards pacemaker= ${pacegap1.toFixed(2)} m`;
+			document.getElementById('rtV1').textContent += ` gap towards pacemaker= ${(pacegap1 || 0).toFixed(2)} m`;
 		}
 		if (pacegap2 !== undefined) {
-			document.getElementById('rtV2').textContent += ` gap towards pacemaker= ${pacegap2.toFixed(2)} m`;
+			document.getElementById('rtV2').textContent += ` gap towards pacemaker= ${(pacegap2 || 0).toFixed(2)} m`;
 		}
+	}
 	}
 
 	function rtMouseLeave() {
@@ -1071,8 +1075,8 @@ function App(props) {
 	}
 
 	const mid = Math.floor(results.length / 2);
-	const median = results.length % 2 == 0 ? (results[mid-1] + results[mid]) / 2 : results[mid];
-	const mean = results.reduce((a,b) => a+b, 0) / results.length;
+	const median = results.length > 0 ? (results.length % 2 == 0 ? (results[mid-1] + results[mid]) / 2 : results[mid]) : 0;
+	const mean = results.length > 0 ? results.reduce((a,b) => a+b, 0) / results.length : 0;
 
 	const colors = [
 		{stroke: 'rgb(42, 119, 197)', fill: 'rgba(42, 119, 197, 0.7)'},
@@ -1174,8 +1178,8 @@ function App(props) {
 	const umaTabs = (
 		<Fragment>
 			<div class={`umaTab ${currentIdx == 0 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx0)}>Umamusume 1</div>
-			{mode == Mode.Compare && <div class={`umaTab ${currentIdx == 1 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx1)}>Umamusume 2{posKeepMode != PosKeepMode.Virtual && <div id="expandBtn" title="Expand panel" onClick={toggleExpand} />}</div>}
-			{posKeepMode == PosKeepMode.Virtual && <div class={`umaTab ${currentIdx == 2 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx2)}>Virtual Pacemaker<div id="expandBtn" title="Expand panel" onClick={toggleExpand} /></div>}
+			{mode == Mode.Compare && <div class={`umaTab ${currentIdx == 1 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx1)}>Umamusume 2</div>}
+			{posKeepMode == PosKeepMode.Virtual && <div class={`umaTab ${currentIdx == 2 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx2)}>Virtual Pacemaker{mode == Mode.Compare && currentIdx == 1 && <div id="expandBtn" title="Expand panel" onClick={toggleExpand} />}</div>}
 		</Fragment>
 	);
 
@@ -1199,10 +1203,10 @@ function App(props) {
 						</tfoot>
 						<tbody>
 							<tr>
-								<td onClick={() => setChartData('minrun')}>{results[0].toFixed(2)}<span class="unit-basinn">{CC_GLOBAL?'lengths':'バ身'}</span></td>
-								<td onClick={() => setChartData('maxrun')}>{results[results.length-1].toFixed(2)}<span class="unit-basinn">{CC_GLOBAL?'lengths':'バ身'}</span></td>
-								<td onClick={() => setChartData('meanrun')}>{mean.toFixed(2)}<span class="unit-basinn">{CC_GLOBAL?'lengths':'バ身'}</span></td>
-								<td onClick={() => setChartData('medianrun')}>{median.toFixed(2)}<span class="unit-basinn">{CC_GLOBAL?'lengths':'バ身'}</span></td>
+								<td onClick={() => setChartData('minrun')}>{(results[0] || 0).toFixed(2)}<span class="unit-basinn">{CC_GLOBAL?'lengths':'バ身'}</span></td>
+								<td onClick={() => setChartData('maxrun')}>{(results[results.length-1] || 0).toFixed(2)}<span class="unit-basinn">{CC_GLOBAL?'lengths':'バ身'}</span></td>
+								<td onClick={() => setChartData('meanrun')}>{(mean || 0).toFixed(2)}<span class="unit-basinn">{CC_GLOBAL?'lengths':'バ身'}</span></td>
+								<td onClick={() => setChartData('medianrun')}>{(median || 0).toFixed(2)}<span class="unit-basinn">{CC_GLOBAL?'lengths':'バ身'}</span></td>
 							</tr>
 						</tbody>
 					</table>
@@ -1323,11 +1327,11 @@ function App(props) {
 					<table>
 						<caption style="color:#2a77c5">Umamusume 1</caption>
 						<tbody>
-							<tr><th>Time to finish</th><td>{chartData.t[0][chartData.t[0].length-1].toFixed(4) + ' s'}</td></tr>
-							<tr><th>Start delay</th><td>{chartData.sdly[0].toFixed(4) + ' s'}</td></tr>
-							<tr><th>Top speed</th><td>{chartData.v[0].reduce((a,b) => Math.max(a,b), 0).toFixed(2) + ' m/s'}</td></tr>
+							<tr><th>Time to finish</th><td>{(chartData.t[0][chartData.t[0].length-1] || 0).toFixed(4) + ' s'}</td></tr>
+							<tr><th>Start delay</th><td>{(chartData.sdly[0] || 0).toFixed(4) + ' s'}</td></tr>
+							<tr><th>Top speed</th><td>{(chartData.v[0].reduce((a,b) => Math.max(a,b), 0) || 0).toFixed(2) + ' m/s'}</td></tr>
 							{rushedStats && allowRushedUma2 && (
-								<tr><th>Rushed frequency</th><td>{rushedStats.uma1.frequency > 0 ? `${rushedStats.uma1.frequency.toFixed(1)}% (${rushedStats.uma1.mean.toFixed(1)}m)` : '0%'}</td></tr>
+								<tr><th>Rushed frequency</th><td>{rushedStats.uma1.frequency > 0 ? `${(rushedStats.uma1.frequency || 0).toFixed(1)}% (${(rushedStats.uma1.mean || 0).toFixed(1)}m)` : '0%'}</td></tr>
 							)}
 						</tbody>
 						{chartData.sk[0].size > 0 &&
@@ -1335,18 +1339,18 @@ function App(props) {
 								{Array.from(chartData.sk[0].entries()).map(([id,ars]) => ars.flatMap(pos =>
 									<tr>
 										<th>{skillnames[id][0]}</th>
-										<td>{`${pos[0].toFixed(2)} m – ${pos[1].toFixed(2)} m`}</td>
+										<td>{`${(pos[0] || 0).toFixed(2)} m – ${(pos[1] || 0).toFixed(2)} m`}</td>
 									</tr>))}
 							</tbody>}
 					</table>
 					<table>
 						<caption style="color:#c52a2a">Umamusume 2</caption>
 						<tbody>
-							<tr><th>Time to finish</th><td>{chartData.t[1][chartData.t[1].length-1].toFixed(4) + ' s'}</td></tr>
-							<tr><th>Start delay</th><td>{chartData.sdly[1].toFixed(4) + ' s'}</td></tr>
-							<tr><th>Top speed</th><td>{chartData.v[1].reduce((a,b) => Math.max(a,b), 0).toFixed(2) + ' m/s'}</td></tr>
+							<tr><th>Time to finish</th><td>{(chartData.t[1][chartData.t[1].length-1] || 0).toFixed(4) + ' s'}</td></tr>
+							<tr><th>Start delay</th><td>{(chartData.sdly[1] || 0).toFixed(4) + ' s'}</td></tr>
+							<tr><th>Top speed</th><td>{(chartData.v[1].reduce((a,b) => Math.max(a,b), 0) || 0).toFixed(2) + ' m/s'}</td></tr>
 							{rushedStats && allowRushedUma2 && (
-								<tr><th>Rushed frequency</th><td>{rushedStats.uma2.frequency > 0 ? `${rushedStats.uma2.frequency.toFixed(1)}% (${rushedStats.uma2.mean.toFixed(1)}m)` : '0%'}</td></tr>
+								<tr><th>Rushed frequency</th><td>{rushedStats.uma2.frequency > 0 ? `${(rushedStats.uma2.frequency || 0).toFixed(1)}% (${(rushedStats.uma2.mean || 0).toFixed(1)}m)` : '0%'}</td></tr>
 							)}
 						</tbody>
 						{chartData.sk[1].size > 0 &&
@@ -1354,7 +1358,7 @@ function App(props) {
 								{Array.from(chartData.sk[1].entries()).map(([id,ars]) => ars.flatMap(pos =>
 									<tr>
 										<th>{skillnames[id][0]}</th>
-										<td>{`${pos[0].toFixed(2)} m – ${pos[1].toFixed(2)} m`}</td>
+										<td>{`${(pos[0] || 0).toFixed(2)} m – ${(pos[1] || 0).toFixed(2)} m`}</td>
 									</tr>))}
 							</tbody>}
 					</table>
@@ -1381,8 +1385,7 @@ function App(props) {
 						onSelectionChange={basinnChartSelection}
 						onRunTypeChange={setChartData}
 						onDblClickRow={addSkillFromTable}
-						onInfoClick={showPopover}
-						showUmaIcons={true} />
+						onInfoClick={showPopover} />
 				</div>
 			</div>
 		);
@@ -1426,7 +1429,7 @@ function App(props) {
 							</div>
 							<div>
 								<input type="radio" id="mode-uniques-chart" name="mode" value="uniques-chart" checked={mode == Mode.UniquesChart} onClick={() => updateUiState(UiStateMsg.SetModeUniquesChart)} />
-								<label for="mode-uniques-chart">Uma chart</label>
+								<label for="mode-uniques-chart">Uniques chart</label>
 							</div>
 						</fieldset>
 						{
@@ -1464,17 +1467,28 @@ function App(props) {
 										<label for="showVirtualPacemakerOnGraph">Show Pacemaker</label>
 										<input type="checkbox" id="showVirtualPacemakerOnGraph" checked={showVirtualPacemakerOnGraph} onClick={toggleShowVirtualPacemakerOnGraph} />
 									</div>
-									<div id="speedUpRateControl">
-										<label for="speeduprate">Speed up mode probability: {pacerSpeedUpRate}%</label>
-										<input 
-											type="range" 
-											id="speeduprate" 
-											min="0" 
-											max="100" 
-											value={pacerSpeedUpRate} 
-											onInput={(e) => setPacerSpeedUpRate(+e.currentTarget.value)} 
-										/>
+									<div>
+										<label for="useEnhancedPoskeep">Enhanced Poskeep (Shared Pacemaker)</label>
+										<input type="checkbox" id="useEnhancedPoskeep" checked={useEnhancedPoskeep} onClick={() => setUseEnhancedPoskeep(!useEnhancedPoskeep)} />
 									</div>
+									{!useEnhancedPoskeep && (
+										<div id="speedUpRateControl">
+											<label for="speeduprate">Speed up mode probability: {pacerSpeedUpRate}%</label>
+											<input 
+												type="range" 
+												id="speeduprate" 
+												min="0" 
+												max="100" 
+												value={pacerSpeedUpRate} 
+												onInput={(e) => setPacerSpeedUpRate(+e.currentTarget.value)} 
+											/>
+										</div>
+									)}
+								{useEnhancedPoskeep && (
+									<div id="enhancedPoskeepInfo">
+										<span>Using shared pacemaker with realistic overtake/speed up dynamics</span>
+									</div>
+								)}
 								</div>
 							)}
 						</fieldset>

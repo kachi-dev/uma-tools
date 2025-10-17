@@ -1065,4 +1065,47 @@ export class RaceSolver {
 		this.activeCurrentSpeedSkills.forEach(callDeactivateHook);
 		this.activeAccelSkills.forEach(callDeactivateHook);
 	}
+
+	/**
+	 * Reset the RaceSolver to its initial state for reuse.
+	 * This is useful for shared pacers that need to be reset between samples.
+	 */
+	reset() {
+		this.accumulatetime = new Timer();
+		this.pos = 0;
+		this.minSpeed = 0;
+		this.currentSpeed = 0;
+		this.targetSpeed = 0;
+		this.accel = 0;
+		this.finished = false;
+		this.isLastSpurt = false;
+		this.isRushed = false;
+		this.isDownhillMode = false;
+		this.hillIdx = -1;
+		this.phase = 0;
+		this.sectionLength = 0;
+		this.posKeepEnd = 0;
+		this.posKeepExitPosition = 0;
+		this.positionKeepState = PositionKeepState.None;
+		this.positionKeepActivations = [];
+		this.posKeepNextTimer = new Timer();
+		this.posKeepSpeedCoef = 1.0;
+		this.sectionModifier = [];
+		this.baseTargetSpeed = [];
+		this.lastSpurtSpeed = 0;
+		this.activeTargetSpeedSkills = [];
+		this.activeCurrentSpeedSkills = [];
+		this.activeAccelSkills = [];
+		this.skillActivations = [];
+		
+		// Reset HP policy
+		if (this.hp && typeof this.hp.reset === 'function') {
+			this.hp.reset();
+		}
+		
+		// Reset pacer if it exists
+		if (this.pacer && typeof this.pacer.reset === 'function') {
+			this.pacer.reset();
+		}
+	}
 }

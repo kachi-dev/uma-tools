@@ -3,7 +3,7 @@ import type { RaceParameters } from '../uma-skill-tools/RaceParameters';
 
 import { Map as ImmMap } from 'immutable';
 import { HorseState, SkillSet } from '../components/HorseDefTypes';
-import { runComparison } from './compare';
+import { runComparison, runEnhancedComparison } from './compare';
 
 function mergeResults(results1, results2) {
 	console.assert(results1.id == results2.id, `mergeResults: ${results1.id} != ${results2.id}`);
@@ -38,7 +38,8 @@ function run1Round(nsamples: number, skills: string[], course: CourseData, raced
 	const data = new Map();
 	skills.forEach(id => {
 		const withSkill = uma.set('skills', uma.skills.add(id));
-		const {results, runData} = runComparison(nsamples, course, racedef, uma, withSkill, pacer, options);
+		const comparisonFn = options.useEnhancedPoskeep ? runEnhancedComparison : runComparison;
+		const {results, runData} = comparisonFn(nsamples, course, racedef, uma, withSkill, pacer, options);
 		const mid = Math.floor(results.length / 2);
 		const median = results.length % 2 == 0 ? (results[mid-1] + results[mid]) / 2 : results[mid];
 		const mean = results.reduce((a,b) => a+b, 0) / results.length;
@@ -87,11 +88,12 @@ function runCompare({nsamples, course, racedef, uma1, uma2, pacer, options}) {
 		.set('skills', SkillSet(pacer.skills || []))
 		.set('forcedSkillPositions', ImmMap(pacer.forcedSkillPositions || {})) : null;
 	let results;
+	const comparisonFn = options.useEnhancedPoskeep ? runEnhancedComparison : runComparison;
 	for (let n = Math.min(20, nsamples), mul = 6; n < nsamples; n = Math.min(n * mul, nsamples), mul = Math.max(mul - 1, 2)) {
-		results = runComparison(n, course, racedef, uma1_, uma2_, pacer_, options);
+		results = comparisonFn(n, course, racedef, uma1_, uma2_, pacer_, options);
 		postMessage({type: 'compare', results});
 	}
-	results = runComparison(nsamples, course, racedef, uma1_, uma2_, pacer_, options);
+	results = comparisonFn(nsamples, course, racedef, uma1_, uma2_, pacer_, options);
 	postMessage({type: 'compare', results});
 	postMessage({type: 'compare-complete'});
 }
