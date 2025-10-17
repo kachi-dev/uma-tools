@@ -1381,7 +1381,8 @@ function App(props) {
 						onSelectionChange={basinnChartSelection}
 						onRunTypeChange={setChartData}
 						onDblClickRow={addSkillFromTable}
-						onInfoClick={showPopover} />
+						onInfoClick={showPopover}
+						showUmaIcons={true} />
 				</div>
 			</div>
 		);
@@ -1425,7 +1426,7 @@ function App(props) {
 							</div>
 							<div>
 								<input type="radio" id="mode-uniques-chart" name="mode" value="uniques-chart" checked={mode == Mode.UniquesChart} onClick={() => updateUiState(UiStateMsg.SetModeUniquesChart)} />
-								<label for="mode-uniques-chart">Uniques chart</label>
+								<label for="mode-uniques-chart">Uma chart</label>
 							</div>
 						</fieldset>
 						{

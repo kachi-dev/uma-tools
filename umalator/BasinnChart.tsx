@@ -20,10 +20,33 @@ import './BasinnChart.css';
 
 import skillnames from '../uma-skill-tools/data/skillnames.json';
 import skill_meta from '../skill_meta.json';
+import umas from '../umas.json';
+import icons from '../icons.json';
 
 function skillmeta(id: string) {
 	// handle the fake skills (e.g., variations of Sirius unique) inserted by make_skill_data with ids like 100701-1
 	return skill_meta[id.split('-')[0]];
+}
+
+function umaForUniqueSkill(skillId: string): string | null {
+	const sid = parseInt(skillId);
+	if (sid < 100000 || sid >= 200000) return null;
+	
+	const remainder = sid - 100001;
+	if (remainder < 0) return null;
+	
+	const i = Math.floor(remainder / 10) % 1000;
+	const v = Math.floor(remainder / 10 / 1000) + 1;
+	
+	const umaId = i.toString().padStart(3, '0');
+	const baseUmaId = `1${umaId}`;
+	const outfitId = `${baseUmaId}${v.toString().padStart(2, '0')}`;
+	
+	if (umas[baseUmaId] && umas[baseUmaId].outfits[outfitId]) {
+		return outfitId;
+	}
+	
+	return null;
 }
 
 export function getActivateableSkills(skills: string[], horse: HorseState, course: CourseData, racedef: RaceParameters) {
@@ -51,10 +74,24 @@ function formatBasinn(info) {
 }
 
 function SkillNameCell(props) {
+	const { id, showUmaIcons = false } = props;
+	
+	if (showUmaIcons) {
+		const umaId = umaForUniqueSkill(id);
+		if (umaId && icons[umaId]) {
+			return (
+				<div class="chartSkillName">
+					<img src={icons[umaId]} />
+					<span><Text id={`skillnames.${id}`} /></span>
+				</div>
+			);
+		}
+	}
+	
 	return (
 		<div class="chartSkillName">
-			<img src={`/uma-tools/icons/${skillmeta(props.id).iconId}.png`} />
-			<span><Text id={`skillnames.${props.id}`} /></span>
+			<img src={`/uma-tools/icons/${skillmeta(id).iconId}.png`} />
+			<span><Text id={`skillnames.${id}`} /></span>
 		</div>
 	);
 }
@@ -85,7 +122,7 @@ export function BasinnChart(props) {
 	const columns = useMemo(() => [{
 		header: () => <span>Skill name</span>,
 		accessorKey: 'id',
-		cell: (info) => <SkillNameCell id={info.getValue()} />,
+		cell: (info) => <SkillNameCell id={info.getValue()} showUmaIcons={props.showUmaIcons} />,
 		sortingFn: (a,b,_) => skillnames[a] < skillnames[b] ? -1 : 1
 	}, {
 		header: headerRenderer(radioGroup, selectedType, 'min', 'Minimum', headerClick),
@@ -106,7 +143,7 @@ export function BasinnChart(props) {
 		accessorKey: 'median',
 		cell: formatBasinn,
 		sortDescFirst: true
-	}], [selectedType]);
+	}], [selectedType, props.showUmaIcons]);
 
 	const [sorting, setSorting] = useState<SortingState>([{id: 'mean', desc: true}]);
 
