@@ -344,7 +344,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		s2.initUmas([s1, ...pacers]);
 
 		pacers.forEach(p => {
-			p?.initUmas([s1, s2, ...pacers.filter(p => p !== pacer)]);
+			p?.initUmas([s1, s2, ...pacers.filter(p2 => p2 !== p)]);
 		});
 
 		let s1Finished = false;
