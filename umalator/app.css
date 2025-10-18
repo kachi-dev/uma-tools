@@ -68,7 +68,7 @@ body {
 	background: rgb(248, 248, 248);
 }
 
-#speedUpRateControl {
+#pacemakerCountControl {
 	display: flex;
 	flex-direction: column;
 	gap: 5px;
@@ -77,13 +77,13 @@ body {
 	border-top: 1px solid rgb(224, 214, 204);
 }
 
-#speedUpRateControl label {
+#pacemakerCountControl label {
 	font-size: 0.85em;
 	color: rgb(121, 64, 22);
 	font-weight: 500;
 }
 
-#speedUpRateControl input[type="range"] {
+#pacemakerCountControl input[type="range"] {
 	width: 100%;
 	cursor: pointer;
 }

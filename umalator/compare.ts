@@ -325,15 +325,29 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 	let aIsUma1 = true; // 'a' starts as standard builder (uma1)
 	
 	for (let i = 0; i < nsamples; ++i) {
-		const pacer: RaceSolver | null = pacerHorse != null ? standard.buildPacer(pacerHorse, i) : null;
+		let pacers = [];
+
+		console.log('pacemakerCount', options.pacemakerCount);
+
+		for (let j = 0; j < options.pacemakerCount; ++j) {
+			const pacer: RaceSolver | null = pacerHorse != null ? standard.buildPacer(pacerHorse, i) : null;
+			pacers.push(pacer);
+
+			this._synchronizedSeed = this._synchronizedSeed + 1;
+		}
+
+		const pacer: RaceSolver | null = pacers.length > 0 ? pacers[0] : null;
 
 		const s1 = a.next(retry).value as RaceSolver;
 		const s2 = b.next(retry).value as RaceSolver;
 		const data = {t: [[], []], p: [[], []], v: [[], []], hp: [[], []], pacerGap: [[], []], sk: [null,null], sdly: [0,0], rushed: [[], []], posKeep: [[], []], pacerV: [[], []], pacerP: [[], []], pacerT: [[], []], pacerPosKeep: [[], []]};
 
-		s1.initUmas([s2, pacer]);
-		s2.initUmas([s1, pacer]);
-		pacer?.initUmas([s1, s2]);
+		s1.initUmas([s2, ...pacers]);
+		s2.initUmas([s1, ...pacers]);
+
+		pacers.forEach(p => {
+			p?.initUmas([s1, s2, ...pacers.filter(p => p !== pacer)]);
+		});
 
 		let s1Finished = false;
 		let s2Finished = false;
@@ -346,9 +360,11 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 				currentPacer = pacer.getPacer();
 			}
 
-			if (pacer && pacer.pos < course.distance) {
-				pacer.step(1/15);
-			}
+			pacers.forEach(p => {
+				if (p && p.pos < course.distance) {
+					p.step(1/15);
+				}
+			});
 
 			if (s2.pos < course.distance) {
 				s2.step(1/15);
@@ -403,15 +419,21 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 			posDifference = data.p[ai][biFrames - 1] - data.p[bi][biFrames - 1];
 		}
 
-		if (pacer && pacer.pos < course.distance) {
-			while (pacer.pos < course.distance) {
-				pacer.step(1/15);
+		pacers.forEach(p => {
+			if (p && p.pos < course.distance) {
+				p.step(1/15);
 
-				data.pacerV[bi].push(pacer ? (pacer.currentSpeed + (pacer.modifiers.currentSpeed.acc + pacer.modifiers.currentSpeed.err)) : undefined);
-				data.pacerP[bi].push(pacer ? pacer.pos : undefined);
-				data.pacerT[bi].push(pacer ? pacer.accumulatetime.t : undefined);
+				if (pacer === p) {
+					data.pacerV[ai].push(p ? (p.currentSpeed + (p.modifiers.currentSpeed.acc + p.modifiers.currentSpeed.err)) : undefined);
+					data.pacerP[ai].push(p ? p.pos : undefined);
+					data.pacerT[ai].push(p ? p.accumulatetime.t : undefined);
+
+					data.pacerV[bi].push(p ? (p.currentSpeed + (p.modifiers.currentSpeed.acc + p.modifiers.currentSpeed.err)) : undefined);
+					data.pacerP[bi].push(p ? p.pos : undefined);
+					data.pacerT[bi].push(p ? p.accumulatetime.t : undefined);
+				}
 			}
-		}
+		});
 
 		data.sk[1] = new Map(skillPos2);  // NOT ai (NB. why not?)
 		skillPos2.clear();

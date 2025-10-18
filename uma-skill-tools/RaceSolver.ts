@@ -121,7 +121,7 @@ export interface RaceState {
 	readonly isLastSpurt: boolean
 	readonly lastSpurtSpeed: number
 	readonly lastSpurtTransition: number
-	readonly isPaceDown: boolean
+	readonly positionKeepState: PositionKeepState
 	readonly isDownhillMode: boolean
 	readonly phase: Phase
 	readonly pos: number
@@ -260,7 +260,7 @@ export class RaceSolver {
 	sectionLength: number
 	umas: RaceSolver[]
 	isPacer: boolean
-	isPaceDown: boolean
+	pacerOverride: boolean
 	posKeepMinThreshold: number
 	posKeepMaxThreshold: number
 	posKeepCooldown: Timer
@@ -355,7 +355,6 @@ export class RaceSolver {
 		this.onSkillActivate = params.onSkillActivate || noop;
 		this.onSkillDeactivate = params.onSkillDeactivate || noop;
 		this.sectionLength = this.course.distance / 24.0;
-		this.isPaceDown = false;
 		this.posKeepMinThreshold = PositionKeep.minThreshold(this.horse.strategy, this.course.distance);
 		this.posKeepMaxThreshold = PositionKeep.maxThreshold(this.horse.strategy, this.course.distance);
 		this.posKeepNextTimer = this.getNewTimer();
@@ -368,6 +367,7 @@ export class RaceSolver {
 		this.posKeepEnd = this.sectionLength * (this.posKeepMode === PosKeepMode.Approximate ? 5.0 : 10.0);
 		this.posKeepSpeedCoef = 1.0;
 		this.isPacer = params.isPacer || false;
+		this.pacerOverride = false;
 		this.umas = [];
 
 		//init timer
@@ -600,7 +600,14 @@ export class RaceSolver {
 			}, frontRunners[0]);
 		}
 
-		// Otherwise, lucky pace
+		// Get pacerOverride uma
+		var pacerOverrideUma = this.umas.find(uma => uma.pacerOverride);
+
+		if (pacerOverrideUma) {
+			return pacerOverrideUma;
+		}
+
+		// Otherwise, lucky pace (set pacerOverride)
 		for (const strategy of [Strategy.Senkou, Strategy.Sasi, Strategy.Oikomi]) {
 			var umas = this.umas.filter(uma => StrategyHelpers.strategyMatches(uma.posKeepStrategy, strategy));
 
@@ -609,7 +616,7 @@ export class RaceSolver {
 					return uma.pos > max.pos ? uma : max;
 				}, umas[0]);
 
-				uma.isPacer = true;
+				uma.pacerOverride = true;
 				uma.posKeepStrategy = Strategy.Nige;
 
 				return uma;
@@ -897,7 +904,7 @@ export class RaceSolver {
 			return;
 		}
 		if (this.currentSpeed > this.targetSpeed) {
-			this.accel = this.isPaceDown ? -0.5 : PhaseDeceleration[this.phase];
+			this.accel = this.positionKeepState === PositionKeepState.PaceDown ? -0.5 : PhaseDeceleration[this.phase];
 			return;
 		}
 		this.accel = this.baseAccel[+(this.hillIdx != -1) * 3 + this.phase];

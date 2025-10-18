@@ -10,6 +10,7 @@
  */
 
 import type { RaceState } from './RaceSolver';
+import { PositionKeepState } from './RaceSolver';
 import { HorseParameters } from './HorseTypes';
 import { CourseData, CourseHelpers, Phase } from './CourseData';
 import { GroundCondition } from './RaceParameters';
@@ -108,9 +109,9 @@ export class EnhancedHpPolicy {
 		return v;
 	}
 
-	getStatusModifier(state: {isPaceDown: boolean, isRushed?: boolean, isDownhillMode?: boolean}) {
+	getStatusModifier(state: {positionKeepState: PositionKeepState, isRushed?: boolean, isDownhillMode?: boolean}) {
 		let modifier = 1.0;
-		if (state.isPaceDown) {
+		if (state.positionKeepState === PositionKeepState.PaceDown) {
 			modifier *= 0.6;
 		}
 		if (state.isRushed) {
@@ -123,7 +124,7 @@ export class EnhancedHpPolicy {
 		return modifier;
 	}
 
-	hpPerSecond(state: {phase: Phase, isPaceDown: boolean, isRushed?: boolean, isDownhillMode?: boolean}, velocity: number) {
+	hpPerSecond(state: {phase: Phase, positionKeepState: PositionKeepState, isRushed?: boolean, isDownhillMode?: boolean}, velocity: number) {
 		const gutsModifier = state.phase >= 2 ? this.gutsModifier : 1.0;
 		return 20.0 * Math.pow(velocity - this.baseSpeed + 12.0, 2) / 144.0 *
 			this.getStatusModifier(state) * this.groundModifier * gutsModifier;
@@ -216,7 +217,7 @@ export class EnhancedHpPolicy {
 		spurtPhase: boolean = true,
 		applyStatusModifier: boolean = false
 	): number {
-		const state = {phase: 2 as Phase, isPaceDown: false};
+		const state = {phase: 2 as Phase, positionKeepState: PositionKeepState.None};
 		const baseConsumption = 20.0 * Math.pow(velocity - this.baseSpeed + 12.0, 2) / 144.0;
 		const gutsModifier = spurtPhase ? this.gutsModifier : 1.0;
 		const statusModifier = applyStatusModifier ? this.getStatusModifier(state) : 1.0;
