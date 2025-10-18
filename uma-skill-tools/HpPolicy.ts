@@ -1,4 +1,5 @@
 import type { RaceState } from './RaceSolver';
+import { PositionKeepState } from './RaceSolver';
 import { HorseParameters } from './HorseTypes';
 import { CourseData, CourseHelpers, Phase } from './CourseData';
 import { GroundCondition } from './RaceParameters';
@@ -59,9 +60,9 @@ export class GameHpPolicy {
 		this.achievedMaxSpurt = false; // Reset for each race
 	}
 
-	getStatusModifier(state: {isPaceDown: boolean, isRushed?: boolean, isDownhillMode?: boolean}) {
+	getStatusModifier(state: {positionKeepState: PositionKeepState, isRushed?: boolean, isDownhillMode?: boolean}) {
 		let modifier = 1.0;
-		if (state.isPaceDown) {
+		if (state.positionKeepState === PositionKeepState.PaceDown) {
 			modifier *= 0.6;
 		}
 		if (state.isRushed) {
@@ -74,7 +75,7 @@ export class GameHpPolicy {
 		return modifier;
 	}
 
-	hpPerSecond(state: {phase: Phase, isPaceDown: boolean, isRushed?: boolean, isDownhillMode?: boolean}, velocity: number) {
+	hpPerSecond(state: {phase: Phase, positionKeepState: PositionKeepState, isRushed?: boolean, isDownhillMode?: boolean}, velocity: number) {
 		const gutsModifier = state.phase >= 2 ? this.gutsModifier : 1.0;
 		return 20.0 * Math.pow(velocity - this.baseSpeed + 12.0, 2) / 144.0 *
 			this.getStatusModifier(state) * this.groundModifier * gutsModifier;
@@ -101,7 +102,7 @@ export class GameHpPolicy {
 	getLastSpurtPair(state: RaceState, maxSpeed: number, baseTargetSpeed2: number) {
 		const maxDist = this.distance - CourseHelpers.phaseStart(this.distance, 2);
 		const s = (maxDist - 60) / maxSpeed;
-		const lastleg = {phase: 2 as Phase, isPaceDown: false};
+		const lastleg = {phase: 2 as Phase, positionKeepState: PositionKeepState.None};
 		const hpNeeded = this.hpPerSecond(lastleg, maxSpeed) * s;
 		
 		if (this.hp >= hpNeeded) {

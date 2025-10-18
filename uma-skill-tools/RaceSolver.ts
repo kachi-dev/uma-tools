@@ -121,7 +121,7 @@ export interface RaceState {
 	readonly isLastSpurt: boolean
 	readonly lastSpurtSpeed: number
 	readonly lastSpurtTransition: number
-	readonly isPaceDown: boolean
+	readonly positionKeepState: PositionKeepState
 	readonly isDownhillMode: boolean
 	readonly phase: Phase
 	readonly pos: number
@@ -164,7 +164,7 @@ export const enum PositionKeepState {
 	PaceUp = 1,
 	PaceDown = 2,
 	SpeedUp = 3,
-	Overtake = 4
+	Overtake = 4,
 }
 
 export function getPositionKeepStateName(state: PositionKeepState): string {
@@ -258,8 +258,9 @@ export class RaceSolver {
 	onSkillActivate: (s: RaceSolver, skillId: string, perspective: Perspective) => void
 	onSkillDeactivate: (s: RaceSolver, skillId: string, perspective: Perspective) => void
 	sectionLength: number
-	pacer: RaceSolver | null
-	isPaceDown: boolean
+	umas: RaceSolver[]
+	isPacer: boolean
+	pacerOverride: boolean
 	posKeepMinThreshold: number
 	posKeepMaxThreshold: number
 	posKeepCooldown: Timer
@@ -270,6 +271,7 @@ export class RaceSolver {
 	positionKeepState: PositionKeepState
 	posKeepMode: PosKeepMode
 	posKeepSpeedCoef: number
+	posKeepStrategy: Strategy
 	
 	// Rushed state
 	isRushed: boolean
@@ -306,7 +308,6 @@ export class RaceSolver {
 		rng: PRNG,
 		skills: PendingSkill[],
 		hp: HpPolicy,
-		pacer?: RaceSolver,
 		onSkillActivate?: (s: RaceSolver, skillId: string) => void,
 		onSkillDeactivate?: (s: RaceSolver, skillId: string) => void,
 		disableRushed?: boolean,
@@ -316,12 +317,12 @@ export class RaceSolver {
 		skillCheckChance?: boolean,
 		synchronizedSeed?: number,
 		posKeepMode?: PosKeepMode,
+		isPacer?: boolean,
 	}) {
 		// clone since green skills may modify the stat values
 		this.horse = Object.assign({}, params.horse);
 		this.course = params.course;
 		this.hp = params.hp;
-		this.pacer = params.pacer || null;
 		this.rng = params.rng;
 		this.pendingSkills = params.skills.slice();  // copy since we remove from it
 		this.pendingRemoval = new Set();
@@ -354,16 +355,20 @@ export class RaceSolver {
 		this.onSkillActivate = params.onSkillActivate || noop;
 		this.onSkillDeactivate = params.onSkillDeactivate || noop;
 		this.sectionLength = this.course.distance / 24.0;
-		this.isPaceDown = false;
 		this.posKeepMinThreshold = PositionKeep.minThreshold(this.horse.strategy, this.course.distance);
 		this.posKeepMaxThreshold = PositionKeep.maxThreshold(this.horse.strategy, this.course.distance);
 		this.posKeepNextTimer = this.getNewTimer();
+		this.posKeepNextTimer.t = -2;
 		this.positionKeepState = PositionKeepState.None;
 		this.posKeepMode = params.posKeepMode || PosKeepMode.None;
+		this.posKeepStrategy = this.horse.strategy;
 		// In approximate mode, all we care about is the consistent early-race pace-down we get
 		// But in full virtual pacemaker mode, we sim the entire poskeep section
 		this.posKeepEnd = this.sectionLength * (this.posKeepMode === PosKeepMode.Approximate ? 5.0 : 10.0);
 		this.posKeepSpeedCoef = 1.0;
+		this.isPacer = params.isPacer || false;
+		this.pacerOverride = false;
+		this.umas = [];
 
 		//init timer
 		this.speedUpProbability = params.speedUpProbability != null ? params.speedUpProbability : 100
@@ -399,15 +404,7 @@ export class RaceSolver {
 
 		this.initHills();
 
-		// must come before the first round of skill activations so concen etc can modify it
 		this.startDelay = 0.1 * (this.posKeepMode === PosKeepMode.Virtual ? this.rng.random() : this.syncRng.random());
-
-		if (this.pacer) {
-			this.pacer.startDelay = 0.0;
-			// NB. we skip updating the pacer in step() below if accumulatetime < dt so this effectively just synchronizes start times.
-			// not entirely sure this is the correct thing to do, but i consider it somewhat logical to minimize rng-start-delay introduced
-			// differences that we're not particularly interested in.
-		}
 
 		this.pos = 0.0;
 		this.accel = 0.0;
@@ -436,6 +433,10 @@ export class RaceSolver {
 		this.hp.init(this.horse);
 
 		this.baseAccel = ([0,1,2,0,1,2] as Phase[]).map((phase,i) => baseAccel(i > 2 ? UphillBaseAccel : BaseAccel, this.horse, phase));
+	}
+
+	initUmas(umas: RaceSolver[]) {
+		this.umas = [...umas.filter(uma => uma != null), this];
 	}
 
 	initHills() {
@@ -563,10 +564,6 @@ export class RaceSolver {
 				return;
 			}
 		}
-		
-		if (this.pacer != null) {
-			this.pacer.step(dt);
-		}
 
 		const halfv = Math.min(this.currentSpeed + 0.5 * dt * this.accel, this.getMaxSpeed());
 		const displacement = halfv + this.modifiers.currentSpeed.acc + this.modifiers.currentSpeed.err;
@@ -593,6 +590,58 @@ export class RaceSolver {
 		this.modifiers.oneFrameAccel = 0.0;
 	}
 
+	getPacer(): RaceSolver | null {
+		// Select furthest-forward front runner
+		var frontRunners = this.umas.filter(uma => StrategyHelpers.strategyMatches(uma.posKeepStrategy, Strategy.Nige));
+
+		if (frontRunners.length > 0) {
+			return frontRunners.reduce((max, uma) => {
+				return uma.pos > max.pos ? uma : max;
+			}, frontRunners[0]);
+		}
+
+		// Get pacerOverride uma
+		var pacerOverrideUma = this.umas.find(uma => uma.pacerOverride);
+
+		if (pacerOverrideUma) {
+			return pacerOverrideUma;
+		}
+
+		// Otherwise, lucky pace (set pacerOverride)
+		for (const strategy of [Strategy.Senkou, Strategy.Sasi, Strategy.Oikomi]) {
+			var umas = this.umas.filter(uma => StrategyHelpers.strategyMatches(uma.posKeepStrategy, strategy));
+
+			if (umas.length > 0) {
+				var uma = umas.reduce((max, uma) => {
+					return uma.pos > max.pos ? uma : max;
+				}, umas[0]);
+
+				uma.pacerOverride = true;
+				uma.posKeepStrategy = Strategy.Nige;
+
+				return uma;
+			}
+		}
+
+		// Otherwise, get virtual pacemaker
+		// (this should never happen though)
+		var pacer = this.umas.find(uma => uma.isPacer);
+
+		if (pacer) {
+			pacer.posKeepStrategy = Strategy.Nige;
+			return pacer;
+		}
+	}
+
+	getUmaByDistanceDescending(): RaceSolver[] {
+		return this.umas.sort((a, b) => b.pos - a.pos);
+	}
+
+	isOnlyFrontRunner(): boolean {
+		var frontRunners = this.umas.filter(uma => StrategyHelpers.strategyMatches(uma.posKeepStrategy, Strategy.Nige));
+		return frontRunners.length === 1 && frontRunners[0] === this;
+	}
+
 	// In Virtual Pacemaker mode, we care about the effects of position keep and the way
 	// umas react during poskeep based on their wit
 	//
@@ -609,15 +658,6 @@ export class RaceSolver {
 		return rng < 0.15 * Math.log10(0.1 * this.horse.wisdom);
 	}
 
-	canSpeedUp(): boolean {
-		// This is used by the pacemaker, so we need to use syncRng to ensure the same pacemaker rolls
-		// are used for both umas.
-		//
-		// It's a cheap way of simulating as if both umas are in the 'same race' without actually simulating
-		// a full lobby of umas.
-		return this.syncRng.random() < 0.2 * Math.log10(0.1 * this.horse.wisdom) && (this.syncRng.random() * 100) < this.speedUpProbability
-	}
-
 	applyPositionKeepStates() {
 		if (this.pos >= this.posKeepEnd || this.posKeepMode === PosKeepMode.None) {
 			// State change triggered by poskeep end
@@ -629,54 +669,32 @@ export class RaceSolver {
 			return;
 		}
 
-		// pacer == null means this horse *is* the pacemaker
-		if (this.pacer == null) {
-			if (this.positionKeepState === PositionKeepState.None) {
-				if (this.posKeepNextTimer.t < 0) { return; }
-
-				if (this.canSpeedUp()) {
-					this.positionKeepActivations.push([this.pos, 0, PositionKeepState.SpeedUp]);
-					this.positionKeepState = PositionKeepState.SpeedUp;
-					this.posKeepExitPosition = this.pos + Math.floor(this.sectionLength);
-				}
-				else {
-					this.posKeepNextTimer.t = -3;
-				}
-			}
-			else {
-				if (this.pos >= this.posKeepExitPosition) {
-					this.positionKeepActivations[this.positionKeepActivations.length - 1][1] = this.pos;
-					this.positionKeepState = PositionKeepState.None;
-					this.posKeepNextTimer.t = -3;
-				}
-			}
-
-			return;
-		}
-
-		var pacer = this.pacer;
+		var pacer = this.getPacer();
 		var behind = pacer.pos - this.pos;
-		var myStrategy = this.horse.strategy;
-		var paceStrategy = pacer.horse.strategy;
+		var myStrategy = this.posKeepStrategy;
 
 		switch (this.positionKeepState) {
 			case PositionKeepState.None:
 				if (this.posKeepNextTimer.t < 0) { return; }
 
 				if (StrategyHelpers.strategyMatches(myStrategy, Strategy.Nige)) {
-					if (behind <= 0) {
-						var threshold = StrategyHelpers.strategyMatches(paceStrategy, Strategy.Nige) ? -4.5 : -12.5;
+					if (pacer === this) {
+						var umas = this.getUmaByDistanceDescending();
+						var secondPlaceUma = umas[1];
+						var distanceAhead = pacer.pos - secondPlaceUma.pos;
+						let threshold = this.isOnlyFrontRunner() ? 12.5 : 4.5;
+						
+						if (this.posKeepNextTimer.t < 0) { return; }
 
-						if (behind > threshold && this.speedUpOvertakeWitCheck()) {
-							this.positionKeepState = PositionKeepState.SpeedUp;
+						if (distanceAhead < threshold && this.speedUpOvertakeWitCheck()) {
 							this.positionKeepActivations.push([this.pos, 0, PositionKeepState.SpeedUp]);
+							this.positionKeepState = PositionKeepState.SpeedUp;
+							this.posKeepExitPosition = this.pos + Math.floor(this.sectionLength);
 						}
 					}
-					else {
-						if (this.speedUpOvertakeWitCheck()) {
-							this.positionKeepState = PositionKeepState.Overtake;
-							this.positionKeepActivations.push([this.pos, 0, PositionKeepState.Overtake]);
-						}
+					else if (this.speedUpOvertakeWitCheck()) {
+						this.positionKeepState = PositionKeepState.Overtake;
+						this.positionKeepActivations.push([this.pos, 0, PositionKeepState.Overtake]);
 					}
 				}
 				else {
@@ -698,7 +716,7 @@ export class RaceSolver {
 
 				if (this.positionKeepState == PositionKeepState.None) {
 					// console.log(this.pos, "Position keep state is None");
-					this.posKeepNextTimer.t = -3;
+					this.posKeepNextTimer.t = -2;
 				}
 				else {
 					// console.log(this.pos, "Position keep state is", getPositionKeepStateName(this.positionKeepState));
@@ -712,10 +730,13 @@ export class RaceSolver {
 					this.positionKeepActivations[this.positionKeepActivations.length - 1][1] = this.pos;
 					this.posKeepNextTimer.t = -3;
 				}
-				else {
-					var threshold = StrategyHelpers.strategyMatches(paceStrategy, Strategy.Nige) ? -4.5 : -12.5;
+				else if (pacer == this) {
+					var umas = this.getUmaByDistanceDescending();
+					var secondPlaceUma = umas[1];
+					var distanceAhead = pacer.pos - secondPlaceUma.pos;
+					let threshold = this.isOnlyFrontRunner() ? 12.5 : 4.5;
 
-					if (behind < threshold) {
+					if (distanceAhead >= threshold) {
 						this.positionKeepState = PositionKeepState.None;
 						this.positionKeepActivations[this.positionKeepActivations.length - 1][1] = this.pos;
 						this.posKeepNextTimer.t = -3;
@@ -883,7 +904,7 @@ export class RaceSolver {
 			return;
 		}
 		if (this.currentSpeed > this.targetSpeed) {
-			this.accel = this.isPaceDown ? -0.5 : PhaseDeceleration[this.phase];
+			this.accel = this.positionKeepState === PositionKeepState.PaceDown ? -0.5 : PhaseDeceleration[this.phase];
 			return;
 		}
 		this.accel = this.baseAccel[+(this.hillIdx != -1) * 3 + this.phase];

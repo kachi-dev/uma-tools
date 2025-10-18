@@ -222,36 +222,28 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		standard.withAsiwotameru().withStaminaSyoubu();
 		compare.withAsiwotameru().withStaminaSyoubu();
 	}
-	
-	// Configure position keep / virtual pacemaker
+
+	let pacerHorse = null;
+
 	if (options.posKeepMode === PosKeepMode.Approximate) {
-		// Use default pacer (old behavior)
-		standard.useDefaultPacer();
-		compare.useDefaultPacer();
-	} else if (options.posKeepMode === PosKeepMode.Virtual) {
-		// Use custom pacemaker configuration if provided
+		pacerHorse = standard.useDefaultPacer();
+	} 
+	else if (options.posKeepMode === PosKeepMode.Virtual) {
 		if (pacer) {
 			const pacerConfig = pacer.toJS ? pacer.toJS() : pacer;
-			const speedUpRate = options.pacerSpeedUpRate != null ? options.pacerSpeedUpRate : 100;
-			
-			standard.pacer(pacerConfig, speedUpRate);
-			compare.pacer(pacerConfig, speedUpRate);
-			
-			// Add pacer skills
+			pacerHorse = standard.pacer(pacerConfig);
+
 			if (pacerConfig.skills && Array.isArray(pacerConfig.skills) && pacerConfig.skills.length > 0) {
 				pacerConfig.skills.forEach((skillId: string) => {
 					const cleanSkillId = skillId.split('-')[0];
 					standard.addPacerSkill(cleanSkillId);
-					compare.addPacerSkill(cleanSkillId);
 				});
 			}
-		} else {
-			// Fallback to default pacer
-			standard.useDefaultPacer();
-			compare.useDefaultPacer();
+		}
+		else {
+			pacerHorse = standard.useDefaultPacer();
 		}
 	}
-	// else: PosKeepMode.None - no pacer at all
 	
 	const skillPos1 = new Map(), skillPos2 = new Map();
 	
@@ -315,6 +307,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 	let minrun, maxrun, meanrun, medianrun;
 	const sampleCutoff = Math.max(Math.floor(nsamples * 0.8), nsamples - 200);
 	let retry = false;
+	let retryCount = 0;
 	
 	// Track rushed statistics across all simulations
 	const rushedStats = {
@@ -332,106 +325,144 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 	let aIsUma1 = true; // 'a' starts as standard builder (uma1)
 	
 	for (let i = 0; i < nsamples; ++i) {
+		let pacers = [];
+
+		for (let j = 0; j < options.pacemakerCount; ++j) {
+			const pacer: RaceSolver | null = pacerHorse != null ? standard.buildPacer(pacerHorse, i) : null;
+			pacers.push(pacer);
+
+			this._synchronizedSeed = this._synchronizedSeed + 1;
+		}
+
+		const pacer: RaceSolver | null = pacers.length > 0 ? pacers[0] : null;
+
 		const s1 = a.next(retry).value as RaceSolver;
 		const s2 = b.next(retry).value as RaceSolver;
-		const data = {t: [[], []], p: [[], []], v: [[], []], hp: [[], []], pacerGap: [[], []], sk: [null,null], sdly: [0,0], rushed: [[], []], posKeep: [[], []], pacerV: [[], []], pacerP: [[], []], pacerT: [[], []], pacerPosKeep: [[], []]};
+		const data = {t: [[], []], p: [[], []], v: [[], []], hp: [[], []], pacerGap: [[], []], sk: [null,null], sdly: [0,0], rushed: [[], []], posKeep: [[], []], pacerV: [[], [], []], pacerP: [[], [], []], pacerT: [[], [], []], pacerPosKeep: [[], [], []]};
 
-		while (s2.pos < course.distance) {
-			s2.step(1/15);
-			data.t[ai].push(s2.accumulatetime.t);
-			data.p[ai].push(s2.pos);
-			data.v[ai].push(s2.currentSpeed + (s2.modifiers.currentSpeed.acc + s2.modifiers.currentSpeed.err));
-			data.hp[ai].push((s2.hp as any).hp);
-			data.pacerGap[ai].push(s2.pacer ? (s2.pacer.pos - s2.pos) : undefined);
-			data.pacerV[ai].push(s2.pacer ? (s2.pacer.currentSpeed + (s2.pacer.modifiers.currentSpeed.acc + s2.pacer.modifiers.currentSpeed.err)) : undefined);
-			data.pacerP[ai].push(s2.pacer ? s2.pacer.pos : undefined);
-			data.pacerT[ai].push(s2.pacer ? s2.pacer.accumulatetime.t : undefined);
-			
-		}
-		data.sdly[ai] = s2.startDelay;
-		data.rushed[ai] = s2.rushedActivations.slice();
-		data.posKeep[ai] = s2.positionKeepActivations.slice();
-		data.pacerPosKeep[ai] = s2.pacer ? s2.pacer.positionKeepActivations.slice() : [];
+		s1.initUmas([s2, ...pacers]);
+		s2.initUmas([s1, ...pacers]);
 
-		while (s1.accumulatetime.t < s2.accumulatetime.t) {
-			s1.step(1/15);
-			data.t[bi].push(s1.accumulatetime.t);
-			data.p[bi].push(s1.pos);
-			data.v[bi].push(s1.currentSpeed + (s1.modifiers.currentSpeed.acc + s1.modifiers.currentSpeed.err));
-			data.hp[bi].push((s1.hp as any).hp);
-			data.pacerGap[bi].push(s1.pacer ? (s1.pacer.pos - s1.pos) : undefined);
-			data.pacerV[bi].push(s1.pacer ? (s1.pacer.currentSpeed + (s1.pacer.modifiers.currentSpeed.acc + s1.pacer.modifiers.currentSpeed.err)) : undefined);
-			data.pacerP[bi].push(s1.pacer ? s1.pacer.pos : undefined);
-			data.pacerT[bi].push(s1.pacer ? s1.pacer.accumulatetime.t : undefined);
-		}
-		// run the rest of the way to have data for the chart
-		const pos1 = s1.pos;
-		while (s1.pos < course.distance) {
-			s1.step(1/15);
-			data.t[bi].push(s1.accumulatetime.t);
-			data.p[bi].push(s1.pos);
-			data.v[bi].push(s1.currentSpeed + (s1.modifiers.currentSpeed.acc + s1.modifiers.currentSpeed.err));
-			data.hp[bi].push((s1.hp as any).hp);
-			data.pacerGap[bi].push(s1.pacer ? (s1.pacer.pos - s1.pos) : undefined);
-			data.pacerV[bi].push(s1.pacer ? (s1.pacer.currentSpeed + (s1.pacer.modifiers.currentSpeed.acc + s1.pacer.modifiers.currentSpeed.err)) : undefined);
-			data.pacerP[bi].push(s1.pacer ? s1.pacer.pos : undefined);
-			data.pacerT[bi].push(s1.pacer ? s1.pacer.accumulatetime.t : undefined);
-		}
-		data.sdly[bi] = s1.startDelay;
-		data.rushed[bi] = s1.rushedActivations.slice();
-		data.posKeep[bi] = s1.positionKeepActivations.slice();
-		data.pacerPosKeep[bi] = s1.pacer ? s1.pacer.positionKeepActivations.slice() : [];
+		pacers.forEach(p => {
+			p?.initUmas([s1, s2, ...pacers.filter(p => p !== pacer)]);
+		});
 
-		//implement dragging here
+		let s1Finished = false;
+		let s2Finished = false;
+		let posDifference = 0;
+
+		while (!s1Finished || !s2Finished) {
+			let currentPacer = null;
+
+			if (pacer) {
+				currentPacer = pacer.getPacer();
+			}
+
+			for (let j = 0; j < options.pacemakerCount; j++) {
+				const p = j < pacers.length ? pacers[j] : null;
+				if (!p || p.pos >= course.distance) continue;
+				p.step(1/15);
+				data.pacerV[j].push(p ? (p.currentSpeed + (p.modifiers.currentSpeed.acc + p.modifiers.currentSpeed.err)) : undefined);
+				data.pacerP[j].push(p ? p.pos : undefined);
+				data.pacerT[j].push(p ? p.accumulatetime.t : undefined);
+			}
+
+			if (s2.pos < course.distance) {
+				s2.step(1/15);
+
+				data.t[ai].push(s2.accumulatetime.t);
+				data.p[ai].push(s2.pos);
+				data.v[ai].push(s2.currentSpeed + (s2.modifiers.currentSpeed.acc + s2.modifiers.currentSpeed.err));
+				data.hp[ai].push((s2.hp as any).hp);
+				data.pacerGap[ai].push(currentPacer ? (currentPacer.pos - s2.pos) : undefined);
+			}
+			else if (!s2Finished) {
+				s2Finished = true;
+
+				data.sdly[ai] = s2.startDelay;
+				data.rushed[ai] = s2.rushedActivations.slice();
+				data.posKeep[ai] = s2.positionKeepActivations.slice();
+			}
+
+			if (s1.pos < course.distance) {
+				s1.step(1/15);
+
+				data.t[bi].push(s1.accumulatetime.t);
+				data.p[bi].push(s1.pos);
+				data.v[bi].push(s1.currentSpeed + (s1.modifiers.currentSpeed.acc + s1.modifiers.currentSpeed.err));
+				data.hp[bi].push((s1.hp as any).hp);
+				data.pacerGap[bi].push(currentPacer ? (currentPacer.pos - s1.pos) : undefined);
+			}
+			else if (!s1Finished) {
+				s1Finished = true;
+
+				data.sdly[bi] = s1.startDelay;
+				data.rushed[bi] = s1.rushedActivations.slice();
+				data.posKeep[bi] = s1.positionKeepActivations.slice();
+			}
+		}
+
+		// ai took less time to finish (less frames to finish)
+		if (data.p[ai].length <= data.p[bi].length) {
+			let aiFrames = data.p[ai].length;
+			posDifference = data.p[ai][aiFrames - 1] - data.p[bi][aiFrames - 1];
+		}
+		else {
+			let biFrames = data.p[bi].length;
+			posDifference = data.p[ai][biFrames - 1] - data.p[bi][biFrames - 1];
+		}
+
+		pacers.forEach(p => {
+			if (p && p.pos < course.distance) {
+				p.step(1/15);
+
+				for (let pacemakerIndex = 0; pacemakerIndex < 3; pacemakerIndex++) {
+					if (pacemakerIndex < pacers.length && pacers[pacemakerIndex] === p) {
+						data.pacerV[pacemakerIndex].push(p ? (p.currentSpeed + (p.modifiers.currentSpeed.acc + p.modifiers.currentSpeed.err)) : undefined);
+						data.pacerP[pacemakerIndex].push(p ? p.pos : undefined);
+						data.pacerT[pacemakerIndex].push(p ? p.accumulatetime.t : undefined);
+					}
+				}
+			}
+		});
+
+		for (let j = 0; j < options.pacemakerCount; j++) {
+			const p = j < pacers.length ? pacers[j] : null;
+			data.pacerPosKeep[j] = p ? p.positionKeepActivations.slice() : [];
+		}
 
 		data.sk[1] = new Map(skillPos2);  // NOT ai (NB. why not?)
 		skillPos2.clear();
 		data.sk[0] = new Map(skillPos1);  // NOT bi (NB. why not?)
 		skillPos1.clear();
 
-		// if `standard` is faster than `compare` then the former ends up going past the course distance
-		// this is not in itself a problem, but it would overestimate the difference if for example a skill
-		// continues past the end of the course. i feel like there are probably some other situations where it would
-		// be inaccurate also. if this happens we have to swap them around and run it again.
-		if (s2.pos < pos1 || isNaN(pos1)) {
-			// Cleanup before swap retry
-			s2.cleanup();
-			s1.cleanup();
-			
-			[b,a] = [a,b];
-			[bi,ai] = [ai,bi];
-			sign *= -1;
-			aIsUma1 = !aIsUma1; // Flip which generator corresponds to which uma
-			--i;  // this one didnt count
-			retry = true;
-		} else {
-			retry = false;
-			
-			// ONLY track stats for valid iterations (after swap check, but BEFORE cleanup)
-			// Key insight: After swaps, s1 and s2 variable names don't tell us which uma they are!
-			// We need to track which BUILDER (a or b) they came from:
-			// - s1 always comes from generator 'a'
-			// - s2 always comes from generator 'b'
-			// - 'a' started as standard builder (uma1), 'b' started as compare builder (uma2)
-			// - After swaps, 'a' might generate uma2 and 'b' might generate uma1
-			// BUT: we swapped both the generators AND the indices, so:
-			//   - If aIsUma1, then s1=uma1, s2=uma2
-			//   - After swap: generators swap AND indices swap, so relationship stays same!
-			
-			// Actually wait, that's not right either. Let me think...
-			// After [b,a]=[a,b], the generator that WAS producing uma1 is now in variable 'b'
-			// And the generator that WAS producing uma2 is now in variable 'a'
-			// So after swaps, aIsUma1 flips!
-			
-			// Determine which uma each solver represents based on current generator state
-			// s1 came from generator 'a': if aIsUma1, then s1 is uma1, else s1 is uma2  
-			// s2 came from generator 'b': if aIsUma1, then s2 is uma2, else s2 is uma1
-			const s1IsUma1 = aIsUma1;
-			const s2IsUma1 = !aIsUma1;
-			
-			if (options.useEnhancedSpurt) {
-				// Each iteration generates ONE solver per uma, not two!
-				// s1 is from generator 'a', s2 is from generator 'b'
+		retry = false;
+		
+		// ONLY track stats for valid iterations (after swap check, but BEFORE cleanup)
+		// Key insight: After swaps, s1 and s2 variable names don't tell us which uma they are!
+		// We need to track which BUILDER (a or b) they came from:
+		// - s1 always comes from generator 'a'
+		// - s2 always comes from generator 'b'
+		// - 'a' started as standard builder (uma1), 'b' started as compare builder (uma2)
+		// - After swaps, 'a' might generate uma2 and 'b' might generate uma1
+		// BUT: we swapped both the generators AND the indices, so:
+		//   - If aIsUma1, then s1=uma1, s2=uma2
+		//   - After swap: generators swap AND indices swap, so relationship stays same!
+		
+		// Actually wait, that's not right either. Let me think...
+		// After [b,a]=[a,b], the generator that WAS producing uma1 is now in variable 'b'
+		// And the generator that WAS producing uma2 is now in variable 'a'
+		// So after swaps, aIsUma1 flips!
+		
+		// Determine which uma each solver represents based on current generator state
+		// s1 came from generator 'a': if aIsUma1, then s1 is uma1, else s1 is uma2  
+		// s2 came from generator 'b': if aIsUma1, then s2 is uma2, else s2 is uma1
+		const s1IsUma1 = aIsUma1;
+		const s2IsUma1 = !aIsUma1;
+		
+		if (options.useEnhancedSpurt) {
+			// Each iteration generates ONE solver per uma, not two!
+			// s1 is from generator 'a', s2 is from generator 'b'
 			// Track stats for s1's uma
 			const s1Stats = s1IsUma1 ? spurtStats.uma1 : spurtStats.uma2;
 			s1Stats.total++;
@@ -457,54 +488,52 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 			if (s2Survived) {
 				s2Stats.staminaSurvivalCount++;
 			}
+		}
+		
+		// Cleanup AFTER stat tracking
+		s2.cleanup();
+		s1.cleanup();
+		
+		// Collect rushed statistics (also based on which uma the solver represents)
+		if (s1.rushedActivations.length > 0) {
+			const [start, end] = s1.rushedActivations[0];
+			const length = end - start;
+			const s1RushedStats = s1IsUma1 ? rushedStats.uma1 : rushedStats.uma2;
+			s1RushedStats.lengths.push(length);
+			s1RushedStats.count++;
+		}
+		if (s2.rushedActivations.length > 0) {
+			const [start, end] = s2.rushedActivations[0];
+			const length = end - start;
+			const s2RushedStats = s2IsUma1 ? rushedStats.uma1 : rushedStats.uma2;
+			s2RushedStats.lengths.push(length);
+			s2RushedStats.count++;
+		}
+		const basinn = sign * posDifference / 2.5;
+		diff.push(basinn);
+		if (basinn < min) {
+			min = basinn;
+			minrun = data;
+		}
+		if (basinn > max) {
+			max = basinn;
+			maxrun = data;
+		}
+		if (i == sampleCutoff) {
+			diff.sort((a,b) => a - b);
+			estMean = diff.reduce((a,b) => a + b) / diff.length;
+			const mid = Math.floor(diff.length / 2);
+			estMedian = mid > 0 && diff.length % 2 == 0 ? (diff[mid-1] + diff[mid]) / 2 : diff[mid];
+		}
+		if (i >= sampleCutoff) {
+			const meanDiff = Math.abs(basinn - estMean), medianDiff = Math.abs(basinn - estMedian);
+			if (meanDiff < bestMeanDiff) {
+				bestMeanDiff = meanDiff;
+				meanrun = data;
 			}
-			
-			// Cleanup AFTER stat tracking
-			s2.cleanup();
-			s1.cleanup();
-
-			
-			// Collect rushed statistics (also based on which uma the solver represents)
-			if (s1.rushedActivations.length > 0) {
-				const [start, end] = s1.rushedActivations[0];
-				const length = end - start;
-				const s1RushedStats = s1IsUma1 ? rushedStats.uma1 : rushedStats.uma2;
-				s1RushedStats.lengths.push(length);
-				s1RushedStats.count++;
-			}
-			if (s2.rushedActivations.length > 0) {
-				const [start, end] = s2.rushedActivations[0];
-				const length = end - start;
-				const s2RushedStats = s2IsUma1 ? rushedStats.uma1 : rushedStats.uma2;
-				s2RushedStats.lengths.push(length);
-				s2RushedStats.count++;
-			}
-			const basinn = sign * (s2.pos - pos1) / 2.5;
-			diff.push(basinn);
-			if (basinn < min) {
-				min = basinn;
-				minrun = data;
-			}
-			if (basinn > max) {
-				max = basinn;
-				maxrun = data;
-			}
-			if (i == sampleCutoff) {
-				diff.sort((a,b) => a - b);
-				estMean = diff.reduce((a,b) => a + b) / diff.length;
-				const mid = Math.floor(diff.length / 2);
-				estMedian = mid > 0 && diff.length % 2 == 0 ? (diff[mid-1] + diff[mid]) / 2 : diff[mid];
-			}
-			if (i >= sampleCutoff) {
-				const meanDiff = Math.abs(basinn - estMean), medianDiff = Math.abs(basinn - estMedian);
-				if (meanDiff < bestMeanDiff) {
-					bestMeanDiff = meanDiff;
-					meanrun = data;
-				}
-				if (medianDiff < bestMedianDiff) {
-					bestMedianDiff = medianDiff;
-					medianrun = data;
-				}
+			if (medianDiff < bestMedianDiff) {
+				bestMedianDiff = medianDiff;
+				medianrun = data;
 			}
 		}
 	}
