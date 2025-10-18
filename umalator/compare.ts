@@ -327,8 +327,6 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 	for (let i = 0; i < nsamples; ++i) {
 		let pacers = [];
 
-		console.log('pacemakerCount', options.pacemakerCount);
-
 		for (let j = 0; j < options.pacemakerCount; ++j) {
 			const pacer: RaceSolver | null = pacerHorse != null ? standard.buildPacer(pacerHorse, i) : null;
 			pacers.push(pacer);
@@ -340,7 +338,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 
 		const s1 = a.next(retry).value as RaceSolver;
 		const s2 = b.next(retry).value as RaceSolver;
-		const data = {t: [[], []], p: [[], []], v: [[], []], hp: [[], []], pacerGap: [[], []], sk: [null,null], sdly: [0,0], rushed: [[], []], posKeep: [[], []], pacerV: [[], []], pacerP: [[], []], pacerT: [[], []], pacerPosKeep: [[], []]};
+		const data = {t: [[], []], p: [[], []], v: [[], []], hp: [[], []], pacerGap: [[], []], sk: [null,null], sdly: [0,0], rushed: [[], []], posKeep: [[], []], pacerV: [[], [], []], pacerP: [[], [], []], pacerT: [[], [], []], pacerPosKeep: [[], [], []]};
 
 		s1.initUmas([s2, ...pacers]);
 		s2.initUmas([s1, ...pacers]);
@@ -360,11 +358,14 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 				currentPacer = pacer.getPacer();
 			}
 
-			pacers.forEach(p => {
-				if (p && p.pos < course.distance) {
-					p.step(1/15);
-				}
-			});
+			for (let j = 0; j < options.pacemakerCount; j++) {
+				const p = j < pacers.length ? pacers[j] : null;
+				if (!p || p.pos >= course.distance) continue;
+				p.step(1/15);
+				data.pacerV[j].push(p ? (p.currentSpeed + (p.modifiers.currentSpeed.acc + p.modifiers.currentSpeed.err)) : undefined);
+				data.pacerP[j].push(p ? p.pos : undefined);
+				data.pacerT[j].push(p ? p.accumulatetime.t : undefined);
+			}
 
 			if (s2.pos < course.distance) {
 				s2.step(1/15);
@@ -374,9 +375,6 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 				data.v[ai].push(s2.currentSpeed + (s2.modifiers.currentSpeed.acc + s2.modifiers.currentSpeed.err));
 				data.hp[ai].push((s2.hp as any).hp);
 				data.pacerGap[ai].push(currentPacer ? (currentPacer.pos - s2.pos) : undefined);
-				data.pacerV[ai].push(pacer ? (pacer.currentSpeed + (pacer.modifiers.currentSpeed.acc + pacer.modifiers.currentSpeed.err)) : undefined);
-				data.pacerP[ai].push(pacer ? pacer.pos : undefined);
-				data.pacerT[ai].push(pacer ? pacer.accumulatetime.t : undefined);
 			}
 			else if (!s2Finished) {
 				s2Finished = true;
@@ -384,7 +382,6 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 				data.sdly[ai] = s2.startDelay;
 				data.rushed[ai] = s2.rushedActivations.slice();
 				data.posKeep[ai] = s2.positionKeepActivations.slice();
-				data.pacerPosKeep[ai] = pacer ? pacer.positionKeepActivations.slice() : [];
 			}
 
 			if (s1.pos < course.distance) {
@@ -395,9 +392,6 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 				data.v[bi].push(s1.currentSpeed + (s1.modifiers.currentSpeed.acc + s1.modifiers.currentSpeed.err));
 				data.hp[bi].push((s1.hp as any).hp);
 				data.pacerGap[bi].push(currentPacer ? (currentPacer.pos - s1.pos) : undefined);
-				data.pacerV[bi].push(pacer ? (pacer.currentSpeed + (pacer.modifiers.currentSpeed.acc + pacer.modifiers.currentSpeed.err)) : undefined);
-				data.pacerP[bi].push(pacer ? pacer.pos : undefined);
-				data.pacerT[bi].push(pacer ? pacer.accumulatetime.t : undefined);
 			}
 			else if (!s1Finished) {
 				s1Finished = true;
@@ -405,7 +399,6 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 				data.sdly[bi] = s1.startDelay;
 				data.rushed[bi] = s1.rushedActivations.slice();
 				data.posKeep[bi] = s1.positionKeepActivations.slice();
-				data.pacerPosKeep[bi] = pacer ? pacer.positionKeepActivations.slice() : [];
 			}
 		}
 
@@ -423,17 +416,20 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 			if (p && p.pos < course.distance) {
 				p.step(1/15);
 
-				if (pacer === p) {
-					data.pacerV[ai].push(p ? (p.currentSpeed + (p.modifiers.currentSpeed.acc + p.modifiers.currentSpeed.err)) : undefined);
-					data.pacerP[ai].push(p ? p.pos : undefined);
-					data.pacerT[ai].push(p ? p.accumulatetime.t : undefined);
-
-					data.pacerV[bi].push(p ? (p.currentSpeed + (p.modifiers.currentSpeed.acc + p.modifiers.currentSpeed.err)) : undefined);
-					data.pacerP[bi].push(p ? p.pos : undefined);
-					data.pacerT[bi].push(p ? p.accumulatetime.t : undefined);
+				for (let pacemakerIndex = 0; pacemakerIndex < 3; pacemakerIndex++) {
+					if (pacemakerIndex < pacers.length && pacers[pacemakerIndex] === p) {
+						data.pacerV[pacemakerIndex].push(p ? (p.currentSpeed + (p.modifiers.currentSpeed.acc + p.modifiers.currentSpeed.err)) : undefined);
+						data.pacerP[pacemakerIndex].push(p ? p.pos : undefined);
+						data.pacerT[pacemakerIndex].push(p ? p.accumulatetime.t : undefined);
+					}
 				}
 			}
 		});
+
+		for (let j = 0; j < options.pacemakerCount; j++) {
+			const p = j < pacers.length ? pacers[j] : null;
+			data.pacerPosKeep[j] = p ? p.positionKeepActivations.slice() : [];
+		}
 
 		data.sk[1] = new Map(skillPos2);  // NOT ai (NB. why not?)
 		skillPos2.clear();

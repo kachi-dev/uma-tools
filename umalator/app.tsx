@@ -252,7 +252,7 @@ function VelocityLines(props) {
 	}, [props.data, props.courseDistance, props.width, props.height]);
 	const colors = ['#2a77c5', '#c52a2a'];
 	const hpColors = ['#688aab', '#ab6868'];
-	const virtualPacemakerColor = '#22c55e';
+	const pacemakerColors = ['#22c55e', '#a855f7', '#ec4899']; // Green, Purple, Pink
 	return (
 		<Fragment>
 			<g transform={`translate(${props.xOffset},5)`}>
@@ -271,15 +271,24 @@ function VelocityLines(props) {
 					return <path key={i} fill="none" stroke={colors[i]} stroke-width="2" stroke-dasharray="5,5" d={
 						d3.line().x(j => x(data.p[i][j])).y(j => pacemakerY(gap[j]))(validPoints.map(p => p.x))
 					} />;
-				}).filter(Boolean) : []).concat(props.showVirtualPacemaker && data.pacerV && data.pacerP && data.pacerV[0] ? (() => {
-					const pacerV = data.pacerV[0];
-					const pacerP = data.pacerP[0];
-					const validPoints = pacerP.map((_,j) => ({x: j, vel: pacerV[j], pos: pacerP[j]})).filter(p => p.vel !== undefined && p.pos !== undefined);
-					if (validPoints.length === 0) return null;
-					
-					return <path key="vp" fill="none" stroke={virtualPacemakerColor} stroke-width="2.5" d={
-						d3.line().x(j => x(pacerP[j])).y(j => y(pacerV[j]))(validPoints.map(p => p.x))
-					} />;
+				}).filter(Boolean) : []).concat(props.showVirtualPacemaker && data.pacerV && data.pacerP ? (() => {
+					const pacemakerLines = [];
+					for (let pacemakerIndex = 0; pacemakerIndex < 3; pacemakerIndex++) {
+						if (props.selectedPacemakers && props.selectedPacemakers[pacemakerIndex] && 
+							data.pacerV && data.pacerV[pacemakerIndex] && data.pacerP && data.pacerP[pacemakerIndex]) {
+							const pacerV = data.pacerV[pacemakerIndex];
+							const pacerP = data.pacerP[pacemakerIndex];
+							const validPoints = pacerP.map((_,j) => ({x: j, vel: pacerV[j], pos: pacerP[j]})).filter(p => p.vel !== undefined && p.pos !== undefined);
+							if (validPoints.length > 0) {
+								pacemakerLines.push(
+									<path key={`vp-${pacemakerIndex}`} fill="none" stroke={pacemakerColors[pacemakerIndex]} stroke-width="2.5" d={
+										d3.line().x(j => x(pacerP[j])).y(j => y(pacerV[j]))(validPoints.map(p => p.x))
+									} />
+								);
+							}
+						}
+					}
+					return pacemakerLines;
 				})() : [])}
 			</g>
 			<g ref={axes} />
@@ -312,7 +321,7 @@ function racedefToParams({mood, ground, weather, season, time, grade}: RaceParam
 	};
 }
 
-async function serialize(courseId: number, nsamples: number, seed: number, posKeepMode: PosKeepMode, racedef: RaceParams, uma1: HorseState, uma2: HorseState, pacer: HorseState, showVirtualPacemakerOnGraph: boolean, pacemakerCount: number, witVarianceSettings: {
+async function serialize(courseId: number, nsamples: number, seed: number, posKeepMode: PosKeepMode, racedef: RaceParams, uma1: HorseState, uma2: HorseState, pacer: HorseState, showVirtualPacemakerOnGraph: boolean, pacemakerCount: number, selectedPacemakers: boolean[], witVarianceSettings: {
 	allowRushedUma1: boolean,
 	allowRushedUma2: boolean,
 	allowDownhillUma1: boolean,
@@ -334,7 +343,8 @@ async function serialize(courseId: number, nsamples: number, seed: number, posKe
 		pacer: pacer.toJS(),
 		witVarianceSettings,
 		showVirtualPacemakerOnGraph,
-		pacemakerCount
+		pacemakerCount,
+		selectedPacemakers
 	});
 	const enc = new TextEncoder();
 	const stringStream = new ReadableStream({
@@ -401,7 +411,8 @@ async function deserialize(hash) {
 						simWitVariance: true
 					},
 					showVirtualPacemakerOnGraph: o.showVirtualPacemakerOnGraph != null ? o.showVirtualPacemakerOnGraph : false,
-					pacemakerCount: o.pacemakerCount != null ? o.pacemakerCount : 1
+					pacemakerCount: o.pacemakerCount != null ? o.pacemakerCount : 1,
+					selectedPacemakers: o.selectedPacemakers != null ? o.selectedPacemakers : [false, false, false]
 				};
 			} catch (_) {
 				return {
@@ -425,7 +436,8 @@ async function deserialize(hash) {
 						simWitVariance: true
 					},
 					showVirtualPacemakerOnGraph: false,
-					pacemakerCount: 1
+					pacemakerCount: 1,
+					selectedPacemakers: [false, false, false]
 				};
 			}
 		} else {
@@ -434,7 +446,7 @@ async function deserialize(hash) {
 	}
 }
 
-async function saveToLocalStorage(courseId: number, nsamples: number, seed: number, posKeepMode: PosKeepMode, racedef: RaceParams, uma1: HorseState, uma2: HorseState, pacer: HorseState, showVirtualPacemakerOnGraph: boolean, pacemakerCount: number, witVarianceSettings: {
+async function saveToLocalStorage(courseId: number, nsamples: number, seed: number, posKeepMode: PosKeepMode, racedef: RaceParams, uma1: HorseState, uma2: HorseState, pacer: HorseState, showVirtualPacemakerOnGraph: boolean, pacemakerCount: number, selectedPacemakers: boolean[], witVarianceSettings: {
 	allowRushedUma1: boolean,
 	allowRushedUma2: boolean,
 	allowDownhillUma1: boolean,
@@ -446,7 +458,7 @@ async function saveToLocalStorage(courseId: number, nsamples: number, seed: numb
 	simWitVariance: boolean
 }) {
 	try {
-		const hash = await serialize(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, witVarianceSettings);
+		const hash = await serialize(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakers, witVarianceSettings);
 		localStorage.setItem('umalator-settings', hash);
 	} catch (error) {
 		console.warn('Failed to save settings to localStorage:', error);
@@ -666,13 +678,49 @@ function App(props) {
 	const [showWitVarianceSettings, setShowWitVarianceSettings] = useState(false);
 	const [showVirtualPacemakerOnGraph, toggleShowVirtualPacemakerOnGraph] = useReducer((b,_) => !b, false);
 	const [pacemakerCount, setPacemakerCount] = useState(1);
+	const [selectedPacemakerIndices, setSelectedPacemakerIndices] = useState([]); // Array of selected pacemaker indices (0, 1, 2), empty means none selected
+	const [isPacemakerDropdownOpen, setIsPacemakerDropdownOpen] = useState(false);
+	
+	function handlePacemakerCountChange(newCount: number) {
+		setPacemakerCount(newCount);
+		const newSelection = selectedPacemakerIndices.filter(index => index < newCount);
+		setSelectedPacemakerIndices(newSelection);
+	}
+	
+	function handlePacemakerSelectionChange(selectedIndices: number[]) {
+		setSelectedPacemakerIndices(selectedIndices);
+	}
+	
+	function togglePacemakerSelection(index: number) {
+		const newSelection = [...selectedPacemakerIndices];
+		const existingIndex = newSelection.indexOf(index);
+		if (existingIndex > -1) {
+			newSelection.splice(existingIndex, 1);
+		} else {
+			newSelection.push(index);
+		}
+
+		setSelectedPacemakerIndices(newSelection);
+	}
+	
+	function getSelectedPacemakers(): boolean[] {
+		const result = [false, false, false];
+
+		selectedPacemakerIndices.forEach(index => {
+			if (index >= 0 && index < 3) {
+				result[index] = true;
+			}
+		});
+
+		return result;
+	}
 	
 	function handleSimWitVarianceToggle() {
 		toggleSimWitVariance(null);
 	}
 	
 	function autoSaveSettings() {
-		saveToLocalStorage(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, {
+		saveToLocalStorage(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, getSelectedPacemakers(), {
 			allowRushedUma1,
 			allowRushedUma2,
 			allowDownhillUma1,
@@ -765,6 +813,9 @@ function App(props) {
 				setUma2(o.uma2);
 				setPacer(o.pacer);
 				setPacemakerCount(o.pacemakerCount);
+				setSelectedPacemakerIndices(o.selectedPacemakers ? 
+					o.selectedPacemakers.map((selected, index) => selected ? index : -1).filter(index => index !== -1) : 
+					[]);
 				
 				if (o.showVirtualPacemakerOnGraph !== undefined && o.showVirtualPacemakerOnGraph !== showVirtualPacemakerOnGraph) {
 					toggleShowVirtualPacemakerOnGraph(null);
@@ -795,6 +846,9 @@ function App(props) {
 					setUma2(o.uma2);
 					setPacer(o.pacer);
 					setPacemakerCount(o.pacemakerCount);
+					setSelectedPacemakerIndices(o.selectedPacemakers ? 
+						o.selectedPacemakers.map((selected, index) => selected ? index : -1).filter(index => index !== -1) : 
+						[]);
 					
 					if (o.showVirtualPacemakerOnGraph !== undefined && o.showVirtualPacemakerOnGraph !== showVirtualPacemakerOnGraph) {
 						toggleShowVirtualPacemakerOnGraph(null);
@@ -825,11 +879,11 @@ function App(props) {
 	// Auto-save settings whenever they change
 	useEffect(() => {
 		autoSaveSettings();
-	}, [courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, allowRushedUma1, allowRushedUma2, allowDownhillUma1, allowDownhillUma2, allowSectionModifierUma1, allowSectionModifierUma2, allowSkillCheckChanceUma1, allowSkillCheckChanceUma2, simWitVariance, showVirtualPacemakerOnGraph, pacemakerCount]);
+	}, [courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, allowRushedUma1, allowRushedUma2, allowDownhillUma1, allowDownhillUma2, allowSectionModifierUma1, allowSectionModifierUma2, allowSkillCheckChanceUma1, allowSkillCheckChanceUma2, simWitVariance, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakerIndices]);
 
 	function copyStateUrl(e) {
 		e.preventDefault();
-		serialize(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, {
+		serialize(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, getSelectedPacemakers(), {
 			allowRushedUma1,
 			allowRushedUma2,
 			allowDownhillUma1,
@@ -1027,6 +1081,17 @@ function App(props) {
 			setPopoverSkill('');
 		});
 	}, []);
+	
+	useEffect(function () {
+		function handleClickOutside(event) {
+			if (isPacemakerDropdownOpen && !event.target.closest('.pacemaker-combobox')) {
+				setIsPacemakerDropdownOpen(false);
+			}
+		}
+		
+		document.addEventListener('click', handleClickOutside);
+		return () => document.removeEventListener('click', handleClickOutside);
+	}, [isPacemakerDropdownOpen]);
 
 	function rtMouseMove(pos) {
 		if (chartData == null) return;
@@ -1124,18 +1189,34 @@ function App(props) {
 		});
 	});
 	
-	const virtualPacemakerPosKeepData = showVirtualPacemakerOnGraph && posKeepMode === PosKeepMode.Virtual && chartData && chartData.pacerPosKeep && chartData.pacerPosKeep[0] ? 
-		chartData.pacerPosKeep[0].map(ar => {
-			const stateName = ar[2] === 1 ? 'PU' : ar[2] === 2 ? 'PDM' : ar[2] === 3 ? 'SU' : ar[2] === 4 ? 'O' : 'Unknown';
-			return {
-				umaIndex: 2,
-				text: stateName,
-				color: {stroke: '#22c55e', fill: 'rgba(34, 197, 94, 0.6)'},
-				start: ar[0],
-				end: ar[1],
-				duration: ar[1] - ar[0]
-			};
-		}) : [];
+	const virtualPacemakerPosKeepData = showVirtualPacemakerOnGraph && posKeepMode === PosKeepMode.Virtual && chartData && chartData.pacerPosKeep ? 
+		(() => {
+			const pacemakerPosKeepData = [];
+			const pacemakerColors = [
+				{stroke: '#22c55e', fill: 'rgba(34, 197, 94, 0.6)'},   // Green
+				{stroke: '#a855f7', fill: 'rgba(168, 85, 247, 0.6)'},  // Purple  
+				{stroke: '#ec4899', fill: 'rgba(236, 72, 153, 0.6)'}   // Pink
+			];
+			
+			for (let pacemakerIndex = 0; pacemakerIndex < 3; pacemakerIndex++) {
+				if (selectedPacemakerIndices.includes(pacemakerIndex) && 
+					chartData.pacerPosKeep && chartData.pacerPosKeep[pacemakerIndex]) {
+					const pacerPosKeepArray = chartData.pacerPosKeep[pacemakerIndex];
+					pacerPosKeepArray.forEach(ar => {
+						const stateName = ar[2] === 1 ? 'PU' : ar[2] === 2 ? 'PDM' : ar[2] === 3 ? 'SU' : ar[2] === 4 ? 'O' : 'Unknown';
+						pacemakerPosKeepData.push({
+							umaIndex: 2 + pacemakerIndex,
+							text: stateName,
+							color: pacemakerColors[pacemakerIndex],
+							start: ar[0],
+							end: ar[1],
+							duration: ar[1] - ar[0]
+						});
+					});
+				}
+			}
+			return pacemakerPosKeepData;
+		})() : [];
 	
 	const posKeepLabels = [];
 	
@@ -1403,7 +1484,7 @@ function App(props) {
 			<IntlProvider definition={strings}>
 				<div id="topPane" class={chartData ? 'hasResults' : ''}>
 					<RaceTrack courseid={courseId} width={960} height={240} xOffset={20} yOffset={15} yExtra={20} mouseMove={rtMouseMove} mouseLeave={rtMouseLeave} onSkillDrag={handleSkillDrag} regions={[...skillActivations, ...rushedIndicators]} posKeepLabels={posKeepLabels} uma1={uma1} uma2={uma2} pacer={pacer}>
-						<VelocityLines data={chartData} courseDistance={course.distance} width={960} height={250} xOffset={20} showHp={showHp} showVirtualPacemaker={showVirtualPacemakerOnGraph && posKeepMode === PosKeepMode.Virtual} />
+						<VelocityLines data={chartData} courseDistance={course.distance} width={960} height={250} xOffset={20} showHp={showHp} showVirtualPacemaker={showVirtualPacemakerOnGraph && posKeepMode === PosKeepMode.Virtual} selectedPacemakers={getSelectedPacemakers()} />
 						
 						<g id="rtMouseOverBox" style="display:none">
 							<text id="rtV1" x="25" y="10" fill="#2a77c5" font-size="10px"></text>
@@ -1461,8 +1542,39 @@ function App(props) {
 							{posKeepMode == PosKeepMode.Virtual && (
 								<div id="pacemakerIndicator">
 									<div>
-										<label for="showVirtualPacemakerOnGraph">Show Pacemaker</label>
-										<input type="checkbox" id="showVirtualPacemakerOnGraph" checked={showVirtualPacemakerOnGraph} onClick={toggleShowVirtualPacemakerOnGraph} />
+										<label>Show Pacemakers:</label>
+										<div className="pacemaker-combobox">
+											<button 
+												className="pacemaker-combobox-button"
+												onClick={() => setIsPacemakerDropdownOpen(!isPacemakerDropdownOpen)}
+											>
+												{selectedPacemakerIndices.length === 0
+													? 'None'
+													: selectedPacemakerIndices.length === 1 
+													? `Pacemaker ${selectedPacemakerIndices[0] + 1}`
+													: selectedPacemakerIndices.length === pacemakerCount
+													? 'All Pacemakers'
+													: `${selectedPacemakerIndices.length} Pacemakers`
+												}
+												<span className="pacemaker-combobox-arrow">▼</span>
+											</button>
+											{isPacemakerDropdownOpen && (
+												<div className="pacemaker-combobox-dropdown">
+													{[...Array(pacemakerCount)].map((_, index) => (
+														<label key={index} className="pacemaker-combobox-option">
+															<input 
+																type="checkbox" 
+																checked={selectedPacemakerIndices.includes(index)}
+																onChange={() => togglePacemakerSelection(index)}
+															/>
+															<span style={{color: index === 0 ? '#22c55e' : index === 1 ? '#a855f7' : '#ec4899'}}>
+																Pacemaker {index + 1}
+															</span>
+														</label>
+													))}
+												</div>
+											)}
+										</div>
 									</div>
 									<div id="pacemakerCountControl">
 										<label for="pacemakercount">Number of pacemakers: {pacemakerCount}</label>
@@ -1472,7 +1584,7 @@ function App(props) {
 											min="1" 
 											max="3" 
 											value={pacemakerCount} 
-											onInput={(e) => setPacemakerCount(+e.currentTarget.value)} 
+											onInput={(e) => handlePacemakerCountChange(+e.currentTarget.value)} 
 										/>
 									</div>
 								</div>

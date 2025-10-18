@@ -88,6 +88,101 @@ body {
 	cursor: pointer;
 }
 
+.pacemaker-selection {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	margin-top: 5px;
+}
+
+.pacemaker-checkbox {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 0.9em;
+	cursor: pointer;
+}
+
+.pacemaker-checkbox input[type="checkbox"] {
+	margin: 0;
+	cursor: pointer;
+}
+
+.pacemaker-checkbox input[type="checkbox"]:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.pacemaker-checkbox span {
+	font-weight: 500;
+}
+
+.pacemaker-combobox {
+	position: relative;
+	display: inline-block;
+	width: 100%;
+}
+
+.pacemaker-combobox-button {
+	background: white;
+	border: 1px solid rgb(148, 150, 189);
+	border-radius: 4px;
+	padding: 6px 12px;
+	width: 100%;
+	text-align: left;
+	cursor: pointer;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-size: 0.9em;
+	color: rgb(121, 64, 22);
+}
+
+.pacemaker-combobox-button:hover {
+	background: rgb(248, 248, 248);
+}
+
+.pacemaker-combobox-arrow {
+	font-size: 0.8em;
+	transition: transform 0.2s;
+}
+
+.pacemaker-combobox-dropdown {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	right: 0;
+	background: white;
+	border: 1px solid rgb(148, 150, 189);
+	border-radius: 4px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	z-index: 1000;
+	margin-top: 2px;
+}
+
+.pacemaker-combobox-option {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 12px;
+	cursor: pointer;
+	font-size: 0.9em;
+	border-bottom: 1px solid rgb(240, 240, 240);
+}
+
+.pacemaker-combobox-option:last-child {
+	border-bottom: none;
+}
+
+.pacemaker-combobox-option:hover {
+	background: rgb(248, 248, 248);
+}
+
+.pacemaker-combobox-option input[type="checkbox"] {
+	margin: 0;
+	cursor: pointer;
+}
+
 #topPane {
 	display: grid;
 	grid-template-columns: 960px auto;
