@@ -85,6 +85,13 @@ const DEFAULT_COURSE_ID = DEFAULT_PRESET.courseId;
 
 function id(x) { return x; }
 
+function formatTime(seconds: number): string {
+	const minutes = Math.floor(seconds / 60);
+	const remainingSeconds = seconds % 60;
+	const secondsStr = remainingSeconds.toFixed(3);
+	return `${minutes}:${secondsStr}`;
+}
+
 function binSearch(a: number[], x: number) {
 	let lo = 0, hi = a.length - 1;
 	if (x < a[0]) return 0;
@@ -1108,8 +1115,6 @@ function App(props) {
 		document.getElementById('rtV2').textContent = `${chartData.v[1][safeI1].toFixed(2)} m/s  t=${chartData.t[1][safeI1].toFixed(2)} s  (${chartData.hp[1][safeI1].toFixed(0)} hp remaining)`;
 		const pacegap1 = chartData.pacerGap?.[0]?.[safeI0];
 		const pacegap2 = chartData.pacerGap?.[1]?.[safeI1];
-		console.log("pacegap1, ", pacegap1);
-		console.log("pacegap2, ", pacegap2);
 		if (pacegap1 !== undefined) {
 			document.getElementById('rtV1').textContent += ` gap towards pacemaker= ${pacegap1.toFixed(2)} m`;
 		}
@@ -1404,7 +1409,7 @@ function App(props) {
 					<table>
 						<caption style="color:#2a77c5">Umamusume 1</caption>
 						<tbody>
-							<tr><th>Time to finish</th><td>{chartData.t[0][chartData.t[0].length-1].toFixed(4) + ' s'}</td></tr>
+							<tr><th>Time to finish</th><td>{formatTime(chartData.t[0][chartData.t[0].length-1] * 1.18)}</td></tr>
 							<tr><th>Start delay</th><td>{chartData.sdly[0].toFixed(4) + ' s'}</td></tr>
 							<tr><th>Top speed</th><td>{chartData.v[0].reduce((a,b) => Math.max(a,b), 0).toFixed(2) + ' m/s'}</td></tr>
 							{rushedStats && allowRushedUma2 && (
@@ -1423,7 +1428,7 @@ function App(props) {
 					<table>
 						<caption style="color:#c52a2a">Umamusume 2</caption>
 						<tbody>
-							<tr><th>Time to finish</th><td>{chartData.t[1][chartData.t[1].length-1].toFixed(4) + ' s'}</td></tr>
+							<tr><th>Time to finish</th><td>{formatTime(chartData.t[1][chartData.t[1].length-1] * 1.18)}</td></tr>
 							<tr><th>Start delay</th><td>{chartData.sdly[1].toFixed(4) + ' s'}</td></tr>
 							<tr><th>Top speed</th><td>{chartData.v[1].reduce((a,b) => Math.max(a,b), 0).toFixed(2) + ' m/s'}</td></tr>
 							{rushedStats && allowRushedUma2 && (

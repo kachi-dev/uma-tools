@@ -356,6 +356,10 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 
 			if (pacer) {
 				currentPacer = pacer.getPacer();
+
+				pacer.umas.forEach(u => {
+					u.updatePacer(currentPacer);
+				});
 			}
 
 			for (let j = 0; j < options.pacemakerCount; j++) {

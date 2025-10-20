@@ -272,7 +272,8 @@ export class RaceSolver {
 	posKeepMode: PosKeepMode
 	posKeepSpeedCoef: number
 	posKeepStrategy: Strategy
-	
+	pacer: RaceSolver | null
+
 	// Rushed state
 	isRushed: boolean
 	hasBeenRushed: boolean  // Track if horse has already been rushed this race (can only happen once)
@@ -358,7 +359,6 @@ export class RaceSolver {
 		this.posKeepMinThreshold = PositionKeep.minThreshold(this.horse.strategy, this.course.distance);
 		this.posKeepMaxThreshold = PositionKeep.maxThreshold(this.horse.strategy, this.course.distance);
 		this.posKeepNextTimer = this.getNewTimer();
-		this.posKeepNextTimer.t = -2;
 		this.positionKeepState = PositionKeepState.None;
 		this.posKeepMode = params.posKeepMode || PosKeepMode.None;
 		this.posKeepStrategy = this.horse.strategy;
@@ -369,6 +369,7 @@ export class RaceSolver {
 		this.isPacer = params.isPacer || false;
 		this.pacerOverride = false;
 		this.umas = [];
+		this.pacer = null;
 
 		//init timer
 		this.speedUpProbability = params.speedUpProbability != null ? params.speedUpProbability : 100
@@ -590,6 +591,13 @@ export class RaceSolver {
 		this.modifiers.oneFrameAccel = 0.0;
 	}
 
+	// Slightly scuffed way of ensuring all umas use the same pacemaker
+	// in compare.ts, call .getPacer() on any uma (doesn't matter which)
+	// and then call .updatePacer(result) on all umas to update pacer reference
+	updatePacer(pacemaker: RaceSolver) {
+		this.pacer = pacemaker;
+	}
+
 	getPacer(): RaceSolver | null {
 		// Select furthest-forward front runner
 		var frontRunners = this.umas.filter(uma => StrategyHelpers.strategyMatches(uma.posKeepStrategy, Strategy.Nige));
@@ -669,7 +677,11 @@ export class RaceSolver {
 			return;
 		}
 
-		var pacer = this.getPacer();
+		if (!this.pacer) {
+			return;
+		}
+
+		var pacer = this.pacer;
 		var behind = pacer.pos - this.pos;
 		var myStrategy = this.posKeepStrategy;
 
