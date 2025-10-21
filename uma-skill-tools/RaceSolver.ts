@@ -1000,8 +1000,8 @@ export class RaceSolver {
 		return this.wisdomRollRng.random() <= Math.max(100-9000/this.horse.wisdom,20) * 0.01;
 	}
 
-	isGreen(skill: {effects: {type: number}[]}): boolean {
-		return skill.effects.length > 0 && skill.effects.every(ef => ef.type > SkillType.WisdomUp);
+	isGreen(skill: PendingSkill): boolean {
+		return skill.rarity != SkillRarity.Gold && skill.rarity != SkillRarity.Unique && skill.rarity != SkillRarity.White && skill.rarity != SkillRarity.Evolution
 	}
 
 
