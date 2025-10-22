@@ -435,6 +435,31 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 			data.pacerPosKeep[j] = p ? p.positionKeepActivations.slice() : [];
 		}
 
+		// Clean up skills that are still active when the race ends
+		// This ensures skills that activate near the finish line get proper end positions
+		// Also handles skills with very short durations that might deactivate in the same frame
+		const cleanupActiveSkills = (solver, selfSkillSet, otherSkillSet) => {
+			const allActiveSkills = [
+				...solver.activeTargetSpeedSkills,
+				...solver.activeCurrentSpeedSkills,
+				...solver.activeAccelSkills
+			];
+			
+			allActiveSkills.forEach(skill => {
+				// Call the deactivator to set the end position to course.distance
+				// This handles both race-end cleanup and very short duration skills
+				// Use the correct skill position maps for this solver
+				getDeactivator(selfSkillSet, otherSkillSet)(solver, skill.skillId, skill.perspective);
+			});
+		};
+
+		// Clean up active skills for both horses
+		// s1 comes from generator 'a' (standard), s2 comes from generator 'b' (compare)
+		// standard uses skillPos1 for self, skillPos2 for other
+		// compare uses skillPos2 for self, skillPos1 for other
+		cleanupActiveSkills(s1, skillPos1, skillPos2);
+		cleanupActiveSkills(s2, skillPos2, skillPos1);
+
 		data.sk[1] = new Map(skillPos2);  // NOT ai (NB. why not?)
 		skillPos2.clear();
 		data.sk[0] = new Map(skillPos1);  // NOT bi (NB. why not?)
