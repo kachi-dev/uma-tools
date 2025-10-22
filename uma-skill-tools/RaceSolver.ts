@@ -1001,7 +1001,8 @@ export class RaceSolver {
 	}
 
 	isGreen(skill: PendingSkill): boolean {
-		return skill.rarity != SkillRarity.Gold && skill.rarity != SkillRarity.Unique && skill.rarity != SkillRarity.White && skill.rarity != SkillRarity.Evolution
+		console.log(skill, " Thats a skill")
+		return skill.rarity != SkillRarity.Gold && skill.rarity != SkillRarity.White && skill.rarity != SkillRarity.Evolution
 	}
 
 
