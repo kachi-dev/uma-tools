@@ -984,7 +984,7 @@ export class RaceSolver {
 				this.pendingRemoval.delete(s.skillId);
 			} else if (this.pos >= s.trigger.start && s.extraCondition(this)) {
 				// Check wisdom for skill activation if enabled
-				if (this.skillCheckChance && !this.checkWisdomForSkill(s) && s.rarity != SkillRarity.Unique && !this.isGreen(s)) {
+				if (this.skillCheckChance && !this.shouldSkipWisdomCheck(s) && !this.checkWisdomForSkill(s)) {
 					// Skill fails due to low wisdom
 					this.pendingSkills.splice(i,1);
 				} else {
@@ -1000,9 +1000,24 @@ export class RaceSolver {
 		return this.wisdomRollRng.random() <= Math.max(100-9000/this.horse.wisdom,20) * 0.01;
 	}
 
-	isGreen(skill: PendingSkill): boolean {
-		console.log(skill.skillId, " Thats a skill")
-		return skill.rarity != SkillRarity.Gold && skill.rarity != SkillRarity.White && skill.rarity != SkillRarity.Evolution
+	shouldSkipWisdomCheck(skill: PendingSkill): boolean {
+		// Skip wisdom checks for rare skills (Gold, Evolution) and common skills (White)
+		// For unique skills, only skip wisdom checks for natural unique skills (IDs not starting with 9)
+		// Inherited unique skills (IDs starting with 9) should still get wisdom checks in global version
+		if (skill.rarity === SkillRarity.Gold ||
+			skill.rarity === SkillRarity.Evolution ||
+			skill.rarity === SkillRarity.White) {
+			return true;
+		}
+
+		if (skill.rarity === SkillRarity.Unique) {
+			// Natural unique skills don't start with 9, inherited unique skills start with 9
+			// Skip wisdom checks for natural unique skills only
+			return !skill.skillId.startsWith('9');
+		}
+
+		// Apply wisdom checks to all other skill rarities (mid-tier skills)
+		return false;
 	}
 
 

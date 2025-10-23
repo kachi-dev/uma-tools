@@ -57,6 +57,45 @@ const redirectTable = {
 	}
 };
 
+const seedrandomPlugin = {
+	name: 'seedrandomPlugin',
+	setup(build) {
+		build.onResolve({filter: /^seedrandom$/}, args => ({
+			path: args.path,
+			namespace: 'seedrandom-ns'
+		}));
+		build.onLoad({filter: /.*/, namespace: 'seedrandom-ns'}, () => ({
+			contents: `
+// Simple seedrandom implementation for browser
+export default function seedrandom(seed) {
+	let x = 0;
+	let y = 0;
+	let z = 0;
+	let w = 0;
+
+	function next() {
+		const t = x ^ (x << 11);
+		x = y;
+		y = z;
+		z = w;
+		w = w ^ (w >>> 19) ^ (t ^ (t >>> 8));
+		return (w >>> 0) / 0x100000000;
+	}
+
+	// Simple seed initialization
+	const str = seed.toString();
+	for (let i = 0; i < str.length; i++) {
+		x = (x * 31 + str.charCodeAt(i)) >>> 0;
+	}
+
+	return next;
+}
+			`,
+			loader: 'js'
+		}));
+	}
+};
+
 const buildOptions = {
 	entryPoints: [{in: '../umalator/app.tsx', out: 'bundle'}, '../umalator/simulator.worker.ts'],
 	bundle: true,
@@ -65,7 +104,7 @@ const buildOptions = {
 	write: !serve,
 	define: {CC_DEBUG: debug.toString(), CC_GLOBAL: 'true'},
 	external: ['*.ttf'],
-	plugins: [redirectData, mockAssert, redirectTable]
+	plugins: [redirectData, mockAssert, redirectTable, seedrandomPlugin]
 };
 
 const MIME_TYPES = {
