@@ -176,9 +176,9 @@ export function RaceTrack(props) {
 			const w = rect.width - xOffset;
 			const x = e.clientX - rect.left - xOffset;
 			
-			const newStart = Math.max(0, Math.min(course.distance, x / w * course.distance - dragOffset.x));
+			const newStart = Math.round(Math.max(0, Math.min(course.distance, x / w * course.distance - dragOffset.x)));
 			const skillLength = Math.max(50, draggedSkill.originalEnd - draggedSkill.originalStart); // Ensure minimum length of 50m
-			const newEnd = Math.max(newStart + skillLength, Math.min(course.distance, newStart + skillLength));
+			const newEnd = Math.round(Math.max(newStart + skillLength, Math.min(course.distance, newStart + skillLength)));
 			
 			console.log('Dragging:', {newStart, newEnd, dragOffset, x, w});
 			
