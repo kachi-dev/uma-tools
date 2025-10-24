@@ -350,6 +350,7 @@ async function serialize(courseId: number, nsamples: number, seed: number, posKe
 		pacer: pacer.toJS(),
 		witVarianceSettings,
 		showVirtualPacemakerOnGraph,
+		showProcInputs,
 		pacemakerCount,
 		selectedPacemakers
 	});
@@ -418,6 +419,7 @@ async function deserialize(hash) {
 						simWitVariance: true
 					},
 					showVirtualPacemakerOnGraph: o.showVirtualPacemakerOnGraph != null ? o.showVirtualPacemakerOnGraph : false,
+					showProcInputs: o.showProcInputs != null ? o.showProcInputs : true,
 					pacemakerCount: o.pacemakerCount != null ? o.pacemakerCount : 1,
 					selectedPacemakers: o.selectedPacemakers != null ? o.selectedPacemakers : [false, false, false]
 				};
@@ -443,6 +445,7 @@ async function deserialize(hash) {
 						simWitVariance: true
 					},
 					showVirtualPacemakerOnGraph: false,
+					showProcInputs: true,
 					pacemakerCount: 1,
 					selectedPacemakers: [false, false, false]
 				};
@@ -684,6 +687,7 @@ function App(props) {
 	const [simWitVariance, toggleSimWitVariance] = useReducer((b,_) => !b, false);
 	const [showWitVarianceSettings, setShowWitVarianceSettings] = useState(false);
 	const [showVirtualPacemakerOnGraph, toggleShowVirtualPacemakerOnGraph] = useReducer((b,_) => !b, false);
+	const [showProcInputs, toggleShowProcInputs] = useReducer((b,_) => !b, true);
 	const [pacemakerCount, setPacemakerCount] = useState(1);
 	const [selectedPacemakerIndices, setSelectedPacemakerIndices] = useState([]); // Array of selected pacemaker indices (0, 1, 2), empty means none selected
 	const [isPacemakerDropdownOpen, setIsPacemakerDropdownOpen] = useState(false);
@@ -827,6 +831,10 @@ function App(props) {
 				if (o.showVirtualPacemakerOnGraph !== undefined && o.showVirtualPacemakerOnGraph !== showVirtualPacemakerOnGraph) {
 					toggleShowVirtualPacemakerOnGraph(null);
 				}
+
+				if (o.showProcInputs !== undefined && o.showProcInputs !== showProcInputs) {
+					toggleShowProcInputs(null);
+				}
 				
 				if (o.witVarianceSettings) {
 					const settings = o.witVarianceSettings;
@@ -860,7 +868,11 @@ function App(props) {
 					if (o.showVirtualPacemakerOnGraph !== undefined && o.showVirtualPacemakerOnGraph !== showVirtualPacemakerOnGraph) {
 						toggleShowVirtualPacemakerOnGraph(null);
 					}
-					
+
+					if (o.showProcInputs !== undefined && o.showProcInputs !== showProcInputs) {
+						toggleShowProcInputs(null);
+					}
+
 					if (o.witVarianceSettings) {
 						const settings = o.witVarianceSettings;
 						if (settings.allowRushedUma1 !== allowRushedUma1) toggleRushedUma1(null);
@@ -1600,6 +1612,10 @@ function App(props) {
 							<input type="checkbox" id="showhp" checked={showHp} onClick={toggleShowHp} />
 						</div>
 						<div>
+							<label for="showProcInputs">Show @m inputs</label>
+							<input type="checkbox" id="showProcInputs" checked={showProcInputs} onClick={toggleShowProcInputs} />
+						</div>
+						<div>
 							<label for="simWitVariance">Wit Variance</label>
 							<input type="checkbox" id="simWitVariance" checked={simWitVariance} onClick={handleSimWitVarianceToggle} />
 							<button 
@@ -1633,7 +1649,7 @@ function App(props) {
 				{expanded && <div id="umaPane" />}
 				<div id={expanded ? 'umaOverlay' : 'umaPane'}>
 					<div class={!expanded && currentIdx == 0 ? 'selected' : ''}>
-						<HorseDef key={uma1.outfitId} state={uma1} setState={setUma1} courseDistance={course.distance} tabstart={() => 4} onResetAll={resetAllUmas}>
+						<HorseDef key={uma1.outfitId} state={uma1} setState={setUma1} courseDistance={course.distance} tabstart={() => 4} onResetAll={resetAllUmas} showProcInputs={showProcInputs}>
 							{expanded ? 'Umamusume 1' : umaTabs}
 						</HorseDef>
 					</div>
@@ -1644,12 +1660,12 @@ function App(props) {
 							<div id="swapUmas" title="Swap umas" onClick={swapUmas}>⮂</div>
 						</div>}
 					{mode == Mode.Compare && <div class={!expanded && currentIdx == 1 ? 'selected' : ''}>
-						<HorseDef key={uma2.outfitId} state={uma2} setState={setUma2} courseDistance={course.distance} tabstart={() => 4 + horseDefTabs()} onResetAll={resetAllUmas}>
+						<HorseDef key={uma2.outfitId} state={uma2} setState={setUma2} courseDistance={course.distance} tabstart={() => 4 + horseDefTabs()} onResetAll={resetAllUmas} showProcInputs={showProcInputs}>
 							{expanded ? 'Umamusume 2' : umaTabs}
 						</HorseDef>
 					</div>}
 					{posKeepMode == PosKeepMode.Virtual && <div class={!expanded && currentIdx == 2 ? 'selected' : ''}>
-						<HorseDef key={pacer.outfitId} state={pacer} setState={setPacer} courseDistance={course.distance} tabstart={() => 4 + (mode == Mode.Compare ? 2 : 1) * horseDefTabs()} onResetAll={resetAllUmas}>
+						<HorseDef key={pacer.outfitId} state={pacer} setState={setPacer} courseDistance={course.distance} tabstart={() => 4 + (mode == Mode.Compare ? 2 : 1) * horseDefTabs()} onResetAll={resetAllUmas} showProcInputs={showProcInputs}>
 							{expanded ? 'Virtual Pacemaker' : umaTabs}
 						</HorseDef>
 					</div>}

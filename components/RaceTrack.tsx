@@ -13,7 +13,7 @@ import tracknames from '../uma-skill-tools/data/tracknames.json';
 
 import './RaceTrack.css';
 
-export const enum RegionDisplayType { Immediate, Regions, Textbox };
+export const enum RegionDisplayType { Immediate, Regions, Textbox, Marker };
 
 const STRINGS_ja = Object.freeze({
 	'racetrack': Object.freeze({
