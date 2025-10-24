@@ -368,6 +368,7 @@
 	width: 576px;
 }
 
+
 .horseSkillList .skill {
 	margin: 0;
 }
@@ -419,12 +420,28 @@
 
 /* Forced position input styles */
 .forcedPositionInput {
-	border: 1px solid #ccc;
+	border: 1px solid rgba(121, 64, 22, 0.4);
 	border-radius: 4px;
 	box-sizing: border-box;
 	font-size: 0.9em;
-	padding: 4px;
-	width: 70px;
+	padding: 6px 8px;
+	width: 80px;
+	background: rgba(255, 255, 255, 0.3);
+	color: rgb(121, 64, 22);
+	transition: all 0.2s ease;
+	backdrop-filter: blur(2px);
+}
+
+.forcedPositionInput:focus {
+	outline: none;
+	border-color: rgb(121, 64, 22);
+	background: rgba(255, 255, 255, 0.5);
+	box-shadow: 0 0 0 2px rgba(121, 64, 22, 0.2);
+}
+
+.forcedPositionInput:hover {
+	border-color: rgba(121, 64, 22, 0.6);
+	background: rgba(255, 255, 255, 0.4);
 }
 
 .forcedPositionInput.inline {
@@ -432,18 +449,40 @@
 	vertical-align: middle;
 }
 
-.forcedPositionWrapper {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	margin-top: 8px;
-	padding: 8px;
-	background: rgba(255, 255, 255, 0.5);
-	border-radius: 4px;
-}
 
 .forcedPositionLabel {
 	color: rgb(121, 64, 22);
 	font-size: 0.9em;
 	font-weight: bold;
+}
+
+.skillDetailsSection:has(.forcedPositionLabel) {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+}
+
+.horseSkillList li {
+	position: relative;
+}
+
+.horseSkillList li .skill {
+	position: static;
+}
+
+.forcedPositionLabel.inline {
+	position: absolute;
+	right: 12px;
+	bottom: -12px;
+	color: rgb(121, 64, 22);
+	font-size: 0.8em;
+	font-weight: normal;
+	background: rgba(121, 64, 22, 0.1);
+	padding: 2px 6px;
+	border-radius: 3px;
+	pointer-events: none;
+	z-index: 10;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }

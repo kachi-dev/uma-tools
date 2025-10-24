@@ -430,6 +430,19 @@ export function ExpandedSkillDetails(props) {
 							}
 						</div>
 					)}
+					<div class="skillDetailsSection">
+						<label class="forcedPositionLabel">Force @ position (m):</label>
+						<input
+							type="number"
+							class="forcedPositionInput"
+							placeholder="Optional"
+							value={props.forcedPosition}
+							onInput={(e) => props.onPositionChange((e.target as HTMLInputElement).value)}
+							onClick={(e) => e.stopPropagation()}
+							min="0"
+							step="10"
+						/>
+					</div>
 				</div>
 			</div>
 		</IntlProvider>

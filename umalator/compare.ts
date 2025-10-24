@@ -321,6 +321,17 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		uma2: { maxSpurtCount: 0, staminaSurvivalCount: 0, total: 0 }
 	};
 	
+	// Track last spurt 1st place frequency
+	// This is primarily useful for front runners where we want to evaluate how effective
+	// they are at getting angling & scheming
+	//
+	// note: eventually we could also even limit angling & scheming proc to only occur
+	// when the uma is *actually* 1st place in the sim instead of using a probability estimate?
+	const firstUmaStats = {
+		uma1: { firstPlaceCount: 0, total: 0 },
+		uma2: { firstPlaceCount: 0, total: 0 }
+	};
+	
 	// Track which generator corresponds to which uma (flips when we swap generators)
 	let aIsUma1 = true; // 'a' starts as standard builder (uma1)
 	
@@ -519,6 +530,18 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 			}
 		}
 		
+		const s1FirstUmaStats = s1IsUma1 ? firstUmaStats.uma1 : firstUmaStats.uma2;
+		s1FirstUmaStats.total++;
+		if (s1.firstUmaInLateRace) {
+			s1FirstUmaStats.firstPlaceCount++;
+		}
+		
+		const s2FirstUmaStats = s2IsUma1 ? firstUmaStats.uma1 : firstUmaStats.uma2;
+		s2FirstUmaStats.total++;
+		if (s2.firstUmaInLateRace) {
+			s2FirstUmaStats.firstPlaceCount++;
+		}
+		
 		// Cleanup AFTER stat tracking
 		s2.cleanup();
 		s1.cleanup();
@@ -597,6 +620,15 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		}
 	} : null;
 	
+	const firstUmaStatsSummary = {
+		uma1: {
+			firstPlaceRate: firstUmaStats.uma1.total > 0 ? (firstUmaStats.uma1.firstPlaceCount / firstUmaStats.uma1.total * 100) : 0
+		},
+		uma2: {
+			firstPlaceRate: firstUmaStats.uma2.total > 0 ? (firstUmaStats.uma2.firstPlaceCount / firstUmaStats.uma2.total * 100) : 0
+		}
+	};
+	
 	// Each run (min, max, mean, median) already has its own rushed data from its actual simulation
 	// We don't need to overwrite it - just ensure the rushed field is properly formatted
 	// The rushed data comes from the RaceSolver.rushedActivations collected during each specific run
@@ -606,6 +638,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		runData: {minrun, maxrun, meanrun, medianrun},
 		rushedStats: rushedStatsSummary,
 		spurtInfo: options.useEnhancedSpurt ? { uma1: spurtInfo1, uma2: spurtInfo2 } : null,
-		spurtStats: spurtStatsSummary
+		spurtStats: spurtStatsSummary,
+		firstUmaStats: firstUmaStatsSummary
 	};
 }

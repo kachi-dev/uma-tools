@@ -261,7 +261,7 @@ export function horseDefTabs() {
 }
 
 export function HorseDef(props) {
-	const {state, setState, showProcInputs = true} = props;
+	const {state, setState} = props;
 	const [skillPickerOpen, setSkillPickerOpen] = useState(false);
 	const [expanded, setExpanded] = useState(() => ImmSet());
 
@@ -344,41 +344,24 @@ export function HorseDef(props) {
 		return Array.from(state.skills).map(id =>
 			expanded.has(id)
 				? <li key={id} class="horseExpandedSkill">
-					  <ExpandedSkillDetails id={id} distanceFactor={props.courseDistance} dismissable={id != u} />
-					  {showProcInputs && (
-					  <div class="forcedPositionWrapper">
-						  <label class="forcedPositionLabel">Force @ position (m):</label>
-						  <input
-							  type="number"
-							  class="forcedPositionInput"
-							  placeholder="Optional"
-							  value={state.forcedSkillPositions.get(id) || ''}
-							  onInput={(e) => handlePositionChange(id, (e.target as HTMLInputElement).value)}
-							  onClick={(e) => e.stopPropagation()}
-							  min="0"
-							  step="10"
-						  />
-					  </div>
-				  )}
+					  <ExpandedSkillDetails 
+						  id={id} 
+						  distanceFactor={props.courseDistance} 
+						  dismissable={id != u}
+						  forcedPosition={state.forcedSkillPositions.get(id) || ''}
+						  onPositionChange={(value: string) => handlePositionChange(id, value)}
+					  />
 				  </li>
 				: <li key={id} style="">
 					  <Skill id={id} selected={false} dismissable={id != u} />
-					  {showProcInputs && (
-						  <input
-							  type="number"
-							  class="forcedPositionInput inline"
-							  placeholder="@m"
-							  title="Force skill activation at this position (in meters)"
-							  value={state.forcedSkillPositions.get(id) || ''}
-							  onInput={(e) => handlePositionChange(id, (e.target as HTMLInputElement).value)}
-							  onClick={(e) => e.stopPropagation()}
-							  min="0"
-							  step="10"
-						  />
-					  )}
+						  {state.forcedSkillPositions.has(id) && (
+							  <span class="forcedPositionLabel inline">
+								  @{state.forcedSkillPositions.get(id)}m
+							  </span>
+						  )}
 				  </li>
 		);
-	}, [state.skills, umaId, expanded, props.courseDistance, state.forcedSkillPositions, showProcInputs]);
+	}, [state.skills, umaId, expanded, props.courseDistance, state.forcedSkillPositions]);
 
 	return (
 		<div class="horseDef">

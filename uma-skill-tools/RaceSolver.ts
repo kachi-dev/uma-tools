@@ -295,6 +295,8 @@ export class RaceSolver {
 	//skill check chance
 	skillCheckChance: boolean
 
+	firstUmaInLateRace: boolean
+
 	modifiers: {
 		targetSpeed: CompensatedAccumulator
 		currentSpeed: CompensatedAccumulator
@@ -392,6 +394,7 @@ export class RaceSolver {
 		this.skillCheckChance = params.skillCheckChance !== false; // Default to true
 		this.rushedActivations = [];
 		this.positionKeepActivations = [];
+		this.firstUmaInLateRace = false;
 		// Calculate rushed chance and determine if/when it activates
 		this.initRushedState(params.disableRushed || false);
 
@@ -827,12 +830,23 @@ export class RaceSolver {
 		}
 	}
 
+	updatefirstUmaInLateRace() {
+		let firstPlaceUma = this.umas.find(u => u.firstUmaInLateRace);
+
+		if (firstPlaceUma) {
+			return;
+		}
+
+		this.firstUmaInLateRace = this.getUmaByDistanceDescending()[0] === this;
+	}
+
 	updateLastSpurtState() {
 		if (this.isLastSpurt || this.phase < 2) return;
 		if (this.lastSpurtTransition == -1) {
 			const v = this.hp.getLastSpurtPair(this, this.lastSpurtSpeed, this.baseTargetSpeed[2]);
 			this.lastSpurtTransition = v[0];
 			this.lastSpurtSpeed = v[1];
+			this.updatefirstUmaInLateRace();
 		}
 		if (this.pos >= this.lastSpurtTransition) {
 			this.isLastSpurt = true;
