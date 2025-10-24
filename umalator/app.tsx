@@ -1302,10 +1302,10 @@ function App(props) {
 					{firstUmaStats && (
 						<div style={{marginTop: '15px', marginBottom: '10px', textAlign: 'center'}}>
 							<div style={{display: 'inline-block', margin: '0 20px'}}>
-								<strong>Uma 1:</strong> Last spurt 1st place %: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{firstUmaStats.uma1.firstPlaceRate.toFixed(1)}%</span>
+								<strong>Uma 1:</strong> Final leg 1st place %: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{firstUmaStats.uma1.firstPlaceRate.toFixed(1)}%</span>
 							</div>
 							<div style={{display: 'inline-block', margin: '0 20px'}}>
-								<strong>Uma 2:</strong> Last spurt 1st place %: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{firstUmaStats.uma2.firstPlaceRate.toFixed(1)}%</span>
+								<strong>Uma 2:</strong> Final leg 1st place %: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{firstUmaStats.uma2.firstPlaceRate.toFixed(1)}%</span>
 							</div>
 						</div>
 					)}

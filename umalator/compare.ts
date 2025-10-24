@@ -415,6 +415,8 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 				data.rushed[bi] = s1.rushedActivations.slice();
 				data.posKeep[bi] = s1.positionKeepActivations.slice();
 			}
+
+			s2.updatefirstUmaInLateRace();
 		}
 
 		// ai took less time to finish (less frames to finish)

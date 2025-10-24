@@ -831,13 +831,19 @@ export class RaceSolver {
 	}
 
 	updatefirstUmaInLateRace() {
-		let firstPlaceUma = this.umas.find(u => u.firstUmaInLateRace);
+		let existingFirstPlaceUma = this.umas.find(u => u.firstUmaInLateRace);
 
-		if (firstPlaceUma) {
+		if (existingFirstPlaceUma) {
 			return;
 		}
 
-		this.firstUmaInLateRace = this.getUmaByDistanceDescending()[0] === this;
+		let firstPlaceUma = this.getUmaByDistanceDescending()[0];
+
+		if (firstPlaceUma.pos < this.course.distance * 2/3) {
+			return;
+		}
+
+		firstPlaceUma.firstUmaInLateRace = true;
 	}
 
 	updateLastSpurtState() {
@@ -846,7 +852,6 @@ export class RaceSolver {
 			const v = this.hp.getLastSpurtPair(this, this.lastSpurtSpeed, this.baseTargetSpeed[2]);
 			this.lastSpurtTransition = v[0];
 			this.lastSpurtSpeed = v[1];
-			this.updatefirstUmaInLateRace();
 		}
 		if (this.pos >= this.lastSpurtTransition) {
 			this.isLastSpurt = true;
