@@ -410,7 +410,6 @@ export class RaceSolver {
 		this.initHills();
 
 		this.startDelay = 0.1 * (this.posKeepMode === PosKeepMode.Virtual ? this.rng.random() : this.syncRng.random());
-		this.startDelayAccumulator = this.startDelay;
 
 		this.pos = 0.0;
 		this.accel = 0.0;
@@ -420,6 +419,8 @@ export class RaceSolver {
 		this.minSpeed = 0.85 * baseSpeed(this.course) + Math.sqrt(200.0 * this.horse.guts) * 0.001;
 		this.startDash = true;
 		this.modifiers.accel.add(24.0);  // start dash accel
+
+		this.startDelayAccumulator = this.startDelay;
 
 		// similarly this must also come after the first round of skill activations
 		this.baseTargetSpeed = ([0,1,2] as Phase[]).map(phase => baseTargetSpeed(this.horse, this.course, phase));
