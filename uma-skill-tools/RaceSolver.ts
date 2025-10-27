@@ -1030,21 +1030,17 @@ export class RaceSolver {
 	}
 
 	shouldSkipWisdomCheck(skill: PendingSkill): boolean {
-		// Skip wisdom checks for rare skills (Gold, Evolution) and common skills (White)
-		// For unique skills, only skip wisdom checks for natural unique skills (IDs not starting with 9)
-		// Inherited unique skills (IDs starting with 9) should still get wisdom checks in global version
-		const skillNum = parseInt(skill.skillId);
-        if (skillNum >= 10001 && skillNum <= 10061) {
-            return true;
-        }//DONT SKIP WIT CHECKS FOR GOLD EVOS AND WHITES
-
-		if (skill.rarity === SkillRarity.Unique) {
-			// Natural unique skills don't start with 9, inherited unique skills start with 9
-			// Skip wisdom checks for natural unique skills only
-			return !skill.skillId.startsWith('9');
+		// Green skills
+		if (skill.effects.length > 0 && skill.effects[0].type >= 1 && skill.effects[0].type <= 5) {
+			return true;
 		}
 
-		// Apply wisdom checks to all other skill rarities (mid-tier skills)
+		// Uniques
+		// (Inherited uniques are White rarity so this works fine)
+		if (skill.rarity === SkillRarity.Unique) {
+			return true;
+		}
+
 		return false;
 	}
 
