@@ -1026,8 +1026,8 @@ export class RaceSolver {
 		if (skill.rarity === SkillRarity.Gold ||
 			skill.rarity === SkillRarity.Evolution ||
 			skill.rarity === SkillRarity.White) {
-			return true;
-		}
+			return false;
+		} //DONT SKIP WIT CHECKS FOR GOLD EVOS AND WHITES
 
 		if (skill.rarity === SkillRarity.Unique) {
 			// Natural unique skills don't start with 9, inherited unique skills start with 9
