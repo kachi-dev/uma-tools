@@ -546,17 +546,6 @@ export class RaceSolver {
 	}
 
 	step(dt: number) {
-		// velocity verlet integration
-		// do this half-step update of velocity (halfv) because during the start dash acceleration depends on velocity
-		// (ie, velocity is given by the following system of differential equations)
-		//
-		// x′(t + Δt) = x′(t) + Δt * x′′(t + Δt)
-		//               ⎧ baseAccel(horse) + accelSkillModifier + 24.0	if x′(t) < 0.85 * baseSpeed(course)
-		// x′′(t + Δt) = ⎨
-		//               ⎩ baseAccel(horse) + accelSkillModifier		if x′(t) ≥ 0.85 * baseSpeed(course)
-		//
-		// i dont actually know anything about numerical analysis but i saw this on the internet
-
 		if (this.accumulatetime.t < this.startDelay) {
 			const partialFrame = this.startDelay - this.accumulatetime.t;
 			if (partialFrame < dt) {
@@ -569,10 +558,6 @@ export class RaceSolver {
 			}
 		}
 
-		const halfv = Math.min(this.currentSpeed + 0.5 * dt * this.accel, this.getMaxSpeed());
-		const displacement = halfv + this.modifiers.currentSpeed.acc + this.modifiers.currentSpeed.err;
-		this.pos += displacement * dt;
-		this.hp.tick(this, dt);
 		this.timers.forEach(tm => tm.t += dt);
 		this.updateHills();
 		this.updatePhase();
@@ -584,13 +569,22 @@ export class RaceSolver {
 		this.updateLastSpurtState();
 		this.updateTargetSpeed();
 		this.applyForces();
-		this.currentSpeed = Math.min(halfv + 0.5 * dt * this.accel + this.modifiers.oneFrameAccel, this.getMaxSpeed());
+
+		this.currentSpeed = Math.min(this.currentSpeed + this.accel * dt, this.getMaxSpeed());
+
 		if (!this.startDash && this.currentSpeed < this.minSpeed) {
 			this.currentSpeed = this.minSpeed;
-		} else if (this.startDash && this.currentSpeed >= 0.85 * baseSpeed(this.course)) {
+		}
+
+		const displacement = this.currentSpeed + this.modifiers.currentSpeed.acc + this.modifiers.currentSpeed.err;
+		this.pos += displacement * dt;
+		this.hp.tick(this, dt);
+
+		if (this.startDash && this.currentSpeed >= 0.85 * baseSpeed(this.course)) {
 			this.startDash = false;
 			this.modifiers.accel.add(-24.0);
 		}
+
 		this.modifiers.oneFrameAccel = 0.0;
 	}
 
