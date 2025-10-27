@@ -891,6 +891,17 @@ function App(props) {
 	useEffect(() => {
 		autoSaveSettings();
 	}, [courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, allowRushedUma1, allowRushedUma2, allowDownhillUma1, allowDownhillUma2, allowSectionModifierUma1, allowSectionModifierUma2, allowSkillCheckChanceUma1, allowSkillCheckChanceUma2, simWitVariance, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakerIndices]);
+	
+	useEffect(() => {
+		const shouldShow = posKeepMode === PosKeepMode.Virtual && selectedPacemakerIndices.length > 0;
+		if (shouldShow !== showVirtualPacemakerOnGraph) {
+			if (shouldShow && !showVirtualPacemakerOnGraph) {
+				toggleShowVirtualPacemakerOnGraph(null);
+			} else if (!shouldShow && showVirtualPacemakerOnGraph) {
+				toggleShowVirtualPacemakerOnGraph(null);
+			}
+		}
+	}, [posKeepMode, selectedPacemakerIndices.length]);
 
 	function copyStateUrl(e) {
 		e.preventDefault();
