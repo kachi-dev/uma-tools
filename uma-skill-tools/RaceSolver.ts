@@ -238,6 +238,7 @@ export class RaceSolver {
 	timers: Timer[]
 	startDash: boolean
 	startDelay: number
+	startDelayAccumulator: number
 	gateRoll: number
 	randomLot: number
 	isLastSpurt: boolean
@@ -409,6 +410,7 @@ export class RaceSolver {
 		this.initHills();
 
 		this.startDelay = 0.1 * (this.posKeepMode === PosKeepMode.Virtual ? this.rng.random() : this.syncRng.random());
+		this.startDelayAccumulator = this.startDelay;
 
 		this.pos = 0.0;
 		this.accel = 0.0;
@@ -545,20 +547,27 @@ export class RaceSolver {
 		// technically, there's a hard cap of 30m/s, but there's no way to actually hit that without implementing the Pace Up Ex position keep mode
 	}
 
+	logVelocityData(dt: number) {
+		console.log('frame: ', this.accumulatetime.t);
+		console.log('current speed: ', this.currentSpeed);
+		console.log('accel: ', this.accel);
+		console.log('dist:', this.pos);
+		console.log('--------------------------------');
+	}
+
 	step(dt: number) {
-		if (this.accumulatetime.t < this.startDelay) {
-			const partialFrame = this.startDelay - this.accumulatetime.t;
-			if (partialFrame < dt) {
-				this.timers.forEach(tm => tm.t += partialFrame);
-				dt -= partialFrame;
-			} else {
-				// still must progress timers
-				this.timers.forEach(tm => tm.t += dt);
+		let dtAfterDelay = dt
+
+		this.timers.forEach(tm => tm.t += dt);
+
+		if (this.startDelayAccumulator > 0.0) {
+			this.startDelayAccumulator -= dt;
+
+			if (this.startDelayAccumulator > 0.0) {
 				return;
 			}
 		}
-
-		this.timers.forEach(tm => tm.t += dt);
+		
 		this.updateHills();
 		this.updatePhase();
 		this.updateRushedState();
@@ -577,7 +586,13 @@ export class RaceSolver {
 		}
 
 		const displacement = this.currentSpeed + this.modifiers.currentSpeed.acc + this.modifiers.currentSpeed.err;
-		this.pos += displacement * dt;
+
+		if (this.startDelayAccumulator < 0.0) {
+			dtAfterDelay = Math.abs(this.startDelayAccumulator);
+			this.startDelayAccumulator = 0.0;
+		}
+
+		this.pos += displacement * dtAfterDelay;
 		this.hp.tick(this, dt);
 
 		if (this.startDash && this.currentSpeed >= 0.85 * baseSpeed(this.course)) {
