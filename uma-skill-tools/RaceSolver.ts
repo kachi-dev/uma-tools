@@ -1023,11 +1023,10 @@ export class RaceSolver {
 		// Skip wisdom checks for rare skills (Gold, Evolution) and common skills (White)
 		// For unique skills, only skip wisdom checks for natural unique skills (IDs not starting with 9)
 		// Inherited unique skills (IDs starting with 9) should still get wisdom checks in global version
-		if (skill.rarity === SkillRarity.Gold ||
-			skill.rarity === SkillRarity.Evolution ||
-			skill.rarity === SkillRarity.White) {
-			return true;
-		}
+		const skillNum = parseInt(skill.skillId);
+        if (skillNum >= 10001 && skillNum <= 10061) {
+            return true;
+        }//DONT SKIP WIT CHECKS FOR GOLD EVOS AND WHITES
 
 		if (skill.rarity === SkillRarity.Unique) {
 			// Natural unique skills don't start with 9, inherited unique skills start with 9
