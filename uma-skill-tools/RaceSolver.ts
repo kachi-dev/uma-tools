@@ -202,6 +202,7 @@ export interface PendingSkill {
 	trigger: Region
 	extraCondition: DynamicCondition
 	effects: SkillEffect[]
+	originWisdom?: number
 }
 
 interface ActiveSkill {
@@ -297,6 +298,9 @@ export class RaceSolver {
 	skillCheckChance: boolean
 
 	firstUmaInLateRace: boolean
+
+	hpDied: boolean
+	fullSpurt: boolean
 
 	modifiers: {
 		targetSpeed: CompensatedAccumulator
@@ -396,6 +400,8 @@ export class RaceSolver {
 		this.rushedActivations = [];
 		this.positionKeepActivations = [];
 		this.firstUmaInLateRace = false;
+		this.hpDied = false;
+		this.fullSpurt = false;
 		// Calculate rushed chance and determine if/when it activates
 		this.initRushedState(params.disableRushed || false);
 
@@ -595,6 +601,10 @@ export class RaceSolver {
 
 		this.pos += displacement * dtAfterDelay;
 		this.hp.tick(this, dt);
+
+		if (!this.hp.hasRemainingHp() && !this.hpDied) {
+			this.hpDied = true;
+		}
 
 		if (this.startDash && this.currentSpeed >= 0.85 * baseSpeed(this.course)) {
 			this.startDash = false;
@@ -862,6 +872,9 @@ export class RaceSolver {
 			const v = this.hp.getLastSpurtPair(this, this.lastSpurtSpeed, this.baseTargetSpeed[2]);
 			this.lastSpurtTransition = v[0];
 			this.lastSpurtSpeed = v[1];
+			if ((this.hp as any).isMaxSpurt && (this.hp as any).isMaxSpurt()) {
+				this.fullSpurt = true;
+			}
 		}
 		if (this.pos >= this.lastSpurtTransition) {
 			this.isLastSpurt = true;
@@ -1017,16 +1030,20 @@ export class RaceSolver {
 					// Skill fails due to low wisdom
 					this.pendingSkills.splice(i,1);
 				} else {
-				this.activateSkill(s);
-				this.pendingSkills.splice(i,1);
+					this.activateSkill(s);
+					this.pendingSkills.splice(i,1);
 				}
 			}
 		}
 	}
 
 	checkWisdomForSkill(skill: PendingSkill): boolean {
-		// Check if horse's wisdom meets the requirement
-		return this.wisdomRollRng.random() <= Math.max(100-9000/this.horse.wisdom,20) * 0.01;
+		let rngRoll = this.wisdomRollRng.random();
+		const wisdom = skill.perspective === Perspective.Other && skill.originWisdom !== undefined 
+			? skill.originWisdom 
+			: this.horse.wisdom;
+		let wisdomCheck = Math.max(100-9000/wisdom,20) * 0.01;
+		return rngRoll <= wisdomCheck;
 	}
 
 	shouldSkipWisdomCheck(skill: PendingSkill): boolean {

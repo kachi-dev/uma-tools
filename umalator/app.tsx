@@ -484,8 +484,8 @@ async function loadFromLocalStorage() {
 	return null;
 }
 
-const EMPTY_RESULTS_STATE = {courseId: DEFAULT_COURSE_ID, results: [], runData: null, chartData: null, displaying: '', rushedStats: null, spurtInfo: null, spurtStats: null, firstUmaStats: null};
-function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | string | {results: any, runData: any, rushedStats?: any, spurtInfo?: any, spurtStats?: any, firstUmaStats?: any}) {
+const EMPTY_RESULTS_STATE = {courseId: DEFAULT_COURSE_ID, results: [], runData: null, chartData: null, displaying: '', rushedStats: null, spurtInfo: null, staminaStats: null, firstUmaStats: null};
+function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | string | {results: any, runData: any, rushedStats?: any, spurtInfo?: any, staminaStats?: any, firstUmaStats?: any}) {
 	if (typeof o == 'number') {
 		return {
 			courseId: o,
@@ -495,7 +495,7 @@ function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | strin
 			displaying: '',
 			rushedStats: null,
 			spurtInfo: null,
-			spurtStats: null,
+			staminaStats: null,
 			firstUmaStats: null
 		};
 	} else if (typeof o == 'string') {
@@ -508,7 +508,7 @@ function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | strin
 			displaying: o,
 			rushedStats: state.rushedStats,
 			spurtInfo: state.spurtInfo,
-			spurtStats: state.spurtStats,
+			staminaStats: state.staminaStats,
 			firstUmaStats: state.firstUmaStats
 		};
 	} else {
@@ -520,7 +520,7 @@ function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | strin
 			displaying: state.displaying || 'meanrun',
 			rushedStats: o.rushedStats || null,
 			spurtInfo: o.spurtInfo || null,
-			spurtStats: o.spurtStats || null,
+			staminaStats: o.staminaStats || null,
 			firstUmaStats: o.firstUmaStats || null
 		};
 	}
@@ -758,7 +758,7 @@ function App(props) {
 		setPacer(new HorseState({strategy: 'Nige'}));
 	}
 	
-	const [{courseId, results, runData, chartData, displaying, rushedStats, spurtInfo, spurtStats, firstUmaStats}, setSimState] = useReducer(updateResultsState, EMPTY_RESULTS_STATE);1
+	const [{courseId, results, runData, chartData, displaying, rushedStats, spurtInfo, staminaStats, firstUmaStats}, setSimState] = useReducer(updateResultsState, EMPTY_RESULTS_STATE);
 	const setCourseId = setSimState;
 	const setResults = setSimState;
 	const setChartData = setSimState;
@@ -1310,123 +1310,39 @@ function App(props) {
 					<div id="resultsHelp">Negative numbers mean <strong style="color:#2a77c5">Umamusume 1</strong> is faster, positive numbers mean <strong style="color:#c52a2a">Umamusume 2</strong> is faster.</div>
 					
 					
-					{firstUmaStats && (
+					{(firstUmaStats || staminaStats) && (
 						<div style={{marginTop: '15px', marginBottom: '10px', textAlign: 'center'}}>
-							<div style={{display: 'inline-block', margin: '0 20px'}}>
-								<strong>Uma 1:</strong> Final leg 1st place %: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{firstUmaStats.uma1.firstPlaceRate.toFixed(1)}%</span>
-							</div>
-							<div style={{display: 'inline-block', margin: '0 20px'}}>
-								<strong>Uma 2:</strong> Final leg 1st place %: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{firstUmaStats.uma2.firstPlaceRate.toFixed(1)}%</span>
-							</div>
-						</div>
-					)}
-					
-					{spurtInfo && (
-						<>
-							{spurtStats && (
-								<div style={{marginTop: '15px', marginBottom: '10px', textAlign: 'center'}}>
-									<div style={{display: 'inline-block', margin: '0 20px'}}>
-										<strong>Uma 1:</strong> Max Spurt Rate: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{spurtStats.uma1.maxSpurtRate.toFixed(1)}%</span> | 
-										Stamina Survival: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{spurtStats.uma1.staminaSurvivalRate.toFixed(1)}%</span>
+							{firstUmaStats && (
+								<div style={{marginBottom: '2px', display: 'flex', justifyContent: 'center', gap: '40px'}}>
+									<div style={{textAlign: 'right', minWidth: '250px'}}>
+										<strong>Uma 1:</strong> Final leg 1st place: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{firstUmaStats.uma1.firstPlaceRate.toFixed(1)}%</span>
 									</div>
-									<div style={{display: 'inline-block', margin: '0 20px'}}>
-										<strong>Uma 2:</strong> Max Spurt Rate: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{spurtStats.uma2.maxSpurtRate.toFixed(1)}%</span> | 
-										Stamina Survival: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{spurtStats.uma2.staminaSurvivalRate.toFixed(1)}%</span>
+									<div style={{textAlign: 'left', minWidth: '250px'}}>
+										<strong>Uma 2:</strong> Final leg 1st place: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{firstUmaStats.uma2.firstPlaceRate.toFixed(1)}%</span>
 									</div>
 								</div>
 							)}
-							<table id="spurtInfoSummary" style="margin-top: 15px; width: 100%;">
-								<caption style="font-weight: bold; margin-bottom: 5px;">Enhanced Spurt Calculator Analysis (Theoretical)</caption>
-							<thead>
-								<tr>
-									<th></th>
-									<th style="color: #2a77c5">Uma 1</th>
-									<th style="color: #c52a2a">Uma 2</th>
-								</tr>
-							</thead>
-							<tbody>
-								<tr>
-									<th>Max Spurt Possible?</th>
-									<td style="color: #2a77c5">{spurtInfo.uma1.maxSpurt ? '✓ Yes' : '✗ No'}</td>
-									<td style="color: #c52a2a">{spurtInfo.uma2.maxSpurt ? '✓ Yes' : '✗ No'}</td>
-								</tr>
-								<tr>
-									<th>Spurt Start Position</th>
-									<td style="color: #2a77c5">{spurtInfo.uma1.transition >= 0 ? spurtInfo.uma1.transition.toFixed(0) + ' m' : 'N/A'}</td>
-									<td style="color: #c52a2a">{spurtInfo.uma2.transition >= 0 ? spurtInfo.uma2.transition.toFixed(0) + ' m' : 'N/A'}</td>
-								</tr>
-								<tr>
-									<th>Spurt Speed</th>
-									<td style="color: #2a77c5">{spurtInfo.uma1.speed > 0 ? spurtInfo.uma1.speed.toFixed(2) + ' m/s' : 'N/A'}</td>
-									<td style="color: #c52a2a">{spurtInfo.uma2.speed > 0 ? spurtInfo.uma2.speed.toFixed(2) + ' m/s' : 'N/A'}</td>
-								</tr>
-								<tr>
-									<th>HP at Finish</th>
-									<td style="color: #2a77c5">{spurtInfo.uma1.hpRemaining.toFixed(0)}</td>
-									<td style="color: #c52a2a">{spurtInfo.uma2.hpRemaining.toFixed(0)}</td>
-								</tr>
-								<tr>
-									<th>Spurt Strategy</th>
-									<td style="color: #2a77c5; font-size: 0.9em">{spurtInfo.uma1.maxSpurt ? 'Full distance at max speed' : 'Optimal suboptimal speed'}</td>
-									<td style="color: #c52a2a; font-size: 0.9em">{spurtInfo.uma2.maxSpurt ? 'Full distance at max speed' : 'Optimal suboptimal speed'}</td>
-								</tr>
-								<tr>
-									<th>Skill Activation Rate</th>
-									<td style="color: #2a77c5">{spurtInfo.uma1.skillActivationRate.toFixed(1)}%</td>
-									<td style="color: #c52a2a">{spurtInfo.uma2.skillActivationRate.toFixed(1)}%</td>
-								</tr>
-								{(!spurtInfo.uma1.maxSpurt || !spurtInfo.uma2.maxSpurt) && (
-									<tr>
-										<th>Heal Skills Available</th>
-										<td style="color: #2a77c5; font-size: 0.85em">
-											{spurtInfo.uma1.healSkillsAvailable.length > 0 
-												? `${spurtInfo.uma1.healSkillsAvailable.length} skill(s)` 
-												: 'None'}
-										</td>
-										<td style="color: #c52a2a; font-size: 0.85em">
-											{spurtInfo.uma2.healSkillsAvailable.length > 0 
-												? `${spurtInfo.uma2.healSkillsAvailable.length} skill(s)` 
-												: 'None'}
-										</td>
-									</tr>
-								)}
-								{(!spurtInfo.uma1.maxSpurt && spurtInfo.uma1.healSkillsAvailable.length > 0) || 
-								 (!spurtInfo.uma2.maxSpurt && spurtInfo.uma2.healSkillsAvailable.length > 0) ? (
-									<tr>
-										<th>Heal Sufficiency</th>
-										<td style="color: #2a77c5; font-size: 0.85em">
-											{!spurtInfo.uma1.maxSpurt && spurtInfo.uma1.healSkillsAvailable.length > 0
-												? (() => {
-													const totalHeal = spurtInfo.uma1.healSkillsAvailable.reduce((sum, skill) => sum + skill.heal, 0);
-													const maxPossibleHeal = totalHeal * 4; // Max 4 corners
-													const sufficient = maxPossibleHeal >= spurtInfo.uma1.healNeeded;
-													const activationChance = spurtInfo.uma1.skillActivationRate;
-													return `Need ${spurtInfo.uma1.healNeeded.toFixed(0)} HP | Can heal ${maxPossibleHeal.toFixed(0)} HP max ${sufficient ? '✓' : '✗ Insufficient'}`;
-												})()
-												: spurtInfo.uma1.maxSpurt ? '—' : 'No heal skills'}
-										</td>
-										<td style="color: #c52a2a; font-size: 0.85em">
-											{!spurtInfo.uma2.maxSpurt && spurtInfo.uma2.healSkillsAvailable.length > 0
-												? (() => {
-													const totalHeal = spurtInfo.uma2.healSkillsAvailable.reduce((sum, skill) => sum + skill.heal, 0);
-													const maxPossibleHeal = totalHeal * 4; // Max 4 corners
-													const sufficient = maxPossibleHeal >= spurtInfo.uma2.healNeeded;
-													const activationChance = spurtInfo.uma2.skillActivationRate;
-													return `Need ${spurtInfo.uma2.healNeeded.toFixed(0)} HP | Can heal ${maxPossibleHeal.toFixed(0)} HP max ${sufficient ? '✓' : '✗ Insufficient'}`;
-												})()
-												: spurtInfo.uma2.maxSpurt ? '—' : 'No heal skills'}
-										</td>
-									</tr>
-								) : null}
-								</tbody>
-							</table>
-							<div style={{marginTop: '1em', padding: '0.75em', background: '#f5f5f5', borderRadius: '4px', fontSize: '0.85em', color: '#555'}}>
-								<strong>Note:</strong> The table above shows theoretical calculations based purely on stats. 
-								The rates above show actual simulation results across all runs.
-								"Max Spurt Rate" = % of runs that achieved max spurt speed. 
-								"Stamina Survival" = % of runs that finished with positive HP.
-							</div>
-						</>
+							{staminaStats && (
+								<>
+									<div style={{marginBottom: '2px', display: 'flex', justifyContent: 'center', gap: '40px'}}>
+										<div style={{textAlign: 'right', minWidth: '250px'}}>
+											<strong>Uma 1:</strong> Spurt Rate: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{staminaStats.uma1.fullSpurtRate.toFixed(1)}%</span>
+										</div>
+										<div style={{textAlign: 'left', minWidth: '250px'}}>
+											<strong>Uma 2:</strong> Spurt Rate: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{staminaStats.uma2.fullSpurtRate.toFixed(1)}%</span>
+										</div>
+									</div>
+									<div style={{marginBottom: '2px', display: 'flex', justifyContent: 'center', gap: '40px'}}>
+										<div style={{textAlign: 'right', minWidth: '250px'}}>
+											<strong>Uma 1:</strong> Survival Rate: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{staminaStats.uma1.staminaSurvivalRate.toFixed(1)}%</span>
+										</div>
+										<div style={{textAlign: 'left', minWidth: '250px'}}>
+											<strong>Uma 2:</strong> Survival Rate: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{staminaStats.uma2.staminaSurvivalRate.toFixed(1)}%</span>
+										</div>
+									</div>
+								</>
+							)}
+						</div>
 					)}
 					
 					<Histogram width={500} height={333} data={results} />

@@ -1,7 +1,7 @@
 import { CourseData } from '../uma-skill-tools/CourseData';
 import { RaceParameters, GroundCondition } from '../uma-skill-tools/RaceParameters';
 import { RaceSolver, PosKeepMode } from '../uma-skill-tools/RaceSolver';
-import { RaceSolverBuilder, Perspective, parseStrategy, parseAptitude } from '../uma-skill-tools/RaceSolverBuilder';
+import { RaceSolverBuilder, Perspective, parseStrategy, parseAptitude, buildBaseStats, buildAdjustedStats } from '../uma-skill-tools/RaceSolverBuilder';
 import { EnhancedHpPolicy } from '../uma-skill-tools/EnhancedHpPolicy';
 import { GameHpPolicy } from '../uma-skill-tools/HpPolicy';
 import { HorseParameters } from '../uma-skill-tools/HorseTypes';
@@ -196,15 +196,26 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 	const common = uma1.skills.intersect(uma2.skills).toArray().sort((a,b) => +a - +b);
 	const commonIdx = (id) => { let i = common.indexOf(id); return i > -1 ? i : common.length; };
 	const sort = (a,b) => commonIdx(a) - commonIdx(b) || +a - +b;
+	
+	const uma1Horse = uma1.toJS();
+	const uma1BaseStats = buildBaseStats(uma1Horse, uma1Horse.mood);
+	const uma1AdjustedStats = buildAdjustedStats(uma1BaseStats, course, racedef.groundCondition);
+	const uma1Wisdom = uma1AdjustedStats.wisdom;
+	
+	const uma2Horse = uma2.toJS();
+	const uma2BaseStats = buildBaseStats(uma2Horse, uma2Horse.mood);
+	const uma2AdjustedStats = buildAdjustedStats(uma2BaseStats, course, racedef.groundCondition);
+	const uma2Wisdom = uma2AdjustedStats.wisdom;
+	
 	uma1.skills.toArray().sort(sort).forEach(id => {
 		const skillId = id.split('-')[0];
 		const forcedPos = uma1.forcedSkillPositions.get(id);
 		if (forcedPos != null) {
 			standard.addSkillAtPosition(skillId, forcedPos, Perspective.Self);
-			compare.addSkill(skillId, Perspective.Other);
+			compare.addSkill(skillId, Perspective.Other, undefined, uma1Wisdom);
 		} else {
 			standard.addSkill(skillId, Perspective.Self);
-			compare.addSkill(skillId, Perspective.Other);
+			compare.addSkill(skillId, Perspective.Other, undefined, uma1Wisdom);
 		}
 	});
 	uma2.skills.toArray().sort(sort).forEach(id => {
@@ -212,10 +223,10 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		const forcedPos = uma2.forcedSkillPositions.get(id);
 		if (forcedPos != null) {
 			compare.addSkillAtPosition(skillId, forcedPos, Perspective.Self);
-			standard.addSkill(skillId, Perspective.Other);
+			standard.addSkill(skillId, Perspective.Other, undefined, uma2Wisdom);
 		} else {
 			compare.addSkill(skillId, Perspective.Self);
-			standard.addSkill(skillId, Perspective.Other);
+			standard.addSkill(skillId, Perspective.Other, undefined, uma2Wisdom);
 		}
 	});
 	if (!CC_GLOBAL) {
@@ -315,10 +326,10 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		uma2: { lengths: [], count: 0 }
 	};
 	
-	// Track spurt and stamina statistics
-	const spurtStats = {
-		uma1: { maxSpurtCount: 0, staminaSurvivalCount: 0, total: 0 },
-		uma2: { maxSpurtCount: 0, staminaSurvivalCount: 0, total: 0 }
+	// Track stamina survival and full spurt statistics
+	const staminaStats = {
+		uma1: { hpDiedCount: 0, fullSpurtCount: 0, total: 0 },
+		uma2: { hpDiedCount: 0, fullSpurtCount: 0, total: 0 }
 	};
 	
 	// Track last spurt 1st place frequency
@@ -502,34 +513,24 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		const s1IsUma1 = aIsUma1;
 		const s2IsUma1 = !aIsUma1;
 		
-		if (options.useEnhancedSpurt) {
-			// Each iteration generates ONE solver per uma, not two!
-			// s1 is from generator 'a', s2 is from generator 'b'
-			// Track stats for s1's uma
-			const s1Stats = s1IsUma1 ? spurtStats.uma1 : spurtStats.uma2;
-			s1Stats.total++;
-			const s1Hp = s1.hp as any;
-			const s1MaxSpurt = s1Hp.isMaxSpurt && s1Hp.isMaxSpurt();
-			if (s1MaxSpurt) {
-				s1Stats.maxSpurtCount++;
-			}
-			const s1Survived = s1Hp.hp > 0;
-			if (s1Survived) {
-				s1Stats.staminaSurvivalCount++;
-			}
-			
-			// Track stats for s2's uma
-			const s2Stats = s2IsUma1 ? spurtStats.uma1 : spurtStats.uma2;
-			s2Stats.total++;
-			const s2Hp = s2.hp as any;
-			const s2MaxSpurt = s2Hp.isMaxSpurt && s2Hp.isMaxSpurt();
-			if (s2MaxSpurt) {
-				s2Stats.maxSpurtCount++;
-			}
-			const s2Survived = s2Hp.hp > 0;
-			if (s2Survived) {
-				s2Stats.staminaSurvivalCount++;
-			}
+		// Track stats for s1's uma
+		const s1Stats = s1IsUma1 ? staminaStats.uma1 : staminaStats.uma2;
+		s1Stats.total++;
+		if (s1.hpDied) {
+			s1Stats.hpDiedCount++;
+		}
+		if (s1.fullSpurt) {
+			s1Stats.fullSpurtCount++;
+		}
+		
+		// Track stats for s2's uma
+		const s2Stats = s2IsUma1 ? staminaStats.uma1 : staminaStats.uma2;
+		s2Stats.total++;
+		if (s2.hpDied) {
+			s2Stats.hpDiedCount++;
+		}
+		if (s2.fullSpurt) {
+			s2Stats.fullSpurtCount++;
 		}
 		
 		const s1FirstUmaStats = s1IsUma1 ? firstUmaStats.uma1 : firstUmaStats.uma2;
@@ -610,17 +611,17 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		uma2: calculateStats(rushedStats.uma2)
 	};
 	
-	// Calculate spurt and stamina survival rates
-	const spurtStatsSummary = options.useEnhancedSpurt ? {
+	// Calculate stamina survival and full spurt rates
+	const staminaStatsSummary = {
 		uma1: {
-			maxSpurtRate: spurtStats.uma1.total > 0 ? (spurtStats.uma1.maxSpurtCount / spurtStats.uma1.total * 100) : 0,
-			staminaSurvivalRate: spurtStats.uma1.total > 0 ? (spurtStats.uma1.staminaSurvivalCount / spurtStats.uma1.total * 100) : 0
+			staminaSurvivalRate: staminaStats.uma1.total > 0 ? ((staminaStats.uma1.total - staminaStats.uma1.hpDiedCount) / staminaStats.uma1.total * 100) : 0,
+			fullSpurtRate: staminaStats.uma1.total > 0 ? (staminaStats.uma1.fullSpurtCount / staminaStats.uma1.total * 100) : 0
 		},
 		uma2: {
-			maxSpurtRate: spurtStats.uma2.total > 0 ? (spurtStats.uma2.maxSpurtCount / spurtStats.uma2.total * 100) : 0,
-			staminaSurvivalRate: spurtStats.uma2.total > 0 ? (spurtStats.uma2.staminaSurvivalCount / spurtStats.uma2.total * 100) : 0
+			staminaSurvivalRate: staminaStats.uma2.total > 0 ? ((staminaStats.uma2.total - staminaStats.uma2.hpDiedCount) / staminaStats.uma2.total * 100) : 0,
+			fullSpurtRate: staminaStats.uma2.total > 0 ? (staminaStats.uma2.fullSpurtCount / staminaStats.uma2.total * 100) : 0
 		}
-	} : null;
+	};
 	
 	const firstUmaStatsSummary = {
 		uma1: {
@@ -640,7 +641,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		runData: {minrun, maxrun, meanrun, medianrun},
 		rushedStats: rushedStatsSummary,
 		spurtInfo: options.useEnhancedSpurt ? { uma1: spurtInfo1, uma2: spurtInfo2 } : null,
-		spurtStats: spurtStatsSummary,
+		staminaStats: staminaStatsSummary,
 		firstUmaStats: firstUmaStatsSummary
 	};
 }

@@ -399,7 +399,7 @@ export class RaceSolverBuilder {
 	_pacerTriggers: Region[][];
 	_rng: SeededRng
 	_parser: {parse: any, tokenize: any}
-	_skills: {id: string, p: Perspective}[]
+	_skills: {id: string, p: Perspective, originWisdom?: number}[]
 	_samplePolicyOverride: Map<string, ActivationSamplePolicy>
 	_extraSkillHooks: ((skilldata: SkillData[], horse: HorseParameters, course: CourseData) => void)[]
 	_onSkillActivate: (state: RaceSolver, skillId: string) => void
@@ -698,8 +698,8 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
-	addSkill(skillId: string, perspective: Perspective = Perspective.Self, samplePolicy?: ActivationSamplePolicy) {
-		this._skills.push({id: skillId, p: perspective});
+	addSkill(skillId: string, perspective: Perspective = Perspective.Self, samplePolicy?: ActivationSamplePolicy, originWisdom?: number) {
+		this._skills.push({id: skillId, p: perspective, originWisdom});
 		if (samplePolicy != null) {
 			this._samplePolicyOverride.set(skillId, samplePolicy);
 		}
@@ -714,9 +714,9 @@ export class RaceSolverBuilder {
 	 * @param perspective Whether this skill is for Self or Other (default: Self)
 	 * @returns this builder for chaining
 	 */
-	addSkillAtPosition(skillId: string, position: number, perspective: Perspective = Perspective.Self) {
+	addSkillAtPosition(skillId: string, position: number, perspective: Perspective = Perspective.Self, originWisdom?: number) {
 		const { createFixedPositionPolicy } = require('./ActivationSamplePolicy');
-		return this.addSkill(skillId, perspective, createFixedPositionPolicy(position));
+		return this.addSkill(skillId, perspective, createFixedPositionPolicy(position), originWisdom);
 	}
 	
 	/**
@@ -832,7 +832,8 @@ export class RaceSolverBuilder {
 				rarity: sd.rarity,
 				trigger: triggers[sdi][i % triggers[sdi].length],
 				extraCondition: sd.extraCondition,
-				effects: sd.effects
+				effects: sd.effects,
+				originWisdom: this._skills[sdi].originWisdom
 			}));
 
 			const hpRng = new Rule30CARng(solverRng.int32());

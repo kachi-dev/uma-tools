@@ -1,7 +1,7 @@
 @echo off
 
 if "%1" == "" (
-  set mastermdb=%APPDATA%\..\LocalLow\Cygames\umamusume\master\master.mdb
+  set mastermdb=%APPDATA%\..\LocalLow\Cygames\Umamusume\master\master.mdb
 ) else (
   set mastermdb=%1
 )
