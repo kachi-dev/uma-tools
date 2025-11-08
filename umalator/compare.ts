@@ -360,7 +360,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 
 		const s1 = a.next(retry).value as RaceSolver;
 		const s2 = b.next(retry).value as RaceSolver;
-		const data = {t: [[], []], p: [[], []], v: [[], []], hp: [[], []], pacerGap: [[], []], sk: [null,null], sdly: [0,0], rushed: [[], []], posKeep: [[], []], pacerV: [[], [], []], pacerP: [[], [], []], pacerT: [[], [], []], pacerPosKeep: [[], [], []]};
+		const data = {t: [[], []], p: [[], []], v: [[], []], hp: [[], []], pacerGap: [[], []], sk: [null,null], sdly: [0,0], rushed: [[], []], posKeep: [[], []], competeFight: [[], []], pacerV: [[], [], []], pacerP: [[], [], []], pacerT: [[], [], []], pacerPosKeep: [[], [], []]};
 
 		s1.initUmas([s2, ...pacers]);
 		s2.initUmas([s1, ...pacers]);
@@ -408,6 +408,9 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 				data.sdly[ai] = s2.startDelay;
 				data.rushed[ai] = s2.rushedActivations.slice();
 				data.posKeep[ai] = s2.positionKeepActivations.slice();
+				if (s2.competeFightStart != null) {
+					data.competeFight[ai] = [s2.competeFightStart, s2.competeFightEnd != null ? s2.competeFightEnd : course.distance];
+				}
 			}
 
 			if (s1.pos < course.distance) {
@@ -425,6 +428,9 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 				data.sdly[bi] = s1.startDelay;
 				data.rushed[bi] = s1.rushedActivations.slice();
 				data.posKeep[bi] = s1.positionKeepActivations.slice();
+				if (s1.competeFightStart != null) {
+					data.competeFight[bi] = [s1.competeFightStart, s1.competeFightEnd != null ? s1.competeFightEnd : course.distance];
+				}
 			}
 
 			s2.updatefirstUmaInLateRace();
