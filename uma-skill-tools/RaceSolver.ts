@@ -128,6 +128,8 @@ export interface RaceState {
 	readonly startDelay: number
 	readonly gateRoll: number
 	readonly usedSkills: ReadonlySet<string>
+	readonly leadCompetition: boolean
+	readonly posKeepStrategy: Strategy
 }
 
 export type DynamicCondition = (state: RaceState) => boolean;
@@ -301,6 +303,12 @@ export class RaceSolver {
 	competeFightEnd: number | null
 	competeFightTimer: Timer
 
+	// Lead Competition
+	leadCompetition: boolean
+	leadCompetitionStart: number | null
+	leadCompetitionEnd: number | null
+	leadCompetitionTimer: Timer
+
 	firstUmaInLateRace: boolean
 
 	hpDied: boolean
@@ -410,7 +418,14 @@ export class RaceSolver {
 		this.initRushedState(params.disableRushed || false);
 
 		this.competeFight = false;
+		this.competeFightStart = null;
+		this.competeFightEnd = null;
 		this.competeFightTimer = this.getNewTimer();
+
+		this.leadCompetition = false;
+		this.leadCompetitionStart = null;
+		this.leadCompetitionEnd = null;
+		this.leadCompetitionTimer = this.getNewTimer();
 
 		this.modifiers = {
 			targetSpeed: new CompensatedAccumulator(0.0),
@@ -590,6 +605,7 @@ export class RaceSolver {
 		this.applyPositionKeepStates();
 		this.updatePositionKeepCoefficient();
 		this.updateCompeteFight();
+		this.updateLeadCompetition();
 		this.updateLastSpurtState();
 		this.updateTargetSpeed();
 		this.applyForces();
@@ -681,7 +697,7 @@ export class RaceSolver {
 	}
 
 	isOnlyFrontRunner(): boolean {
-		var frontRunners = this.umas.filter(uma => StrategyHelpers.strategyMatches(uma.posKeepStrategy, Strategy.Nige));
+		var frontRunners = this.umas.filter(uma => StrategyHelpers.strategyMatches(uma.posKeepStrategy, Strategy.Nige) || StrategyHelpers.strategyMatches(uma.posKeepStrategy, Strategy.Oonige));
 		return frontRunners.length === 1 && frontRunners[0] === this;
 	}
 
@@ -724,13 +740,13 @@ export class RaceSolver {
 			case PositionKeepState.None:
 				if (this.posKeepNextTimer.t < 0) { return; }
 
-				if (StrategyHelpers.strategyMatches(myStrategy, Strategy.Nige)) {
+				if (StrategyHelpers.strategyMatches(myStrategy, Strategy.Nige) || StrategyHelpers.strategyMatches(myStrategy, Strategy.Oonige)) {
 					// Speed Up
 					if (pacer === this) {
 						var umas = this.getUmaByDistanceDescending();
 						var secondPlaceUma = umas[1];
 						var distanceAhead = pacer.pos - secondPlaceUma.pos;
-						let threshold = myStrategy === Strategy.Oonige ? 17.5 : 4.5;
+						let threshold = StrategyHelpers.strategyMatches(myStrategy, Strategy.Oonige) ? 17.5 : 4.5;
 						
 						if (this.posKeepNextTimer.t < 0) { return; }
 
@@ -785,7 +801,7 @@ export class RaceSolver {
 					var umas = this.getUmaByDistanceDescending();
 					var secondPlaceUma = umas[1];
 					var distanceAhead = pacer.pos - secondPlaceUma.pos;
-					let threshold = myStrategy === Strategy.Oonige ? 17.5 : 4.5;
+					let threshold = StrategyHelpers.strategyMatches(myStrategy, Strategy.Oonige) ? 17.5 : 4.5;
 
 					if (distanceAhead >= threshold) {
 						this.positionKeepState = PositionKeepState.None;
@@ -802,7 +818,7 @@ export class RaceSolver {
 					this.posKeepNextTimer.t = -3;
 				}
 				else {
-					var threshold = myStrategy === Strategy.Oonige ? -27.5 : -10;
+					var threshold = StrategyHelpers.strategyMatches(myStrategy, Strategy.Oonige) ? -27.5 : -10;
 
 					if (behind < threshold) {
 						this.positionKeepState = PositionKeepState.None;
@@ -888,6 +904,28 @@ export class RaceSolver {
 		if (this.competeFightTimer.t >= 2) {
 			this.competeFight = true;
 			this.competeFightStart = this.pos;
+		}
+	}
+
+	updateLeadCompetition() {
+		if (this.leadCompetition) {
+			let leadCompeteDuration = Math.pow(700 * this.horse.guts, 0.5) * 0.012;
+
+			if (this.leadCompetitionTimer.t >= leadCompeteDuration || this.pos >= this.leadCompetitionEnd) {
+				this.leadCompetition = false;
+				this.leadCompetitionEnd = this.pos;
+			}
+		}
+
+		if (this.leadCompetitionStart !== null) {
+			return;
+		}
+
+		if (this.pos >= 200 && (StrategyHelpers.strategyMatches(this.posKeepStrategy, Strategy.Nige) || StrategyHelpers.strategyMatches(this.posKeepStrategy, Strategy.Oonige))) {
+			this.leadCompetitionTimer.t = 0;
+			this.leadCompetition = true;
+			this.leadCompetitionStart = this.pos;
+			this.leadCompetitionEnd = Math.floor(this.sectionLength * 8);
 		}
 	}
 
@@ -983,6 +1021,10 @@ export class RaceSolver {
 
 		if (this.competeFight) {
 			this.targetSpeed += Math.pow(200 * this.horse.guts, 0.709) * 0.0001;
+		}
+
+		if (this.leadCompetition) {
+			this.targetSpeed += Math.pow(500 * this.horse.guts, 0.6) * 0.0001;
 		}
 
 		// moved logic on every step
