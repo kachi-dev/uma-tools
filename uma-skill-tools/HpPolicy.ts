@@ -68,7 +68,7 @@ export class GameHpPolicy {
 		}
 		
 		if (state.leadCompetition) {
-			const isOonige = StrategyHelpers.strategyMatches(state.posKeepStrategy, Strategy.Oonige);
+			const isOonige = state.posKeepStrategy === Strategy.Oonige;
 			if (state.isRushed) {
 				modifier *= isOonige ? 7.7 : 3.6;
 			} else {

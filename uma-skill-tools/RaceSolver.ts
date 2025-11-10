@@ -648,7 +648,7 @@ export class RaceSolver {
 	getPacer(): RaceSolver | null {
 		// Select furthest-forward front runner
 		for (const strategy of [Strategy.Oonige, Strategy.Nige]) {
-			var umas = this.umas.filter(uma => StrategyHelpers.strategyMatches(uma.posKeepStrategy, strategy));
+			var umas = this.umas.filter(uma => uma.posKeepStrategy === strategy);
 
 			if (umas.length > 0) {
 				var uma = umas.reduce((max, uma) => {
@@ -697,7 +697,7 @@ export class RaceSolver {
 	}
 
 	isOnlyFrontRunner(): boolean {
-		var frontRunners = this.umas.filter(uma => StrategyHelpers.strategyMatches(uma.posKeepStrategy, Strategy.Nige) || StrategyHelpers.strategyMatches(uma.posKeepStrategy, Strategy.Oonige));
+		var frontRunners = this.umas.filter(uma => StrategyHelpers.strategyMatches(uma.posKeepStrategy, Strategy.Nige));
 		return frontRunners.length === 1 && frontRunners[0] === this;
 	}
 
@@ -740,13 +740,13 @@ export class RaceSolver {
 			case PositionKeepState.None:
 				if (this.posKeepNextTimer.t < 0) { return; }
 
-				if (StrategyHelpers.strategyMatches(myStrategy, Strategy.Nige) || StrategyHelpers.strategyMatches(myStrategy, Strategy.Oonige)) {
+				if (StrategyHelpers.strategyMatches(myStrategy, Strategy.Nige)) {
 					// Speed Up
 					if (pacer === this) {
 						var umas = this.getUmaByDistanceDescending();
 						var secondPlaceUma = umas[1];
 						var distanceAhead = pacer.pos - secondPlaceUma.pos;
-						let threshold = StrategyHelpers.strategyMatches(myStrategy, Strategy.Oonige) ? 17.5 : 4.5;
+						let threshold = myStrategy === Strategy.Oonige ? 17.5 : 4.5;
 						
 						if (this.posKeepNextTimer.t < 0) { return; }
 
@@ -801,7 +801,7 @@ export class RaceSolver {
 					var umas = this.getUmaByDistanceDescending();
 					var secondPlaceUma = umas[1];
 					var distanceAhead = pacer.pos - secondPlaceUma.pos;
-					let threshold = StrategyHelpers.strategyMatches(myStrategy, Strategy.Oonige) ? 17.5 : 4.5;
+					let threshold = myStrategy === Strategy.Oonige ? 17.5 : 4.5;
 
 					if (distanceAhead >= threshold) {
 						this.positionKeepState = PositionKeepState.None;
@@ -817,10 +817,13 @@ export class RaceSolver {
 					this.positionKeepActivations[this.positionKeepActivations.length - 1][1] = this.pos;
 					this.posKeepNextTimer.t = -3;
 				}
-				else {
-					var threshold = StrategyHelpers.strategyMatches(myStrategy, Strategy.Oonige) ? -27.5 : -10;
+				else if (pacer == this) {
+					var umas = this.getUmaByDistanceDescending();
+					var secondPlaceUma = umas[1];
+					var distanceAhead = this.pos - secondPlaceUma.pos;
+					let threshold = myStrategy === Strategy.Oonige ? 27.5 : 10;
 
-					if (behind < threshold) {
+					if (distanceAhead >= threshold) {
 						this.positionKeepState = PositionKeepState.None;
 						this.positionKeepActivations[this.positionKeepActivations.length - 1][1] = this.pos;
 						this.posKeepNextTimer.t = -3;
@@ -897,6 +900,10 @@ export class RaceSolver {
 			return;
 		}
 
+		if (StrategyHelpers.strategyMatches(this.posKeepStrategy, Strategy.Nige)) {
+			return;
+		}
+
 		if (this.hp.hpRatioRemaining() < 0.15 || !this.isOnFinalStraight()) {
 			return;
 		}
@@ -921,7 +928,7 @@ export class RaceSolver {
 			return;
 		}
 
-		if (this.pos >= 200 && (StrategyHelpers.strategyMatches(this.posKeepStrategy, Strategy.Nige) || StrategyHelpers.strategyMatches(this.posKeepStrategy, Strategy.Oonige))) {
+		if (this.pos >= 200 && (StrategyHelpers.strategyMatches(this.posKeepStrategy, Strategy.Nige))) {
 			this.leadCompetitionTimer.t = 0;
 			this.leadCompetition = true;
 			this.leadCompetitionStart = this.pos;
