@@ -604,8 +604,8 @@ export class RaceSolver {
 		this.processSkillActivations();
 		this.applyPositionKeepStates();
 		this.updatePositionKeepCoefficient();
-		this.updateCompeteFight();
-		this.updateLeadCompetition();
+		// this.updateCompeteFight();
+		// this.updateLeadCompetition();
 		this.updateLastSpurtState();
 		this.updateTargetSpeed();
 		this.applyForces();
@@ -1209,7 +1209,9 @@ export class RaceSolver {
 				++this.activateCountHeal;
 				// Pass state to recover for dynamic spurt recalculation in accuracy mode
 				this.hp.recover(ef.modifier, this);
-				this.updateLastSpurtState();
+				if (this.phase >= 2 && !this.isLastSpurt) {
+					this.updateLastSpurtState();
+				}
 				break;
 			case SkillType.ActivateRandomGold:
 				this.doActivateRandomGold(ef.modifier);
