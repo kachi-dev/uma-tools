@@ -1238,9 +1238,37 @@ function App(props) {
 			return pacemakerPosKeepData;
 		})() : [];
 	
+	const competeFightData = chartData == null ? [] : (chartData.competeFight || [[], []]).flatMap((competeFightArray, i) => {
+		if (!competeFightArray || competeFightArray.length === 0) return [];
+		const start = competeFightArray[0];
+		const end = competeFightArray[1];
+		return [{
+			umaIndex: i,
+			text: 'Duel',
+			color: posKeepColors[i],
+			start: start,
+			end: end,
+			duration: end - start
+		}];
+	});
+	
+	const leadCompetitionData = chartData == null ? [] : (chartData.leadCompetition || [[], []]).flatMap((leadCompetitionArray, i) => {
+		if (!leadCompetitionArray || leadCompetitionArray.length === 0) return [];
+		const start = leadCompetitionArray[0];
+		const end = leadCompetitionArray[1];
+		return [{
+			umaIndex: i,
+			text: 'SS',
+			color: posKeepColors[i],
+			start: start,
+			end: end,
+			duration: end - start
+		}];
+	});
+	
 	const posKeepLabels = [];
 	
-	const tempLabels = [...posKeepData, ...virtualPacemakerPosKeepData].map(posKeep => ({
+	const tempLabels = [...posKeepData, ...virtualPacemakerPosKeepData, ...competeFightData, ...leadCompetitionData].map(posKeep => ({
 		...posKeep,
 		x: posKeep.start / course.distance * 960,
 		width: posKeep.duration / course.distance * 960,

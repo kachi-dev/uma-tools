@@ -1,6 +1,6 @@
 import type { RaceState } from './RaceSolver';
 import { PositionKeepState } from './RaceSolver';
-import { HorseParameters } from './HorseTypes';
+import { HorseParameters, Strategy, StrategyHelpers } from './HorseTypes';
 import { CourseData, CourseHelpers, Phase } from './CourseData';
 import { GroundCondition } from './RaceParameters';
 import { PRNG } from './Random';
@@ -60,22 +60,33 @@ export class GameHpPolicy {
 		this.achievedMaxSpurt = false; // Reset for each race
 	}
 
-	getStatusModifier(state: {positionKeepState: PositionKeepState, isRushed?: boolean, isDownhillMode?: boolean}) {
+	getStatusModifier(state: {positionKeepState: PositionKeepState, isRushed?: boolean, isDownhillMode?: boolean, leadCompetition?: boolean, posKeepStrategy?: Strategy}) {
 		let modifier = 1.0;
+
+		if (state.isDownhillMode) {
+			modifier *= 0.4;
+		}
+		
+		if (state.leadCompetition) {
+			const isOonige = state.posKeepStrategy === Strategy.Oonige;
+			if (state.isRushed) {
+				modifier *= isOonige ? 7.7 : 3.6;
+			} else {
+				modifier *= isOonige ? 3.5 : 1.4;
+			}
+		}
+		else if (state.isRushed) {
+			modifier *= 1.6;
+		}
+
 		if (state.positionKeepState === PositionKeepState.PaceDown) {
 			modifier *= 0.6;
 		}
-		if (state.isRushed) {
-			modifier *= 1.6;
-		}
-		if (state.isDownhillMode) {
-			// Downhill accel mode reduces HP consumption by 60%
-			modifier *= 0.4;
-		}
+		
 		return modifier;
 	}
 
-	hpPerSecond(state: {phase: Phase, positionKeepState: PositionKeepState, isRushed?: boolean, isDownhillMode?: boolean}, velocity: number) {
+	hpPerSecond(state: {phase: Phase, positionKeepState: PositionKeepState, isRushed?: boolean, isDownhillMode?: boolean, leadCompetition?: boolean, posKeepStrategy?: Strategy}, velocity: number) {
 		const gutsModifier = state.phase >= 2 ? this.gutsModifier : 1.0;
 		return 20.0 * Math.pow(velocity - this.baseSpeed + 12.0, 2) / 144.0 *
 			this.getStatusModifier(state) * this.groundModifier * gutsModifier;
@@ -102,7 +113,7 @@ export class GameHpPolicy {
 	getLastSpurtPair(state: RaceState, maxSpeed: number, baseTargetSpeed2: number) {
 		const maxDist = this.distance - CourseHelpers.phaseStart(this.distance, 2);
 		const s = (maxDist - 60) / maxSpeed;
-		const lastleg = {phase: 2 as Phase, positionKeepState: PositionKeepState.None};
+		const lastleg = {phase: 2 as Phase, positionKeepState: PositionKeepState.None, leadCompetition: false, posKeepStrategy: state.posKeepStrategy};
 		const hpNeeded = this.hpPerSecond(lastleg, maxSpeed) * s;
 		
 		if (this.hp >= hpNeeded) {

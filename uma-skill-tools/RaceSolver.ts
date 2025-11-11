@@ -41,9 +41,7 @@ function baseTargetSpeed(horse: HorseParameters, course: CourseData, phase: Phas
 function lastSpurtSpeed(horse: HorseParameters, course: CourseData) {
 	let v = (baseTargetSpeed(horse, course, 2) + 0.01 * baseSpeed(course)) * 1.05 +
 		Math.sqrt(500.0 * horse.speed) * Speed.DistanceProficiencyModifier[horse.distanceAptitude] * 0.002;
-	if (!CC_GLOBAL) {
-		v += Math.pow(450.0 * horse.guts, 0.597) * 0.0001;
-	}
+	v += Math.pow(450.0 * horse.guts, 0.597) * 0.0001;
 	return v;
 }
 
@@ -130,6 +128,8 @@ export interface RaceState {
 	readonly startDelay: number
 	readonly gateRoll: number
 	readonly usedSkills: ReadonlySet<string>
+	readonly leadCompetition: boolean
+	readonly posKeepStrategy: Strategy
 }
 
 export type DynamicCondition = (state: RaceState) => boolean;
@@ -297,6 +297,18 @@ export class RaceSolver {
 	//skill check chance
 	skillCheckChance: boolean
 
+	// Compete Fight
+	competeFight: boolean
+	competeFightStart: number | null
+	competeFightEnd: number | null
+	competeFightTimer: Timer
+
+	// Lead Competition
+	leadCompetition: boolean
+	leadCompetitionStart: number | null
+	leadCompetitionEnd: number | null
+	leadCompetitionTimer: Timer
+
 	firstUmaInLateRace: boolean
 
 	hpDied: boolean
@@ -404,6 +416,16 @@ export class RaceSolver {
 		this.fullSpurt = false;
 		// Calculate rushed chance and determine if/when it activates
 		this.initRushedState(params.disableRushed || false);
+
+		this.competeFight = false;
+		this.competeFightStart = null;
+		this.competeFightEnd = null;
+		this.competeFightTimer = this.getNewTimer();
+
+		this.leadCompetition = false;
+		this.leadCompetitionStart = null;
+		this.leadCompetitionEnd = null;
+		this.leadCompetitionTimer = this.getNewTimer();
 
 		this.modifiers = {
 			targetSpeed: new CompensatedAccumulator(0.0),
@@ -582,6 +604,8 @@ export class RaceSolver {
 		this.processSkillActivations();
 		this.applyPositionKeepStates();
 		this.updatePositionKeepCoefficient();
+		// this.updateCompeteFight();
+		// this.updateLeadCompetition();
 		this.updateLastSpurtState();
 		this.updateTargetSpeed();
 		this.applyForces();
@@ -623,12 +647,16 @@ export class RaceSolver {
 
 	getPacer(): RaceSolver | null {
 		// Select furthest-forward front runner
-		var frontRunners = this.umas.filter(uma => StrategyHelpers.strategyMatches(uma.posKeepStrategy, Strategy.Nige));
+		for (const strategy of [Strategy.Oonige, Strategy.Nige]) {
+			var umas = this.umas.filter(uma => uma.posKeepStrategy === strategy);
 
-		if (frontRunners.length > 0) {
-			return frontRunners.reduce((max, uma) => {
-				return uma.pos > max.pos ? uma : max;
-			}, frontRunners[0]);
+			if (umas.length > 0) {
+				var uma = umas.reduce((max, uma) => {
+					return uma.pos > max.pos ? uma : max;
+				}, umas[0]);
+
+				return uma;
+			}
 		}
 
 		// Get pacerOverride uma
@@ -713,11 +741,12 @@ export class RaceSolver {
 				if (this.posKeepNextTimer.t < 0) { return; }
 
 				if (StrategyHelpers.strategyMatches(myStrategy, Strategy.Nige)) {
+					// Speed Up
 					if (pacer === this) {
 						var umas = this.getUmaByDistanceDescending();
 						var secondPlaceUma = umas[1];
 						var distanceAhead = pacer.pos - secondPlaceUma.pos;
-						let threshold = this.isOnlyFrontRunner() ? 12.5 : 4.5;
+						let threshold = myStrategy === Strategy.Oonige ? 17.5 : 4.5;
 						
 						if (this.posKeepNextTimer.t < 0) { return; }
 
@@ -727,12 +756,14 @@ export class RaceSolver {
 							this.posKeepExitPosition = this.pos + Math.floor(this.sectionLength);
 						}
 					}
+					// Overtake
 					else if (this.speedUpOvertakeWitCheck()) {
 						this.positionKeepState = PositionKeepState.Overtake;
 						this.positionKeepActivations.push([this.pos, 0, PositionKeepState.Overtake]);
 					}
 				}
 				else {
+					// Pace Up
 					if (behind > this.posKeepMaxThreshold) {
 						if (this.paceUpWitCheck()) {
 							this.positionKeepState = PositionKeepState.PaceUp;
@@ -740,6 +771,7 @@ export class RaceSolver {
 							this.posKeepExitDistance = this.syncRng.random() * (this.posKeepMaxThreshold - this.posKeepMinThreshold) + this.posKeepMinThreshold;
 						}
 					}
+					// Pace Down
 					else if (behind < this.posKeepMinThreshold) {
 						if (this.activeTargetSpeedSkills.length == 0 && this.activeCurrentSpeedSkills.length == 0) {
 							this.positionKeepState = PositionKeepState.PaceDown;
@@ -769,7 +801,7 @@ export class RaceSolver {
 					var umas = this.getUmaByDistanceDescending();
 					var secondPlaceUma = umas[1];
 					var distanceAhead = pacer.pos - secondPlaceUma.pos;
-					let threshold = this.isOnlyFrontRunner() ? 12.5 : 4.5;
+					let threshold = myStrategy === Strategy.Oonige ? 17.5 : 4.5;
 
 					if (distanceAhead >= threshold) {
 						this.positionKeepState = PositionKeepState.None;
@@ -785,10 +817,13 @@ export class RaceSolver {
 					this.positionKeepActivations[this.positionKeepActivations.length - 1][1] = this.pos;
 					this.posKeepNextTimer.t = -3;
 				}
-				else {
-					var threshold = -10;
+				else if (pacer == this) {
+					var umas = this.getUmaByDistanceDescending();
+					var secondPlaceUma = umas[1];
+					var distanceAhead = this.pos - secondPlaceUma.pos;
+					let threshold = myStrategy === Strategy.Oonige ? 27.5 : 10;
 
-					if (behind < threshold) {
+					if (distanceAhead >= threshold) {
 						this.positionKeepState = PositionKeepState.None;
 						this.positionKeepActivations[this.positionKeepActivations.length - 1][1] = this.pos;
 						this.posKeepNextTimer.t = -3;
@@ -847,6 +882,57 @@ export class RaceSolver {
 			default:
 				this.posKeepSpeedCoef = 1.0;
 				break;
+		}
+	}
+		
+	isOnFinalStraight() {
+		const lastStraight = this.course.straights[this.course.straights.length - 1];
+		return this.pos >= lastStraight.start && this.pos <= lastStraight.end;
+	}
+
+	updateCompeteFight() {
+		if (this.competeFight) {
+			if (this.hp.hpRatioRemaining() <= 0.05) {
+				this.competeFight = false;
+				this.competeFightEnd = this.pos;
+			}
+			
+			return;
+		}
+
+		if (StrategyHelpers.strategyMatches(this.posKeepStrategy, Strategy.Nige)) {
+			return;
+		}
+
+		if (this.hp.hpRatioRemaining() < 0.15 || !this.isOnFinalStraight()) {
+			return;
+		}
+
+		if (this.competeFightTimer.t >= 2) {
+			this.competeFight = true;
+			this.competeFightStart = this.pos;
+		}
+	}
+
+	updateLeadCompetition() {
+		if (this.leadCompetition) {
+			let leadCompeteDuration = Math.pow(700 * this.horse.guts, 0.5) * 0.012;
+
+			if (this.leadCompetitionTimer.t >= leadCompeteDuration || this.pos >= this.leadCompetitionEnd) {
+				this.leadCompetition = false;
+				this.leadCompetitionEnd = this.pos;
+			}
+		}
+
+		if (this.leadCompetitionStart !== null) {
+			return;
+		}
+
+		if (this.pos >= 200 && (StrategyHelpers.strategyMatches(this.posKeepStrategy, Strategy.Nige))) {
+			this.leadCompetitionTimer.t = 0;
+			this.leadCompetition = true;
+			this.leadCompetitionStart = this.pos;
+			this.leadCompetitionEnd = Math.floor(this.sectionLength * 8);
 		}
 	}
 
@@ -940,12 +1026,19 @@ export class RaceSolver {
 			this.targetSpeed = Math.max(this.targetSpeed, this.minSpeed);
 		}
 
+		if (this.competeFight) {
+			this.targetSpeed += Math.pow(200 * this.horse.guts, 0.709) * 0.0001;
+		}
+
+		if (this.leadCompetition) {
+			this.targetSpeed += Math.pow(500 * this.horse.guts, 0.6) * 0.0001;
+		}
+
 		// moved logic on every step
 		// We need to check the isDownhill every frame so we actually get the speed boost
 		if (this.isDownhillMode) {
 			const currentSlope = this.course.slopes.find(s => this.pos >= s.start && this.pos <= s.start + s.length);
 			if (currentSlope) {
-				console.log("Current slope value: ", currentSlope.slope)
 				const downhillBonus = 0.3 + (Math.abs(currentSlope.slope/10000) / 10.0);
 				this.targetSpeed += downhillBonus;
 			}
@@ -963,6 +1056,10 @@ export class RaceSolver {
 		}
 		this.accel = this.baseAccel[+(this.hillIdx != -1) * 3 + this.phase];
 		this.accel += this.modifiers.accel.acc + this.modifiers.accel.err;
+
+		if (this.competeFight) {
+			this.accel += Math.pow(160 * this.horse.guts, 0.59) * 0.0001;
+		}
 	}
 
 	updateHills() {
@@ -1112,7 +1209,7 @@ export class RaceSolver {
 				++this.activateCountHeal;
 				// Pass state to recover for dynamic spurt recalculation in accuracy mode
 				this.hp.recover(ef.modifier, this);
-				if (!CC_GLOBAL && this.phase >= 2 && !this.isLastSpurt) {
+				if (this.phase >= 2 && !this.isLastSpurt) {
 					this.updateLastSpurtState();
 				}
 				break;
