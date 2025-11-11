@@ -221,9 +221,11 @@ export function MoodSelect(props){
 }
 
 export function StrategySelect(props) {
+	const disabled = props.disabled || false;
 	if (CC_GLOBAL) {
 		return (
-			<select class="horseStrategySelect" value={props.s} tabindex={props.tabindex} onInput={(e) => props.setS(e.currentTarget.value)}>
+			<select class="horseStrategySelect" value={props.s} tabindex={props.tabindex} disabled={disabled} onInput={(e) => props.setS(e.currentTarget.value)}>
+				<option value="Oonige">Runaway</option>
 				<option value="Nige">Front Runner</option>
 				<option value="Senkou">Pace Chaser</option>
 				<option value="Sasi">Late Surger</option>
@@ -232,7 +234,7 @@ export function StrategySelect(props) {
 		);
 	}
 	return (
-		<select class="horseStrategySelect" value={props.s} tabindex={props.tabindex} onInput={(e) => props.setS(e.currentTarget.value)}>
+		<select class="horseStrategySelect" value={props.s} tabindex={props.tabindex} disabled={disabled} onInput={(e) => props.setS(e.currentTarget.value)}>
 			<option value="Nige">逃げ</option>
 			<option value="Senkou">先行</option>
 			<option value="Sasi">差し</option>
@@ -339,6 +341,13 @@ export function HorseDef(props) {
 		);
 	}, [expanded]);
 
+	const hasRunawaySkill = state.skills.has('202051');
+	useEffect(function () {
+		if (hasRunawaySkill && state.strategy !== 'Oonige') {
+			setState(state.set('strategy', 'Oonige'));
+		}
+	}, [hasRunawaySkill, state.strategy]);
+
 	const skillList = useMemo(function () {
 		const u = uniqueSkillForUma(umaId);
 		return Array.from(state.skills).map(id =>
@@ -394,7 +403,7 @@ export function HorseDef(props) {
 				</div>
 				<div>
 					<span>{CC_GLOBAL ? 'Style:' : 'Strategy:'}</span>
-					<StrategySelect s={state.strategy} setS={setter('strategy')} tabindex={tabnext()} />
+					<StrategySelect s={state.strategy} setS={setter('strategy')} disabled={hasRunawaySkill} tabindex={tabnext()} />
 				</div>
 				<div>
 					<span>{CC_GLOBAL ? 'Style aptitude:' : 'Strategy aptitude:'}</span>
