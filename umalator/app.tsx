@@ -484,8 +484,8 @@ async function loadFromLocalStorage() {
 	return null;
 }
 
-const EMPTY_RESULTS_STATE = {courseId: DEFAULT_COURSE_ID, results: [], runData: null, chartData: null, displaying: '', rushedStats: null, spurtInfo: null, staminaStats: null, firstUmaStats: null};
-function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | string | {results: any, runData: any, rushedStats?: any, spurtInfo?: any, staminaStats?: any, firstUmaStats?: any}) {
+const EMPTY_RESULTS_STATE = {courseId: DEFAULT_COURSE_ID, results: [], runData: null, chartData: null, displaying: '', rushedStats: null, leadCompetitionStats: null, spurtInfo: null, staminaStats: null, firstUmaStats: null};
+function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | string | {results: any, runData: any, rushedStats?: any, leadCompetitionStats?: any, spurtInfo?: any, staminaStats?: any, firstUmaStats?: any}) {
 	if (typeof o == 'number') {
 		return {
 			courseId: o,
@@ -494,6 +494,7 @@ function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | strin
 			chartData: null,
 			displaying: '',
 			rushedStats: null,
+			leadCompetitionStats: null,
 			spurtInfo: null,
 			staminaStats: null,
 			firstUmaStats: null
@@ -507,6 +508,7 @@ function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | strin
 			chartData: state.runData != null ? state.runData[o] : null,
 			displaying: o,
 			rushedStats: state.rushedStats,
+			leadCompetitionStats: state.leadCompetitionStats,
 			spurtInfo: state.spurtInfo,
 			staminaStats: state.staminaStats,
 			firstUmaStats: state.firstUmaStats
@@ -519,6 +521,7 @@ function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | strin
 			chartData: o.runData[state.displaying || 'meanrun'],
 			displaying: state.displaying || 'meanrun',
 			rushedStats: o.rushedStats || null,
+			leadCompetitionStats: o.leadCompetitionStats || null,
 			spurtInfo: o.spurtInfo || null,
 			staminaStats: o.staminaStats || null,
 			firstUmaStats: o.firstUmaStats || null
@@ -758,7 +761,7 @@ function App(props) {
 		setPacer(new HorseState({strategy: 'Nige'}));
 	}
 	
-	const [{courseId, results, runData, chartData, displaying, rushedStats, spurtInfo, staminaStats, firstUmaStats}, setSimState] = useReducer(updateResultsState, EMPTY_RESULTS_STATE);
+	const [{courseId, results, runData, chartData, displaying, rushedStats, leadCompetitionStats, spurtInfo, staminaStats, firstUmaStats}, setSimState] = useReducer(updateResultsState, EMPTY_RESULTS_STATE);
 	const setCourseId = setSimState;
 	const setResults = setSimState;
 	const setChartData = setSimState;
@@ -1128,14 +1131,6 @@ function App(props) {
 		
 		document.getElementById('rtV1').textContent = `${chartData.v[0][safeI0].toFixed(2)} m/s  t=${chartData.t[0][safeI0].toFixed(2)} s  (${chartData.hp[0][safeI0].toFixed(0)} hp remaining)`;
 		document.getElementById('rtV2').textContent = `${chartData.v[1][safeI1].toFixed(2)} m/s  t=${chartData.t[1][safeI1].toFixed(2)} s  (${chartData.hp[1][safeI1].toFixed(0)} hp remaining)`;
-		const pacegap1 = chartData.pacerGap?.[0]?.[safeI0];
-		const pacegap2 = chartData.pacerGap?.[1]?.[safeI1];
-		if (pacegap1 !== undefined) {
-			document.getElementById('rtV1').textContent += ` gap towards pacemaker= ${pacegap1.toFixed(2)} m`;
-		}
-		if (pacegap2 !== undefined) {
-			document.getElementById('rtV2').textContent += ` gap towards pacemaker= ${pacegap2.toFixed(2)} m`;
-		}
 	}
 
 	function rtMouseLeave() {
@@ -1266,9 +1261,37 @@ function App(props) {
 		}];
 	});
 	
+	const virtualPacemakerLeadCompetitionData = showVirtualPacemakerOnGraph && posKeepMode === PosKeepMode.Virtual && chartData && chartData.pacerLeadCompetition ? 
+		(() => {
+			const pacemakerLeadCompetitionData = [];
+			const pacemakerColors = [
+				{stroke: '#22c55e', fill: 'rgba(34, 197, 94, 0.6)'},
+				{stroke: '#a855f7', fill: 'rgba(168, 85, 247, 0.6)'},
+				{stroke: '#ec4899', fill: 'rgba(236, 72, 153, 0.6)'}
+			];
+			
+			for (let pacemakerIndex = 0; pacemakerIndex < 3; pacemakerIndex++) {
+				if (selectedPacemakerIndices.includes(pacemakerIndex) && 
+					chartData.pacerLeadCompetition && chartData.pacerLeadCompetition[pacemakerIndex] && chartData.pacerLeadCompetition[pacemakerIndex].length > 0) {
+					const leadCompetitionArray = chartData.pacerLeadCompetition[pacemakerIndex];
+					const start = leadCompetitionArray[0];
+					const end = leadCompetitionArray[1];
+					pacemakerLeadCompetitionData.push({
+						umaIndex: 2 + pacemakerIndex,
+						text: 'SS',
+						color: pacemakerColors[pacemakerIndex],
+						start: start,
+						end: end,
+						duration: end - start
+					});
+				}
+			}
+			return pacemakerLeadCompetitionData;
+		})() : [];
+	
 	const posKeepLabels = [];
 	
-	const tempLabels = [...posKeepData, ...virtualPacemakerPosKeepData, ...competeFightData, ...leadCompetitionData].map(posKeep => ({
+	const tempLabels = [...posKeepData, ...virtualPacemakerPosKeepData, ...competeFightData, ...leadCompetitionData, ...virtualPacemakerLeadCompetitionData].map(posKeep => ({
 		...posKeep,
 		x: posKeep.start / course.distance * 960,
 		width: posKeep.duration / course.distance * 960,
@@ -1385,6 +1408,9 @@ function App(props) {
 							{rushedStats && allowRushedUma2 && (
 								<tr><th>Rushed frequency</th><td>{rushedStats.uma1.frequency > 0 ? `${rushedStats.uma1.frequency.toFixed(1)}% (${rushedStats.uma1.mean.toFixed(1)}m)` : '0%'}</td></tr>
 							)}
+							{leadCompetitionStats && (
+								<tr><th>Spot Struggle frequency</th><td>{leadCompetitionStats.uma1.frequency > 0 ? `${leadCompetitionStats.uma1.frequency.toFixed(1)}%` : '0%'}</td></tr>
+							)}
 						</tbody>
 						{chartData.sk[0].size > 0 &&
 							<tbody>
@@ -1403,6 +1429,9 @@ function App(props) {
 							<tr><th>Top speed</th><td>{chartData.v[1].reduce((a,b) => Math.max(a,b), 0).toFixed(2) + ' m/s'}</td></tr>
 							{rushedStats && allowRushedUma2 && (
 								<tr><th>Rushed frequency</th><td>{rushedStats.uma2.frequency > 0 ? `${rushedStats.uma2.frequency.toFixed(1)}% (${rushedStats.uma2.mean.toFixed(1)}m)` : '0%'}</td></tr>
+							)}
+							{leadCompetitionStats && (
+								<tr><th>Spot Struggle frequency</th><td>{leadCompetitionStats.uma2.frequency > 0 ? `${leadCompetitionStats.uma2.frequency.toFixed(1)}%` : '0%'}</td></tr>
 							)}
 						</tbody>
 						{chartData.sk[1].size > 0 &&

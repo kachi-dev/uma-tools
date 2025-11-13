@@ -231,7 +231,6 @@ export class RaceSolver {
 	hp: HpPolicy
 	rng: PRNG
 	syncRng: PRNG
-	synchronizedSeed: number
 	gorosiRng: PRNG
 	rushedRng: PRNG
 	downhillRng: PRNG
@@ -335,7 +334,6 @@ export class RaceSolver {
 		disableSectionModifier?: boolean,
 		speedUpProbability?: number,
 		skillCheckChance?: boolean,
-		synchronizedSeed?: number,
 		posKeepMode?: PosKeepMode,
 		isPacer?: boolean,
 	}) {
@@ -347,8 +345,7 @@ export class RaceSolver {
 		this.pendingSkills = params.skills.slice();  // copy since we remove from it
 		this.pendingRemoval = new Set();
 		this.usedSkills = new Set();
-		this.synchronizedSeed = params.synchronizedSeed != null ? params.synchronizedSeed : this.rng.int32();
-		this.syncRng = new Rule30CARng(this.synchronizedSeed);
+		this.syncRng = new Rule30CARng(this.rng.int32());
 		this.gorosiRng = new Rule30CARng(this.rng.int32());
 		this.rushedRng = new Rule30CARng(this.rng.int32());
 		this.downhillRng = new Rule30CARng(this.rng.int32());
@@ -383,7 +380,7 @@ export class RaceSolver {
 		this.posKeepStrategy = this.horse.strategy;
 		// In approximate mode, all we care about is the consistent early-race pace-down we get
 		// But in full virtual pacemaker mode, we sim the entire poskeep section
-		this.posKeepEnd = this.sectionLength * (this.posKeepMode === PosKeepMode.Approximate ? 5.0 : 10.0);
+		this.posKeepEnd = this.sectionLength * 10.0;
 		this.posKeepSpeedCoef = 1.0;
 		this.isPacer = params.isPacer || false;
 		this.pacerOverride = false;
@@ -605,7 +602,7 @@ export class RaceSolver {
 		this.applyPositionKeepStates();
 		this.updatePositionKeepCoefficient();
 		// this.updateCompeteFight();
-		// this.updateLeadCompetition();
+		this.updateLeadCompetition();
 		this.updateLastSpurtState();
 		this.updateTargetSpeed();
 		this.applyForces();
@@ -928,11 +925,20 @@ export class RaceSolver {
 			return;
 		}
 
-		if (this.pos >= 200 && (StrategyHelpers.strategyMatches(this.posKeepStrategy, Strategy.Nige))) {
-			this.leadCompetitionTimer.t = 0;
-			this.leadCompetition = true;
-			this.leadCompetitionStart = this.pos;
-			this.leadCompetitionEnd = Math.floor(this.sectionLength * 8);
+		if (this.pos >= 150 && this.pos <= Math.floor(this.sectionLength * 5) && (StrategyHelpers.strategyMatches(this.posKeepStrategy, Strategy.Nige))) {
+			let otherUmas = this.umas.filter(u => u.posKeepStrategy === this.posKeepStrategy);
+			let distanceGap = this.posKeepStrategy === Strategy.Nige ? 3.75 : 5;
+
+			let umasWithinGap = otherUmas.filter(u => Math.abs(u.pos - this.pos) <= distanceGap);
+
+			if (umasWithinGap.length >= 2) {
+				for (let uma of umasWithinGap) {
+					uma.leadCompetitionTimer.t = 0;
+					uma.leadCompetition = true;
+					uma.leadCompetitionStart = this.pos;
+					uma.leadCompetitionEnd = uma.pos + Math.floor(this.sectionLength * 8);
+				}
+			}
 		}
 	}
 

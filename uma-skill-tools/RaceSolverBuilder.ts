@@ -398,6 +398,7 @@ export class RaceSolverBuilder {
 	_pacerSkillData: SkillData[];
 	_pacerTriggers: Region[][];
 	_rng: SeededRng
+	_seed: number
 	_parser: {parse: any, tokenize: any}
 	_skills: {id: string, p: Perspective, originWisdom?: number}[]
 	_samplePolicyOverride: Map<string, ActivationSamplePolicy>
@@ -410,7 +411,6 @@ export class RaceSolverBuilder {
 	_useEnhancedSpurt: boolean
 	_accuracyMode: boolean
 	_skillCheckChance: boolean
-	_synchronizedSeed: number
 	_posKeepMode: PosKeepMode
 
 	constructor(readonly nsamples: number) {
@@ -430,7 +430,8 @@ export class RaceSolverBuilder {
 		this._pacerSkills = [];
 		this._pacerSkillIds = [];
 		this._pacerSpeedUpRate = 100;
-		this._rng = new Rule30CARng(Math.floor(Math.random() * (-1 >>> 0)) >>> 0);
+		this._seed = Math.floor(Math.random() * (-1 >>> 0)) >>> 0;
+		this._rng = new Rule30CARng(this._seed);
 		this._parser = defaultParser;
 		this._skills = [];
 		this._samplePolicyOverride = new Map();
@@ -443,13 +444,12 @@ export class RaceSolverBuilder {
 		this._useEnhancedSpurt = false;
 		this._accuracyMode = false;
 		this._skillCheckChance = true;
-		this._synchronizedSeed = null;
 		this._posKeepMode = PosKeepMode.None;
 	}
 
 	seed(seed: number) {
+		this._seed = seed;
 		this._rng = new Rule30CARng(seed);
-		this._synchronizedSeed = this._rng.int32();
 		return this;
 	}
 
@@ -540,29 +540,42 @@ export class RaceSolverBuilder {
 		const pacer = horse;
 		const pacerBaseHorse = pacer ? buildBaseStats(pacer, pacer.mood) : null;
 		const pacerHorse = pacer ? buildAdjustedStats(pacerBaseHorse, this._course, this._raceParams.groundCondition) : null;
-		
+
 		const wholeCourse = new RegionList();
 		wholeCourse.push(new Region(0, this._course.distance));
 		Object.freeze(wholeCourse);
 
 		let pacerSkillData: SkillData[] = [];
-		let pacerTriggers: Region[][] = [];
-		if (pacerBaseHorse && this._pacerSkillIds.length > 0) {
+		
+		if (pacerBaseHorse ) {
 			const makePacerSkill = buildSkillData.bind(null, pacerBaseHorse, this._raceParams, this._course, wholeCourse, this._parser);
 			pacerSkillData = this._pacerSkillIds.flatMap(id => makePacerSkill(id, Perspective.Self));
-			pacerTriggers = pacerSkillData.map(sd => {
-				const sp = this._samplePolicyOverride.get(sd.skillId) || sd.samplePolicy;
-				return sp.sample(sd.regions, this.nsamples, this._rng);
-			});
+			this._pacerSkillData = pacerSkillData;
 		}
-
-		this._pacerSkillData = pacerSkillData;
-		this._pacerTriggers = pacerTriggers;
 
 		return pacerHorse
 	}
 
-	buildPacer(pacerHorse, i: number): RaceSolver | null {
+	setupPacerSkillTriggers(pacerRng: SeededRng) {
+		const wholeCourse = new RegionList();
+		wholeCourse.push(new Region(0, this._course.distance));
+		Object.freeze(wholeCourse);
+
+		let pacerTriggers: Region[][] = [];
+		
+		if (this._pacerSkillIds.length > 0) {
+			pacerTriggers = this._pacerSkillData.map(sd => {
+				const sp = this._samplePolicyOverride.get(sd.skillId) || sd.samplePolicy;
+				return sp.sample(sd.regions, this.nsamples, pacerRng);
+			});
+		}
+
+		this._pacerTriggers = pacerTriggers;
+	}
+
+	buildPacer(pacerHorse, i: number, pacerRng: SeededRng): RaceSolver | null {
+		this.setupPacerSkillTriggers(pacerRng);
+
 		const pacerSkills = this._pacerSkillData.length > 0
 			? this._pacerSkillData.map((sd, sdi) => ({
 				skillId: sd.skillId,
@@ -579,17 +592,15 @@ export class RaceSolverBuilder {
 			course: this._course,
 			hp: NoopHpPolicy,
 			skills: pacerSkills,
-			rng: new Rule30CARng(this._rng.int32()),
+			rng: pacerRng,
 			speedUpProbability: this._pacerSpeedUpRate,
 			disableRushed: this._disableRushed,
 			disableDownhill: this._disableDownhill,
 			disableSectionModifier: this._disableSectionModifier,
 			skillCheckChance: this._skillCheckChance,
-			synchronizedSeed: this._synchronizedSeed,
 			posKeepMode: this._posKeepMode,
 			isPacer: true
 		}) : null;
-		
 	}
 
 	pacer(horse: HorseDesc) {
@@ -774,6 +785,10 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
+	desync() {
+		this.seed(this._rng.int32());
+	}
+
 	fork() {
 		const clone = new RaceSolverBuilder(this.nsamples);
 		clone._course = this._course;
@@ -784,7 +799,7 @@ export class RaceSolverBuilder {
 		clone._pacerSpeedUpRate = this._pacerSpeedUpRate;
 		clone._pacerSkillData = this._pacerSkillData.slice();
 		clone._pacerTriggers = this._pacerTriggers.slice();
-		clone._rng = new Rule30CARng(this._rng.int32());
+		clone.seed(this._seed);
 		clone._parser = this._parser;
 		clone._skills = this._skills.slice();
 		clone._onSkillActivate = this._onSkillActivate;
@@ -795,7 +810,6 @@ export class RaceSolverBuilder {
 		clone._useEnhancedSpurt = this._useEnhancedSpurt;
 		clone._accuracyMode = this._accuracyMode;
 		clone._skillCheckChance = this._skillCheckChance;
-		clone._synchronizedSeed = this._synchronizedSeed;
 		clone._posKeepMode = this._posKeepMode;
 
 		// NB. GOTCHA: if asitame is enabled, it closes over *our* horse and mood data, and not the clone's
@@ -853,11 +867,8 @@ export class RaceSolverBuilder {
 				disableDownhill: this._disableDownhill,
 				disableSectionModifier: this._disableSectionModifier,
 				skillCheckChance: this._skillCheckChance,
-				synchronizedSeed: this._synchronizedSeed,
 				posKeepMode: this._posKeepMode
 			});
-
-			this._synchronizedSeed += 1;
 
 			if (redo) {
 				--i;

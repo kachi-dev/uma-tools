@@ -24,7 +24,7 @@ export function IntroText(props) {
 	return (
 		<div id="introtext">
 			<h1>WELCOME TO VFalator!!!</h1>
-			<p className="warning-text">11/11 update: Duels/Spot Struggle are not currently implemented - we are working on this.</p>
+			<p className="warning-text">11/11 update: Duels have not yet been implemented - everything else should work as expected.</p>
 			<h2 className="warning-text">Warning: the enhancements made to this umalator fork enables usage of the tool as a more comprehensive race simulator, to simulate raw skill length differences without RNG factors <strong>set 'Position Keep' to 'Approximate'</strong> and <strong>turn off 'Wit Variance'</strong></h2>
 			<p className="warning-text">Raw skill length comparisons, as per the original umalator, have been battle-tested on JP and remain largely accurate. New additions such as Wit Variance and Virtual Pacemaker are experimental and results with these features should be taken with a grain of salt.</p>
 			<details>
@@ -45,6 +45,13 @@ export function IntroText(props) {
 				<summary>Caveats</summary>
 				The simulator is fairly complete and implements nearly all relevant game mechanics, with the following exceptions:
 				<ul>
+					<li>
+						<details>
+							<summary>Spot Struggle ignores LaneGap activation condition and is based solely on the distance between umas.</summary>
+							<p>Due to the difficulty of accurately simulating lane movement, Spot Struggle is activated when two or more Front Runner umas are within 3.75m of one another (5m for Runaway).</p>
+						</details>
+					</li>
+
 					<li>
 						<details>
 							<summary>Pseudo-random skills based on the location of other umas use a best-effort estimation for the distribution of their activation locations which may not be perfectly reflective of in-game behavior in all circumstances</summary>

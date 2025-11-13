@@ -9,6 +9,7 @@ import { HorseParameters } from '../uma-skill-tools/HorseTypes';
 import { HorseState } from '../components/HorseDefTypes';
 
 import skilldata from '../uma-skill-tools/data/skill_data.json';
+import { Rule30CARng } from '../uma-skill-tools/Random';
 
 // Calculate theoretical max spurt based purely on stats (no RNG)
 function calculateTheoreticalMaxSpurt(horse: any, course: CourseData, ground: GroundCondition): {
@@ -158,6 +159,10 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 	// Fork to share RNG - both horses face the same random events for fair comparison
 	const compare = standard.fork();
 	
+	if (options.mode === 'compare') {
+		standard.desync();
+	}
+	
 	standard.horse(uma1.toJS());
 	compare.horse(uma2.toJS());
 	
@@ -237,7 +242,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 	let pacerHorse = null;
 
 	if (options.posKeepMode === PosKeepMode.Approximate) {
-		pacerHorse = standard.useDefaultPacer();
+		pacerHorse = standard.useDefaultPacer(true);
 	} 
 	else if (options.posKeepMode === PosKeepMode.Virtual) {
 		if (pacer) {
@@ -257,31 +262,6 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 	}
 	
 	const skillPos1 = new Map(), skillPos2 = new Map();
-	
-	// Calculate theoretical max spurt based on stats (deterministic, RNG-independent)
-	const uma1Calc = calculateTheoreticalMaxSpurt(uma1.toJS(), course, racedef.groundCondition);
-	const uma2Calc = calculateTheoreticalMaxSpurt(uma2.toJS(), course, racedef.groundCondition);
-	
-	const spurtInfo1 = { 
-		maxSpurt: uma1Calc.canMaxSpurt, 
-		transition: (course.distance * 2) / 3, // Typical spurt entry
-		speed: uma1Calc.maxSpurtSpeed, 
-		hpRemaining: uma1Calc.hpRemaining, // HP after entire race
-		skillActivationRate: Math.max(100.0 - 9000.0 / uma1.toJS().wisdom, 20.0),
-		healSkillsAvailable: uma1HealSkills,
-		hpDeficit: Math.max(0, -uma1Calc.hpRemaining), // How much HP short
-		healNeeded: Math.max(0, -uma1Calc.hpRemaining) / uma1Calc.maxHp * 10000
-	};
-	const spurtInfo2 = { 
-		maxSpurt: uma2Calc.canMaxSpurt, 
-		transition: (course.distance * 2) / 3, 
-		speed: uma2Calc.maxSpurtSpeed, 
-		hpRemaining: uma2Calc.hpRemaining, // HP after entire race
-		skillActivationRate: Math.max(100.0 - 9000.0 / uma2.toJS().wisdom, 20.0),
-		healSkillsAvailable: uma2HealSkills,
-		hpDeficit: Math.max(0, -uma2Calc.hpRemaining), // How much HP short
-		healNeeded: Math.max(0, -uma2Calc.hpRemaining) / uma2Calc.maxHp * 10000
-	};
 	function getActivator(selfSet, otherSet) {
 		return function (s, id, persp) {
 			const skillSet = persp == Perspective.Self ? selfSet : otherSet;
@@ -326,6 +306,11 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		uma2: { lengths: [], count: 0 }
 	};
 	
+	const leadCompetitionStats = {
+		uma1: { lengths: [], count: 0 },
+		uma2: { lengths: [], count: 0 }
+	};
+	
 	// Track stamina survival and full spurt statistics
 	const staminaStats = {
 		uma1: { hpDiedCount: 0, fullSpurtCount: 0, total: 0 },
@@ -345,22 +330,23 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 	
 	// Track which generator corresponds to which uma (flips when we swap generators)
 	let aIsUma1 = true; // 'a' starts as standard builder (uma1)
+
+	let basePacerRng = new Rule30CARng(options.seed + 1);
 	
 	for (let i = 0; i < nsamples; ++i) {
 		let pacers = [];
 
 		for (let j = 0; j < options.pacemakerCount; ++j) {
-			const pacer: RaceSolver | null = pacerHorse != null ? standard.buildPacer(pacerHorse, i) : null;
+			let pacerRng = new Rule30CARng(basePacerRng.int32());
+			const pacer: RaceSolver | null = pacerHorse != null ? standard.buildPacer(pacerHorse, i, pacerRng) : null;
 			pacers.push(pacer);
-
-			this._synchronizedSeed = this._synchronizedSeed + 1;
 		}
 
 		const pacer: RaceSolver | null = pacers.length > 0 ? pacers[0] : null;
 
 		const s1 = a.next(retry).value as RaceSolver;
 		const s2 = b.next(retry).value as RaceSolver;
-		const data = {t: [[], []], p: [[], []], v: [[], []], hp: [[], []], pacerGap: [[], []], sk: [null,null], sdly: [0,0], rushed: [[], []], posKeep: [[], []], competeFight: [[], []], leadCompetition: [[], []], pacerV: [[], [], []], pacerP: [[], [], []], pacerT: [[], [], []], pacerPosKeep: [[], [], []]};
+		const data = {t: [[], []], p: [[], []], v: [[], []], hp: [[], []], pacerGap: [[], []], sk: [null,null], sdly: [0,0], rushed: [[], []], posKeep: [[], []], competeFight: [[], []], leadCompetition: [[], []], pacerV: [[], [], []], pacerP: [[], [], []], pacerT: [[], [], []], pacerPosKeep: [[], [], []], pacerLeadCompetition: [[], [], []]};
 
 		s1.initUmas([s2, ...pacers]);
 		s2.initUmas([s1, ...pacers]);
@@ -384,6 +370,13 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 				});
 			}
 
+			if (s2.pos < course.distance) {
+				data.pacerGap[ai].push(currentPacer ? currentPacer.pos - s2.pos : undefined);
+			}
+			if (s1.pos < course.distance) {
+				data.pacerGap[bi].push(currentPacer ? currentPacer.pos - s1.pos : undefined);
+			}
+
 			for (let j = 0; j < options.pacemakerCount; j++) {
 				const p = j < pacers.length ? pacers[j] : null;
 				if (!p || p.pos >= course.distance) continue;
@@ -400,7 +393,6 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 				data.p[ai].push(s2.pos);
 				data.v[ai].push(s2.currentSpeed + (s2.modifiers.currentSpeed.acc + s2.modifiers.currentSpeed.err));
 				data.hp[ai].push((s2.hp as any).hp);
-				data.pacerGap[ai].push(currentPacer ? (currentPacer.pos - s2.pos) : undefined);
 			}
 			else if (!s2Finished) {
 				s2Finished = true;
@@ -423,7 +415,6 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 				data.p[bi].push(s1.pos);
 				data.v[bi].push(s1.currentSpeed + (s1.modifiers.currentSpeed.acc + s1.modifiers.currentSpeed.err));
 				data.hp[bi].push((s1.hp as any).hp);
-				data.pacerGap[bi].push(currentPacer ? (currentPacer.pos - s1.pos) : undefined);
 			}
 			else if (!s1Finished) {
 				s1Finished = true;
@@ -469,6 +460,11 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		for (let j = 0; j < options.pacemakerCount; j++) {
 			const p = j < pacers.length ? pacers[j] : null;
 			data.pacerPosKeep[j] = p ? p.positionKeepActivations.slice() : [];
+			if (p && p.leadCompetitionStart != null) {
+				data.pacerLeadCompetition[j] = [p.leadCompetitionStart, p.leadCompetitionEnd != null ? p.leadCompetitionEnd : course.distance];
+			} else {
+				data.pacerLeadCompetition[j] = [];
+			}
 		}
 
 		// Clean up skills that are still active when the race ends
@@ -576,6 +572,24 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 			s2RushedStats.lengths.push(length);
 			s2RushedStats.count++;
 		}
+		
+		if (s1.leadCompetitionStart != null) {
+			const start = s1.leadCompetitionStart;
+			const end = s1.leadCompetitionEnd != null ? s1.leadCompetitionEnd : course.distance;
+			const length = end - start;
+			const s1LeadCompStats = s1IsUma1 ? leadCompetitionStats.uma1 : leadCompetitionStats.uma2;
+			s1LeadCompStats.lengths.push(length);
+			s1LeadCompStats.count++;
+		}
+		if (s2.leadCompetitionStart != null) {
+			const start = s2.leadCompetitionStart;
+			const end = s2.leadCompetitionEnd != null ? s2.leadCompetitionEnd : course.distance;
+			const length = end - start;
+			const s2LeadCompStats = s2IsUma1 ? leadCompetitionStats.uma1 : leadCompetitionStats.uma2;
+			s2LeadCompStats.lengths.push(length);
+			s2LeadCompStats.count++;
+		}
+		
 		const basinn = sign * posDifference / 2.5;
 		diff.push(basinn);
 		if (basinn < min) {
@@ -623,6 +637,11 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		uma2: calculateStats(rushedStats.uma2)
 	};
 	
+	const leadCompetitionStatsSummary = {
+		uma1: calculateStats(leadCompetitionStats.uma1),
+		uma2: calculateStats(leadCompetitionStats.uma2)
+	};
+	
 	// Calculate stamina survival and full spurt rates
 	const staminaStatsSummary = {
 		uma1: {
@@ -652,6 +671,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		results: diff, 
 		runData: {minrun, maxrun, meanrun, medianrun},
 		rushedStats: rushedStatsSummary,
+		leadCompetitionStats: leadCompetitionStatsSummary,
 		spurtInfo: options.useEnhancedSpurt ? { uma1: spurtInfo1, uma2: spurtInfo2 } : null,
 		staminaStats: staminaStatsSummary,
 		firstUmaStats: firstUmaStatsSummary
