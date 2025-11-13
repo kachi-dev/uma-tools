@@ -935,7 +935,7 @@ export class RaceSolver {
 				for (let uma of umasWithinGap) {
 					uma.leadCompetitionTimer.t = 0;
 					uma.leadCompetition = true;
-					uma.leadCompetitionStart = this.pos;
+					uma.leadCompetitionStart = uma.pos;
 					uma.leadCompetitionEnd = uma.pos + Math.floor(this.sectionLength * 8);
 				}
 			}
