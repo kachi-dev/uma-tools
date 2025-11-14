@@ -1,0 +1,130 @@
+{
+  "m_GameObject": {
+    "m_FileID": 0,
+    "m_PathID": -5850569804158212348
+  },
+  "m_Enabled": 1,
+  "m_Script": {
+    "m_FileID": 0,
+    "m_PathID": 2305682704411251456
+  },
+  "m_Name": "",
+  "courseParams": [
+    {
+      "_paramType": 0,
+      "_values": [
+        1,
+        220
+      ],
+      "_distance": 520.0
+    },
+    {
+      "_paramType": 0,
+      "_values": [
+        2,
+        220
+      ],
+      "_distance": 740.0
+    },
+    {
+      "_paramType": 0,
+      "_values": [
+        3,
+        220
+      ],
+      "_distance": 1310.0
+    },
+    {
+      "_paramType": 0,
+      "_values": [
+        4,
+        220
+      ],
+      "_distance": 1530.0
+    },
+    {
+      "_paramType": 2,
+      "_values": [
+        1,
+        1
+      ],
+      "_distance": 0.0
+    },
+    {
+      "_paramType": 2,
+      "_values": [
+        2,
+        1
+      ],
+      "_distance": 520.0
+    },
+    {
+      "_paramType": 2,
+      "_values": [
+        1,
+        2
+      ],
+      "_distance": 960.0
+    },
+    {
+      "_paramType": 2,
+      "_values": [
+        2,
+        2
+      ],
+      "_distance": 1310.0
+    },
+    {
+      "_paramType": 2,
+      "_values": [
+        1,
+        1
+      ],
+      "_distance": 1750.0
+    },
+    {
+      "_paramType": 2,
+      "_values": [
+        2,
+        1
+      ],
+      "_distance": 2000.0
+    },
+    {
+      "_paramType": 4,
+      "_values": [],
+      "_distance": 1600.0
+    },
+    {
+      "_paramType": 5,
+      "_values": [],
+      "_distance": 1610.0
+    },
+    {
+      "_paramType": 8,
+      "_values": [],
+      "_distance": 1600.0
+    },
+    {
+      "_paramType": 9,
+      "_values": [],
+      "_distance": 1610.0
+    },
+    {
+      "_paramType": 11,
+      "_values": [
+        -10000,
+        200
+      ],
+      "_distance": 420.0
+    },
+    {
+      "_paramType": 11,
+      "_values": [
+        10000,
+        720
+      ],
+      "_distance": 865.0
+    }
+  ]
+}

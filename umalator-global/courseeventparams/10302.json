@@ -1,0 +1,82 @@
+{
+  "m_GameObject": {
+    "m_FileID": 0,
+    "m_PathID": 6417191509550257759
+  },
+  "m_Enabled": 1,
+  "m_Script": {
+    "m_FileID": 0,
+    "m_PathID": 2305682704411251456
+  },
+  "m_Name": "",
+  "courseParams": [
+    {
+      "_paramType": 0,
+      "_values": [
+        3,
+        200
+      ],
+      "_distance": 430.0
+    },
+    {
+      "_paramType": 0,
+      "_values": [
+        4,
+        210
+      ],
+      "_distance": 640.0
+    },
+    {
+      "_paramType": 2,
+      "_values": [
+        1,
+        2
+      ],
+      "_distance": 0.0
+    },
+    {
+      "_paramType": 2,
+      "_values": [
+        2,
+        2
+      ],
+      "_distance": 430.0
+    },
+    {
+      "_paramType": 2,
+      "_values": [
+        1,
+        1
+      ],
+      "_distance": 850.0
+    },
+    {
+      "_paramType": 2,
+      "_values": [
+        2,
+        1
+      ],
+      "_distance": 1200.0
+    },
+    {
+      "_paramType": 4,
+      "_values": [],
+      "_distance": 725.0
+    },
+    {
+      "_paramType": 5,
+      "_values": [],
+      "_distance": 735.0
+    },
+    {
+      "_paramType": 8,
+      "_values": [],
+      "_distance": 750.0
+    },
+    {
+      "_paramType": 9,
+      "_values": [],
+      "_distance": 760.0
+    }
+  ]
+}

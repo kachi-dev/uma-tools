@@ -1,0 +1,146 @@
+{
+  "m_GameObject": {
+    "m_FileID": 0,
+    "m_PathID": -749131320531021955
+  },
+  "m_Enabled": 1,
+  "m_Script": {
+    "m_FileID": 0,
+    "m_PathID": 2305682704411251456
+  },
+  "m_Name": "",
+  "courseParams": [
+    {
+      "_paramType": 0,
+      "_values": [
+        3,
+        210
+      ],
+      "_distance": 310.0
+    },
+    {
+      "_paramType": 0,
+      "_values": [
+        4,
+        160
+      ],
+      "_distance": 520.0
+    },
+    {
+      "_paramType": 0,
+      "_values": [
+        1,
+        170
+      ],
+      "_distance": 1060.0
+    },
+    {
+      "_paramType": 0,
+      "_values": [
+        2,
+        170
+      ],
+      "_distance": 1230.0
+    },
+    {
+      "_paramType": 0,
+      "_values": [
+        3,
+        210
+      ],
+      "_distance": 1750.0
+    },
+    {
+      "_paramType": 0,
+      "_values": [
+        4,
+        160
+      ],
+      "_distance": 1960.0
+    },
+    {
+      "_paramType": 2,
+      "_values": [
+        1,
+        2
+      ],
+      "_distance": 0.0
+    },
+    {
+      "_paramType": 2,
+      "_values": [
+        2,
+        2
+      ],
+      "_distance": 310.0
+    },
+    {
+      "_paramType": 2,
+      "_values": [
+        1,
+        1
+      ],
+      "_distance": 680.0
+    },
+    {
+      "_paramType": 2,
+      "_values": [
+        2,
+        1
+      ],
+      "_distance": 1060.0
+    },
+    {
+      "_paramType": 2,
+      "_values": [
+        1,
+        2
+      ],
+      "_distance": 1400.0
+    },
+    {
+      "_paramType": 2,
+      "_values": [
+        2,
+        2
+      ],
+      "_distance": 1750.0
+    },
+    {
+      "_paramType": 2,
+      "_values": [
+        1,
+        1
+      ],
+      "_distance": 2120.0
+    },
+    {
+      "_paramType": 2,
+      "_values": [
+        2,
+        1
+      ],
+      "_distance": 2400.0
+    },
+    {
+      "_paramType": 4,
+      "_values": [],
+      "_distance": 2001.0
+    },
+    {
+      "_paramType": 5,
+      "_values": [],
+      "_distance": 2011.0
+    },
+    {
+      "_paramType": 8,
+      "_values": [],
+      "_distance": 2001.0
+    },
+    {
+      "_paramType": 9,
+      "_values": [],
+      "_distance": 2011.0
+    }
+  ]
+}
