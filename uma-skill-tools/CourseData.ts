@@ -16,6 +16,13 @@ export interface CourseData {
 	readonly corners: readonly {readonly start: number, readonly length: number}[]
 	readonly straights: readonly {readonly start: number, readonly end: number, readonly frontType: number}[]
 	readonly slopes: readonly {readonly start: number, readonly length: number, readonly slope: number}[]
+	readonly laneMax: number
+	readonly courseWidth: number
+	readonly horseLane: number
+	readonly laneChangeAcceleration: number
+	readonly laneChangeAccelerationPerFrame: number
+	readonly maxLaneDistance: number
+	readonly moveLanePoint: number
 }
 
 import courses from './data/course_data.json';
@@ -79,7 +86,24 @@ export namespace CourseHelpers {
 	export function getCourse(courseId: number): CourseData {
 		const course = courses[courseId];
 		if (!isSortedByStart(course.slopes)) course.slopes.sort((a,b) => a.start - b.start);
-		Object.keys(course).forEach(k => Object.freeze(course[k]));
-		return Object.freeze(course);
+		
+		const courseWidth = 11.25;
+		const horseLane = courseWidth / 18.0;
+		const laneChangeAcceleration = 0.02 * 1.5;
+		const laneChangeAccelerationPerFrame = laneChangeAcceleration / 15.0;
+		const maxLaneDistance = courseWidth * course.laneMax / 10000.0;
+		const moveLanePoint = course.corners.length > 0 ? course.corners[0].start : 30.0;
+		
+		const course2 = Object.assign(course, {
+			courseWidth,
+			horseLane,
+			laneChangeAcceleration,
+			laneChangeAccelerationPerFrame,
+			maxLaneDistance,
+			moveLanePoint
+		});
+		
+		Object.keys(course2).forEach(k => Object.freeze(course2[k]));
+		return Object.freeze(course2);
 	}
 }

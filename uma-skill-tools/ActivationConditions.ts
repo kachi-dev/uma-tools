@@ -247,6 +247,19 @@ export function noopErlangRandom(k: number, lambda: number) {
 
 export const noopUniformRandom = uniformRandom(noopAll);
 
+// This is a hack to prevnt skills like Dodging Danger from activating 0s into the race when their condition is >=1s
+// 13m/s * time is *not* accurate beyond 1s but it's a good enough approximation to appropriately delay skill activation
+function shiftRegionsForwardByMinTime(regions: RegionList, minTime: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
+	const minDistance = 13 * minTime;
+	const shiftedRegions = new RegionList();
+	regions.forEach(r => {
+		if (r.start + minDistance < course.distance) {
+			shiftedRegions.push(new Region(Math.max(r.start, minDistance), Math.min(r.end, course.distance)));
+		}
+	});
+	return shiftedRegions.length > 0 ? shiftedRegions : new RegionList();
+}
+
 function noopSectionRandom(start: number, end: number) {
 	function sectionRandom(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters, extra: RaceParameters) {
 		const bounds = new Region(start * (course.distance / 24), end * (course.distance / 24));
@@ -447,8 +460,12 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	behind_near_lane_time_set1: noopErlangRandom(3, 2.0),
 	blocked_all_continuetime: noopErlangRandom(3, 2.0),
 	blocked_front: noopErlangRandom(3, 2.0),
-	blocked_front_continuetime: noopErlangRandom(3, 2.0),
-	blocked_side_continuetime: noopErlangRandom(3, 2.0),
+	blocked_front_continuetime: erlangRandom(3, 2.0, {
+		filterGte: shiftRegionsForwardByMinTime
+	}),
+	blocked_side_continuetime: erlangRandom(3, 2.0, {
+		filterGte: shiftRegionsForwardByMinTime
+	}),
 	change_order_onetime: noopErlangRandom(3, 2.0),
 	change_order_up_end_after: erlangRandom(3, 2.0, {
 		filterGte(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters, extra: RaceParameters) {
