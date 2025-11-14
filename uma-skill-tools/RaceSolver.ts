@@ -710,8 +710,8 @@ export class RaceSolver {
 		const sideBlocked = this.getConditionValue("blocked_side") === 1;
 
 		if (this.extraMoveLane < 0.0 && this.isAfterFinalCornerOrInFinalStraight()) {
-			this.extraMoveLane =
-				Math.min(currentLane / 0.1, this.course.maxLaneDistance) * 0.5 + this.rng.random()*0.1
+			const laneDistance = currentLane;
+			this.extraMoveLane = Math.max(0, Math.min(1, laneDistance / 0.1)) * 0.5 + this.rng.random() * 0.1;
 		}
 
 		if (this.activeChangeLaneSkills.length > 0) {
@@ -1007,7 +1007,7 @@ export class RaceSolver {
 	}
 
 	isAfterFinalCorner() {
-		const finalCornerStart = this.course.corners.length > 0 ? this.course.corners[0].start : Infinity;
+		const finalCornerStart = this.course.corners.length > 0 ? this.course.corners[this.course.corners.length - 1].start : Infinity;
 		return this.pos >= finalCornerStart;
 	}
 
@@ -1176,6 +1176,11 @@ export class RaceSolver {
 				const downhillBonus = 0.3 + (Math.abs(currentSlope.slope/10000) / 10.0);
 				this.targetSpeed += downhillBonus;
 			}
+		}
+
+		if (this.laneChangeSpeed > 0.0 && this.activeLaneMovementSkills.length > 0) {
+			const moveLaneModifier = Math.sqrt(0.0002 * this.horse.power);
+			this.targetSpeed += moveLaneModifier;
 		}
 	}
 

@@ -94,14 +94,15 @@ export namespace CourseHelpers {
 		const maxLaneDistance = courseWidth * course.laneMax / 10000.0;
 		const moveLanePoint = course.corners.length > 0 ? course.corners[0].start : 30.0;
 		
-		const course2 = Object.assign(course, {
+		const course2 = {
+			...course,
 			courseWidth,
 			horseLane,
 			laneChangeAcceleration,
 			laneChangeAccelerationPerFrame,
 			maxLaneDistance,
 			moveLanePoint
-		});
+		};
 		
 		Object.keys(course2).forEach(k => Object.freeze(course2[k]));
 		return Object.freeze(course2);
