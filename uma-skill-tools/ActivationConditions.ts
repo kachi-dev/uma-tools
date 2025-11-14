@@ -250,14 +250,17 @@ export const noopUniformRandom = uniformRandom(noopAll);
 // This is a hack to prevnt skills like Dodging Danger from activating 0s into the race when their condition is >=1s
 // 13m/s * time is *not* accurate beyond 1s but it's a good enough approximation to appropriately delay skill activation
 function shiftRegionsForwardByMinTime(regions: RegionList, minTime: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
-	const minDistance = 13 * minTime;
+	/* const minDistance = 13 * minTime;
 	const shiftedRegions = new RegionList();
 	regions.forEach(r => {
-		if (r.start + minDistance < course.distance) {
-			shiftedRegions.push(new Region(Math.max(r.start, minDistance), Math.min(r.end, course.distance)));
+		if (r.start === 0) {
+			shiftedRegions.push(new Region(minDistance, course.distance));
+		} else {
+			shiftedRegions.push(r);
 		}
 	});
-	return shiftedRegions.length > 0 ? shiftedRegions : new RegionList();
+	return shiftedRegions.length > 0 ? shiftedRegions : new RegionList(); */
+	return regions;
 }
 
 function noopSectionRandom(start: number, end: number) {

@@ -708,10 +708,11 @@ export class RaceSolver {
 	applyLaneMovement() {
 		const currentLane = this.currentLane
 		const sideBlocked = this.getConditionValue("blocked_side") === 1;
+		// TODO: Simulate 'overtake' condition to prevent umas from getting stuck on inside rail late-race
+		// At the moment this doesn't matter because all we care about is early-race behavior.
 
 		if (this.extraMoveLane < 0.0 && this.isAfterFinalCornerOrInFinalStraight()) {
-			const laneDistance = currentLane;
-			this.extraMoveLane = Math.max(0, Math.min(1, laneDistance / 0.1)) * 0.5 + this.rng.random() * 0.1;
+			this.extraMoveLane = Math.min(currentLane / 0.1, this.course.maxLaneDistance) * 0.5 + (this.rng.random() * 0.1);
 		}
 
 		if (this.activeChangeLaneSkills.length > 0) {

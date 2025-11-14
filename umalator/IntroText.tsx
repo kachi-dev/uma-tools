@@ -34,7 +34,7 @@ export function IntroText(props) {
 					<h1>jechtoff2dudes</h1>
 					<p>Frontrunner Overtake/Speedup mode, Dragging Skill Markers, Downhills, Skill Activation check</p>
 					<h1>Kachi</h1>
-					<p>Fixing all the bugs and UI issues, mood, UI improvements, rewriting poskeep, reworking RNG, uniques chart (utools at home)</p>
+					<p>Fixing all the bugs and UI issues, mood, UI improvements, rewriting poskeep, reworking RNG, uniques chart (utools at home), spot struggle/dueling, lane movement</p>
 			</details>
 
 
@@ -49,6 +49,15 @@ export function IntroText(props) {
 						<details>
 							<summary>Spot Struggle ignores LaneGap activation condition and is based solely on the distance between umas.</summary>
 							<p>Due to the difficulty of accurately simulating lane movement, Spot Struggle is activated when two or more Front Runner umas are within 3.75m of one another (5m for Runaway).</p>
+							<p>We do simulate lane movement, however, this is simply an approximation for the purpose of determining the effectiveness of lane movement skills post 1st-anniversary.</p>
+						</details>
+					</li>
+
+					<li>
+						<details>
+							<summary>Early-race lane movement is simulated approximately as this mechanic is dependent on other umas in the race.</summary>
+							<p>Specifically, your lane movement largely depends on overtake targets and blocking.</p>
+							<p>We have used logic from the mee1080 race simulator to approximate lane movement for the purposes of observing the effect of certain lane movement skills, however, it is not accurate enough to use for mechanics like Spot Struggle and Dueling.</p>
 						</details>
 					</li>
 
@@ -77,6 +86,18 @@ export function IntroText(props) {
 			</details>
 			<details>
 				<summary>Changelog</summary>
+				<section>
+					<h2>2025-11-14</h2>
+					<ul>
+						<li>Updated skill/uma/track data to latest global version.</li>
+						<li>Added Spot Struggle simulation.</li>
+						<li>Added basic lane movement simulation (primarily for Dodging Danger/Prudent Positioning).</li>
+						<li>Added spurt/stamina survival rate. Initial comparisons with in-game spurt rate shows that vfalator is actually more accurate than mee1080, but more testing is needed.</li>
+						<li>Fixed start delay logic.</li>
+						<li>Fixed early-race velocity bug causing umas to accelerate faster than they should.</li>
+						<li>... and probably other stuffs I forgot since there hasn't been a changelog in a while...</li>
+					</ul>
+				</section>
 				<section>
 					<h2>2025-10-09</h2>
 					<ul>
