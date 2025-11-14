@@ -665,6 +665,7 @@ function App(props) {
 	const [seed, setSeed] = useState(DEFAULT_SEED);
 	const [runOnceCounter, setRunOnceCounter] = useState(0);
 	const [isSimulationRunning, setIsSimulationRunning] = useState(false);
+	const chartWorkersCompletedRef = useRef(0);
 	const [posKeepMode, setPosKeepModeRaw] = useState(PosKeepMode.Approximate);
 	const [showHp, toggleShowHp] = useReducer((b,_) => !b, false);
 	
@@ -807,8 +808,14 @@ function App(props) {
 					updateTableData(results);
 					break;
 				case 'compare-complete':
-				case 'chart-complete':
 					setIsSimulationRunning(false);
+					break;
+				case 'chart-complete':
+					chartWorkersCompletedRef.current += 1;
+					if (chartWorkersCompletedRef.current >= 2) {
+						setIsSimulationRunning(false);
+						chartWorkersCompletedRef.current = 0;
+					}
 					break;
 			}
 		});
@@ -1023,6 +1030,7 @@ function App(props) {
 
 	function doBasinnChart() {
 		postEvent('doBasinnChart', {});
+		chartWorkersCompletedRef.current = 0;
 		setIsSimulationRunning(true);
 		const params = racedefToParams(racedef, uma1.strategy);
 

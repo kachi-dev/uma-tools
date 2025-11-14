@@ -72,8 +72,6 @@ export function IntroText(props) {
 							Unique skills are always simulated as a base level 3★ unique.
 						</details>
 					</li>
-					
-					<li>Motivation is always assumed to be maximum</li>
 				</ul>
 				By and large it should be highly accurate. It has been battle-tested on the JP server for several years. Please use this if you KNOW what the hell you are doing.
 			</details>
