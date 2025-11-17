@@ -150,7 +150,8 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		.time(racedef.time)
 		.useEnhancedSpurt(options.useEnhancedSpurt || false)
 		.accuracyMode(options.accuracyMode || false)
-		.posKeepMode(options.posKeepMode);
+		.posKeepMode(options.posKeepMode)
+		.mode(options.mode);
 	if (racedef.orderRange != null) {
 		standard
 			.order(racedef.orderRange[0], racedef.orderRange[1])
@@ -346,7 +347,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 
 		const s1 = a.next(retry).value as RaceSolver;
 		const s2 = b.next(retry).value as RaceSolver;
-		const data = {t: [[], []], p: [[], []], v: [[], []], hp: [[], []], pacerGap: [[], []], sk: [null,null], sdly: [0,0], rushed: [[], []], posKeep: [[], []], competeFight: [[], []], leadCompetition: [[], []], pacerV: [[], [], []], pacerP: [[], [], []], pacerT: [[], [], []], pacerPosKeep: [[], [], []], pacerLeadCompetition: [[], [], []]};
+		const data = {t: [[], []], p: [[], []], v: [[], []], hp: [[], []], currentLane: [[], []], pacerGap: [[], []], sk: [null,null], sdly: [0,0], rushed: [[], []], posKeep: [[], []], competeFight: [[], []], leadCompetition: [[], []], pacerV: [[], [], []], pacerP: [[], [], []], pacerT: [[], [], []], pacerPosKeep: [[], [], []], pacerLeadCompetition: [[], [], []]};
 
 		s1.initUmas([s2, ...pacers]);
 		s2.initUmas([s1, ...pacers]);
@@ -393,6 +394,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 				data.p[ai].push(s2.pos);
 				data.v[ai].push(s2.currentSpeed + (s2.modifiers.currentSpeed.acc + s2.modifiers.currentSpeed.err));
 				data.hp[ai].push((s2.hp as any).hp);
+				data.currentLane[ai].push(s2.currentLane);
 			}
 			else if (!s2Finished) {
 				s2Finished = true;
@@ -415,6 +417,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 				data.p[bi].push(s1.pos);
 				data.v[bi].push(s1.currentSpeed + (s1.modifiers.currentSpeed.acc + s1.modifiers.currentSpeed.err));
 				data.hp[bi].push((s1.hp as any).hp);
+				data.currentLane[bi].push(s1.currentLane);
 			}
 			else if (!s1Finished) {
 				s1Finished = true;

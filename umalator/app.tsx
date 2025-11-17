@@ -248,6 +248,13 @@ function VelocityLines(props) {
 		return d3.scaleLinear().domain([0, domainMax]).range([props.height, bottom60Percent]);
 	})();
 	
+	const laneY = data && data.currentLane && props.horseLane && (() => {
+		const gateCount = 9;
+		const maxLane = Math.max(gateCount + 1, 11) * props.horseLane;
+		const bottom50Percent = props.height * 0.5;
+		return d3.scaleLinear().domain([0, maxLane]).range([props.height, bottom50Percent]);
+	})();
+	
 	useEffect(function () {
 		if (axes.current == null) return;
 		const g = d3.select(axes.current);
@@ -259,7 +266,8 @@ function VelocityLines(props) {
 	}, [props.data, props.courseDistance, props.width, props.height]);
 	const colors = ['#2a77c5', '#c52a2a'];
 	const hpColors = ['#688aab', '#ab6868'];
-	const pacemakerColors = ['#22c55e', '#a855f7', '#ec4899']; // Green, Purple, Pink
+	const laneColors = ['#87ceeb', '#ff0000'];
+	const pacemakerColors = ['#22c55e', '#a855f7', '#ec4899'];
 	return (
 		<Fragment>
 			<g transform={`translate(${props.xOffset},5)`}>
@@ -270,6 +278,10 @@ function VelocityLines(props) {
 				).concat(props.showHp ? data.hp.map((hp,i) =>
 					<path fill="none" stroke={hpColors[i]} stroke-width="2.5" d={
 						d3.line().x(j => x(data.p[i][j])).y(j => hpY(hp[j]))(data.p[i].map((_,j) => j))
+					} />
+				) : []).concat(props.showLanes && data.currentLane && laneY ? data.currentLane.map((lanes,i) =>
+					<path fill="none" stroke={laneColors[i]} stroke-width="2.5" d={
+						d3.line().x(j => x(data.p[i][j])).y(j => laneY(lanes[j]))(data.p[i].map((_,j) => j))
 					} />
 				) : []).concat(data.pacerGap && pacemakerY ? data.pacerGap.map((gap,i) => {
 					const validPoints = data.p[i].map((_,j) => ({x: j, gap: gap[j]})).filter(p => p.gap !== undefined && p.gap >= 0);
@@ -328,7 +340,7 @@ function racedefToParams({mood, ground, weather, season, time, grade}: RaceParam
 	};
 }
 
-async function serialize(courseId: number, nsamples: number, seed: number, posKeepMode: PosKeepMode, racedef: RaceParams, uma1: HorseState, uma2: HorseState, pacer: HorseState, showVirtualPacemakerOnGraph: boolean, pacemakerCount: number, selectedPacemakers: boolean[], witVarianceSettings: {
+async function serialize(courseId: number, nsamples: number, seed: number, posKeepMode: PosKeepMode, racedef: RaceParams, uma1: HorseState, uma2: HorseState, pacer: HorseState, showVirtualPacemakerOnGraph: boolean, pacemakerCount: number, selectedPacemakers: boolean[], showLanes: boolean, witVarianceSettings: {
 	allowRushedUma1: boolean,
 	allowRushedUma2: boolean,
 	allowDownhillUma1: boolean,
@@ -351,7 +363,8 @@ async function serialize(courseId: number, nsamples: number, seed: number, posKe
 		witVarianceSettings,
 		showVirtualPacemakerOnGraph,
 		pacemakerCount,
-		selectedPacemakers
+		selectedPacemakers,
+		showLanes
 	});
 	const enc = new TextEncoder();
 	const stringStream = new ReadableStream({
@@ -419,7 +432,8 @@ async function deserialize(hash) {
 					},
 					showVirtualPacemakerOnGraph: o.showVirtualPacemakerOnGraph != null ? o.showVirtualPacemakerOnGraph : false,
 					pacemakerCount: o.pacemakerCount != null ? o.pacemakerCount : 1,
-					selectedPacemakers: o.selectedPacemakers != null ? o.selectedPacemakers : [false, false, false]
+					selectedPacemakers: o.selectedPacemakers != null ? o.selectedPacemakers : [false, false, false],
+					showLanes: o.showLanes != null ? o.showLanes : false
 				};
 			} catch (_) {
 				return {
@@ -444,7 +458,8 @@ async function deserialize(hash) {
 					},
 					showVirtualPacemakerOnGraph: false,
 					pacemakerCount: 1,
-					selectedPacemakers: [false, false, false]
+					selectedPacemakers: [false, false, false],
+					showLanes: false
 				};
 			}
 		} else {
@@ -453,7 +468,7 @@ async function deserialize(hash) {
 	}
 }
 
-async function saveToLocalStorage(courseId: number, nsamples: number, seed: number, posKeepMode: PosKeepMode, racedef: RaceParams, uma1: HorseState, uma2: HorseState, pacer: HorseState, showVirtualPacemakerOnGraph: boolean, pacemakerCount: number, selectedPacemakers: boolean[], witVarianceSettings: {
+async function saveToLocalStorage(courseId: number, nsamples: number, seed: number, posKeepMode: PosKeepMode, racedef: RaceParams, uma1: HorseState, uma2: HorseState, pacer: HorseState, showVirtualPacemakerOnGraph: boolean, pacemakerCount: number, selectedPacemakers: boolean[], showLanes: boolean, witVarianceSettings: {
 	allowRushedUma1: boolean,
 	allowRushedUma2: boolean,
 	allowDownhillUma1: boolean,
@@ -465,7 +480,7 @@ async function saveToLocalStorage(courseId: number, nsamples: number, seed: numb
 	simWitVariance: boolean
 }) {
 	try {
-		const hash = await serialize(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakers, witVarianceSettings);
+		const hash = await serialize(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakers, showLanes, witVarianceSettings);
 		localStorage.setItem('umalator-settings', hash);
 	} catch (error) {
 		console.warn('Failed to save settings to localStorage:', error);
@@ -668,6 +683,7 @@ function App(props) {
 	const chartWorkersCompletedRef = useRef(0);
 	const [posKeepMode, setPosKeepModeRaw] = useState(PosKeepMode.Approximate);
 	const [showHp, toggleShowHp] = useReducer((b,_) => !b, false);
+	const [showLanes, toggleShowLanes] = useReducer((b,_) => !b, false);
 	
 	useEffect(() => { document.documentElement.classList.toggle('dark', darkMode);}, [darkMode]);
 	//fuck dark mode
@@ -735,7 +751,7 @@ function App(props) {
 	}
 	
 	function autoSaveSettings() {
-		saveToLocalStorage(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, getSelectedPacemakers(), {
+		saveToLocalStorage(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, getSelectedPacemakers(), showLanes, {
 			allowRushedUma1,
 			allowRushedUma2,
 			allowDownhillUma1,
@@ -842,6 +858,10 @@ function App(props) {
 					toggleShowVirtualPacemakerOnGraph(null);
 				}
 
+				if (o.showLanes !== undefined && o.showLanes !== showLanes) {
+					toggleShowLanes(null);
+				}
+
 				if (o.witVarianceSettings) {
 					const settings = o.witVarianceSettings;
 					if (settings.allowRushedUma1 !== allowRushedUma1) toggleRushedUma1(null);
@@ -873,6 +893,10 @@ function App(props) {
 					
 					if (o.showVirtualPacemakerOnGraph !== undefined && o.showVirtualPacemakerOnGraph !== showVirtualPacemakerOnGraph) {
 						toggleShowVirtualPacemakerOnGraph(null);
+					}
+
+					if (o.showLanes !== undefined && o.showLanes !== showLanes) {
+						toggleShowLanes(null);
 					}
 
 					if (o.witVarianceSettings) {
@@ -915,7 +939,7 @@ function App(props) {
 
 	function copyStateUrl(e) {
 		e.preventDefault();
-		serialize(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, getSelectedPacemakers(), {
+		serialize(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, getSelectedPacemakers(), showLanes, {
 			allowRushedUma1,
 			allowRushedUma2,
 			allowDownhillUma1,
@@ -1496,7 +1520,7 @@ function App(props) {
 			<IntlProvider definition={strings}>
 				<div id="topPane" class={chartData ? 'hasResults' : ''}>
 					<RaceTrack courseid={courseId} width={960} height={240} xOffset={20} yOffset={15} yExtra={20} mouseMove={rtMouseMove} mouseLeave={rtMouseLeave} onSkillDrag={handleSkillDrag} regions={[...skillActivations, ...rushedIndicators]} posKeepLabels={posKeepLabels} uma1={uma1} uma2={uma2} pacer={pacer}>
-						<VelocityLines data={chartData} courseDistance={course.distance} width={960} height={250} xOffset={20} showHp={showHp} showVirtualPacemaker={showVirtualPacemakerOnGraph && posKeepMode === PosKeepMode.Virtual} selectedPacemakers={getSelectedPacemakers()} />
+						<VelocityLines data={chartData} courseDistance={course.distance} width={960} height={250} xOffset={20} showHp={showHp} showLanes={showLanes} horseLane={course.horseLane} showVirtualPacemaker={showVirtualPacemakerOnGraph && posKeepMode === PosKeepMode.Virtual} selectedPacemakers={getSelectedPacemakers()} />
 						
 						<g id="rtMouseOverBox" style="display:none">
 							<text id="rtV1" x="25" y="10" fill="#2a77c5" font-size="10px"></text>
@@ -1605,6 +1629,10 @@ function App(props) {
 						<div>
 							<label for="showhp">Show HP</label>
 							<input type="checkbox" id="showhp" checked={showHp} onClick={toggleShowHp} />
+						</div>
+						<div>
+							<label for="showlanes">Show Lanes</label>
+							<input type="checkbox" id="showlanes" checked={showLanes} onClick={toggleShowLanes} />
 						</div>
 						<div>
 							<label for="simWitVariance">Wit Variance</label>

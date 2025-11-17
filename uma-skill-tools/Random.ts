@@ -1,4 +1,4 @@
-import seedrandom from 'seedrandom';
+import Prando from 'prando';
 
 export interface PRNG {
 	int32(): number
@@ -7,27 +7,22 @@ export interface PRNG {
 }
 
 export class SeededRng {
-	private rng: () => number;
+	private prando: Prando;
 
 	constructor(seed: number) {
-		this.rng = seedrandom(seed.toString());
+		this.prando = new Prando(seed);
 	}
 
 	int32(): number {
-		return Math.floor(this.rng() * 0x100000000);
+		return Math.floor(this.prando.next() * 0x100000000);
 	}
 
 	random(): number {
-		return this.rng();
+		return this.prando.next();
 	}
 
 	uniform(upper: number): number {
-		const mask = -1 >>> Math.clz32((upper - 1) | 1);
-		let n = 0;
-		do {
-			n = this.int32() & mask;
-		} while (n >= upper);
-		return n;
+		return this.prando.nextInt(0, upper - 1);
 	}
 }
 

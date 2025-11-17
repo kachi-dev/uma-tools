@@ -412,6 +412,7 @@ export class RaceSolverBuilder {
 	_accuracyMode: boolean
 	_skillCheckChance: boolean
 	_posKeepMode: PosKeepMode
+	_mode: string | undefined
 
 	constructor(readonly nsamples: number) {
 		this._course = null;
@@ -445,6 +446,7 @@ export class RaceSolverBuilder {
 		this._accuracyMode = false;
 		this._skillCheckChance = true;
 		this._posKeepMode = PosKeepMode.None;
+		this._mode = undefined;
 	}
 
 	seed(seed: number) {
@@ -599,6 +601,7 @@ export class RaceSolverBuilder {
 			disableSectionModifier: this._disableSectionModifier,
 			skillCheckChance: this._skillCheckChance,
 			posKeepMode: this._posKeepMode,
+			mode: this._mode,
 			isPacer: true
 		}) : null;
 	}
@@ -775,6 +778,11 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
+	mode(mode: string) {
+		this._mode = mode;
+		return this;
+	}
+
 	onSkillActivate(cb: (state: RaceSolver, skillId: string) => void) {
 		this._onSkillActivate = cb;
 		return this;
@@ -811,6 +819,7 @@ export class RaceSolverBuilder {
 		clone._accuracyMode = this._accuracyMode;
 		clone._skillCheckChance = this._skillCheckChance;
 		clone._posKeepMode = this._posKeepMode;
+		clone._mode = this._mode;
 
 		// NB. GOTCHA: if asitame is enabled, it closes over *our* horse and mood data, and not the clone's
 		// this is assumed to be fine, since fork() is intended to be used after everything is added except skills,
@@ -822,7 +831,7 @@ export class RaceSolverBuilder {
 
 	*build() {
 		let horse = buildBaseStats(this._horse, this._horse.mood);
-		let solverRng = new Rule30CARng(this._rng.int32());
+		let skillRng = new Rule30CARng(this._rng.int32());
 
 		const wholeCourse = new RegionList();
 		wholeCourse.push(new Region(0, this._course.distance));
@@ -833,13 +842,15 @@ export class RaceSolverBuilder {
 		this._extraSkillHooks.forEach(h => h(skilldata, horse, this._course));
 		const triggers = skilldata.map(sd => {
 			const sp = this._samplePolicyOverride.get(sd.skillId) || sd.samplePolicy;
-			return sp.sample(sd.regions, this.nsamples, this._rng)
+			return sp.sample(sd.regions, this.nsamples, skillRng)
 		});
 
 		// must come after skill activations are decided because conditions like base_power depend on base stats
 		horse = buildAdjustedStats(horse, this._course, this._raceParams.groundCondition);
 
 		for (let i = 0; i < this.nsamples; ++i) {
+			let solverRng = new Rule30CARng(this._rng.int32());
+
 			const skills = skilldata.map((sd,sdi) => ({
 				skillId: sd.skillId,
 				perspective: sd.perspective,
@@ -850,7 +861,7 @@ export class RaceSolverBuilder {
 				originWisdom: this._skills[sdi].originWisdom
 			}));
 
-			const hpRng = new Rule30CARng(solverRng.int32());
+			const hpRng = new Rule30CARng(this._rng.int32());
 			const hpPolicy = this._useEnhancedSpurt
 				? new EnhancedHpPolicy(this._course, this._raceParams.groundCondition, hpRng, this._accuracyMode)
 				: new GameHpPolicy(this._course, this._raceParams.groundCondition, hpRng);
@@ -867,7 +878,8 @@ export class RaceSolverBuilder {
 				disableDownhill: this._disableDownhill,
 				disableSectionModifier: this._disableSectionModifier,
 				skillCheckChance: this._skillCheckChance,
-				posKeepMode: this._posKeepMode
+				posKeepMode: this._posKeepMode,
+				mode: this._mode
 			});
 
 			if (redo) {

@@ -238,6 +238,8 @@ export class RaceSolver {
 	rushedRng: PRNG
 	downhillRng: PRNG
 	wisdomRollRng: PRNG
+	posKeepRng: PRNG
+	laneMovementRng: PRNG
 	timers: Timer[]
 	startDash: boolean
 	startDelay: number
@@ -278,6 +280,7 @@ export class RaceSolver {
 	posKeepMode: PosKeepMode
 	posKeepSpeedCoef: number
 	posKeepStrategy: Strategy
+	mode: string | undefined
 	pacer: RaceSolver | null
 
 	// Rushed state
@@ -351,6 +354,7 @@ export class RaceSolver {
 		speedUpProbability?: number,
 		skillCheckChance?: boolean,
 		posKeepMode?: PosKeepMode,
+		mode?: string,
 		isPacer?: boolean,
 	}) {
 		// clone since green skills may modify the stat values
@@ -366,6 +370,8 @@ export class RaceSolver {
 		this.rushedRng = new Rule30CARng(this.rng.int32());
 		this.downhillRng = new Rule30CARng(this.rng.int32());
 		this.wisdomRollRng = new Rule30CARng(this.rng.int32());
+		this.posKeepRng = new Rule30CARng(this.rng.int32());
+		this.laneMovementRng = new Rule30CARng(this.rng.int32());
 		this.timers = [];
 		this.conditionTimer = this.getNewTimer(-1.0);
 		this.accumulatetime = this.getNewTimer();
@@ -397,9 +403,12 @@ export class RaceSolver {
 		this.positionKeepState = PositionKeepState.None;
 		this.posKeepMode = params.posKeepMode || PosKeepMode.None;
 		this.posKeepStrategy = this.horse.strategy;
-		// In approximate mode, all we care about is the consistent early-race pace-down we get
-		// But in full virtual pacemaker mode, we sim the entire poskeep section
-		this.posKeepEnd = this.sectionLength * 10.0;
+		this.mode = params.mode;
+		// For skill chart we want to minimize poskeep skewing results
+		// (i.e. in rare situations, an uma can proc a velocity skill, and gain initial positioning
+		// but then lose that positioning because they are too far forward to proc Pace Up)
+		// this then results in -L in the charts
+		this.posKeepEnd = this.sectionLength * (this.mode === 'compare' ? 10.0 : 3.0);
 		this.posKeepSpeedCoef = 1.0;
 		this.isPacer = params.isPacer || false;
 		this.pacerOverride = false;
@@ -463,7 +472,7 @@ export class RaceSolver {
 
 		this.initHills();
 
-		this.startDelay = 0.1 * (this.posKeepMode === PosKeepMode.Virtual ? this.rng.random() : this.syncRng.random());
+		this.startDelay = 0.1 * this.rng.random();
 
 		this.pos = 0.0;
 		this.accel = 0.0;
@@ -496,6 +505,7 @@ export class RaceSolver {
 		this.baseAccel = ([0,1,2,0,1,2] as Phase[]).map((phase,i) => baseAccel(i > 2 ? UphillBaseAccel : BaseAccel, this.horse, phase));
 
 		this.registerBlockedSideCondition();
+		this.registerOvertakeCondition();
 	}
 
 	private registerBlockedSideCondition(): void {
@@ -529,6 +539,34 @@ export class RaceSolver {
 		);
 
 		this.registerCondition("blocked_side", blockedSideCondition);
+	}
+
+	private registerOvertakeCondition(): void {
+		const conditions: ConditionEntry[] = [
+			{
+				condition: new ApproximateStartContinue("逃げ", 0.05, 0.50),
+				predicate: (state: any) => {
+					return state.simulation.horse.strategy === Strategy.Nige;
+				}
+			},
+			{
+				condition: new ApproximateStartContinue("先行", 0.15, 0.55),
+				predicate: (state: any) => {
+					return state.simulation.horse.strategy === Strategy.Senkou;
+				}
+			},
+			{
+				condition: new ApproximateStartContinue("その他", 0.20, 0.60),
+				predicate: null
+			}
+		];
+
+		const overtakeCondition = new ApproximateMultiCondition(
+			"overtake",
+			conditions
+		);
+
+		this.registerCondition("overtake", overtakeCondition);
 	}
 
 	initUmas(umas: RaceSolver[]) {
@@ -600,7 +638,7 @@ export class RaceSolver {
 			// Check for recovery every 3 seconds
 			if (this.rushedTimer.t > 0 && Math.floor(this.rushedTimer.t / 3) > Math.floor((this.rushedTimer.t - 0.017) / 3)) {
 				// 55% chance to snap out of it
-				if (this.rng.random() < 0.55) {
+				if (this.rushedRng.random() < 0.55) {
 					this.endRushedState();
 					return;
 				}
@@ -708,15 +746,19 @@ export class RaceSolver {
 	applyLaneMovement() {
 		const currentLane = this.currentLane
 		const sideBlocked = this.getConditionValue("blocked_side") === 1;
+		const overtake = this.getConditionValue("overtake") === 1;
 		// TODO: Simulate 'overtake' condition to prevent umas from getting stuck on inside rail late-race
 		// At the moment this doesn't matter because all we care about is early-race behavior.
 
 		if (this.extraMoveLane < 0.0 && this.isAfterFinalCornerOrInFinalStraight()) {
-			this.extraMoveLane = Math.min(currentLane / 0.1, this.course.maxLaneDistance) * 0.5 + (this.rng.random() * 0.1);
+			this.extraMoveLane = Math.min(currentLane / 0.1, this.course.maxLaneDistance) * 0.5 + (this.laneMovementRng.random() * 0.1);
 		}
 
 		if (this.activeChangeLaneSkills.length > 0) {
 			this.targetLane = 9.5 * this.course.horseLane;
+		}
+		else if (overtake) {
+			this.targetLane = Math.max(this.targetLane, this.course.horseLane, this.extraMoveLane);
 		}
 		else if (!this.hp.hasRemainingHp()) {
 			this.targetLane = currentLane;
@@ -825,13 +867,11 @@ export class RaceSolver {
 	// PDM/PUM early-race to mimic what actually happens in game so we limit poskeep to 5 sections
 	// and use synced rng to make skill comparison possible.
 	speedUpOvertakeWitCheck(): boolean {
-		const rng = this.posKeepMode === PosKeepMode.Virtual ? this.rng.random() : this.syncRng.random();
-		return rng < 0.2 * Math.log10(0.1 * this.horse.wisdom);
+		return this.posKeepRng.random() < 0.2 * Math.log10(0.1 * this.horse.wisdom);
 	}
 
 	paceUpWitCheck(): boolean {
-		const rng = this.posKeepMode === PosKeepMode.Virtual ? this.rng.random() : this.syncRng.random();
-		return rng < 0.15 * Math.log10(0.1 * this.horse.wisdom);
+		return this.posKeepRng.random() < 0.15 * Math.log10(0.1 * this.horse.wisdom);
 	}
 
 	applyPositionKeepStates() {
