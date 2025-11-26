@@ -1393,7 +1393,7 @@ function App(props) {
 					<div id="resultsHelp">Negative numbers mean <strong style="color:#2a77c5">Umamusume 1</strong> is faster, positive numbers mean <strong style="color:#c52a2a">Umamusume 2</strong> is faster.</div>
 					
 					
-					{simWitVariance && (firstUmaStats || staminaStats) && (
+					{(firstUmaStats || staminaStats) && (
 						<div style={{marginTop: '15px', marginBottom: '10px', textAlign: 'center'}}>
 							{firstUmaStats && (
 								<div style={{marginBottom: '2px', display: 'flex', justifyContent: 'center', gap: '40px'}}>
@@ -1407,34 +1407,40 @@ function App(props) {
 							)}
 							{staminaStats && (
 								<>
-									<div style={{marginBottom: '2px', display: 'flex', justifyContent: 'center', gap: '40px'}}>
-										<div style={{textAlign: 'right', minWidth: '250px'}}>
-											<strong>Uma 1:</strong> Spurt Rate: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{staminaStats.uma1.fullSpurtRate.toFixed(1)}%</span>
+									{simWitVariance && (
+										<div style={{marginBottom: '2px', display: 'flex', justifyContent: 'center', gap: '40px'}}>
+											<div style={{textAlign: 'right', minWidth: '250px'}}>
+												<strong>Uma 1:</strong> Spurt Rate: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{staminaStats.uma1.fullSpurtRate.toFixed(1)}%</span>
+											</div>
+											<div style={{textAlign: 'left', minWidth: '250px'}}>
+												<strong>Uma 2:</strong> Spurt Rate: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{staminaStats.uma2.fullSpurtRate.toFixed(1)}%</span>
+											</div>
 										</div>
-										<div style={{textAlign: 'left', minWidth: '250px'}}>
-											<strong>Uma 2:</strong> Spurt Rate: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{staminaStats.uma2.fullSpurtRate.toFixed(1)}%</span>
+									)}
+									{simWitVariance && (
+										<div style={{marginBottom: '2px', display: 'flex', justifyContent: 'center', gap: '40px'}}>
+											<div style={{textAlign: 'right', minWidth: '250px'}}>
+												<strong>Uma 1:</strong> Survival Rate: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{staminaStats.uma1.staminaSurvivalRate.toFixed(1)}%</span>
+											</div>
+											<div style={{textAlign: 'left', minWidth: '250px'}}>
+												<strong>Uma 2:</strong> Survival Rate: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{staminaStats.uma2.staminaSurvivalRate.toFixed(1)}%</span>
+											</div>
 										</div>
-									</div>
-									<div style={{marginBottom: '2px', display: 'flex', justifyContent: 'center', gap: '40px'}}>
-										<div style={{textAlign: 'right', minWidth: '250px'}}>
-											<strong>Uma 1:</strong> Survival Rate: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{staminaStats.uma1.staminaSurvivalRate.toFixed(1)}%</span>
+									)}
+									{!simWitVariance && (
+										<div style={{marginBottom: '2px', display: 'flex', justifyContent: 'center', gap: '40px', color: '#c52a2a'}}>
+											<div style={{textAlign: 'right', minWidth: '250px'}}>
+												<strong>Please turn on wit variance to see the spurt stats</strong>
+											</div>
 										</div>
-										<div style={{textAlign: 'left', minWidth: '250px'}}>
-											<strong>Uma 2:</strong> Survival Rate: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{staminaStats.uma2.staminaSurvivalRate.toFixed(1)}%</span>
-										</div>
-									</div>
+									)}
+					
 								</>
 							)}
 						</div>
 					)}
 					
-					{simWitVariance ? (
-						<Histogram width={500} height={333} data={results} />
-					) : (
-						<div style={{marginTop: '15px', marginBottom: '10px', textAlign: 'center'}}>
-							<span style={{color: 'red', fontWeight: 'bold', fontSize: '100px'}}>Turn on Wit Variance to see the Spurt Chart.</span>
-						</div>
-					)}
+					<Histogram width={500} height={333} data={results} />
 				</div>
 				<div id="infoTables">
 					<table>

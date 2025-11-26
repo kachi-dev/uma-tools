@@ -369,7 +369,7 @@ body {
 }
 
 .hasResults .racetrackView > svg text:not(.mouseoverText) {
-	filter: none;
+	filter: opacity(0.3);
 }
 
 .racetrackView .textbox text {
