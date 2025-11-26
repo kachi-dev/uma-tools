@@ -705,7 +705,7 @@ function App(props) {
 	const [allowSectionModifierUma2, toggleSectionModifierUma2] = useReducer((b,_) => !b, true);
 	const [allowSkillCheckChanceUma1, toggleSkillCheckChanceUma1] = useReducer((b,_) => !b, true);
 	const [allowSkillCheckChanceUma2, toggleSkillCheckChanceUma2] = useReducer((b,_) => !b, true);
-	const [simWitVariance, toggleSimWitVariance] = useReducer((b,_) => !b, false);
+	const [simWitVariance, toggleSimWitVariance] = useReducer((b,_) => !b, true);
 	const [showWitVarianceSettings, setShowWitVarianceSettings] = useState(false);
 	const [showVirtualPacemakerOnGraph, toggleShowVirtualPacemakerOnGraph] = useReducer((b,_) => !b, false);
 	const [pacemakerCount, setPacemakerCount] = useState(1);
@@ -872,7 +872,7 @@ function App(props) {
 					if (settings.allowSectionModifierUma2 !== allowSectionModifierUma2) toggleSectionModifierUma2(null);
 					if (settings.allowSkillCheckChanceUma1 !== allowSkillCheckChanceUma1) toggleSkillCheckChanceUma1(null);
 					if (settings.allowSkillCheckChanceUma2 !== allowSkillCheckChanceUma2) toggleSkillCheckChanceUma2(null);
-					if (settings.simWitVariance !== simWitVariance) toggleSimWitVariance(null);
+					// simWitVariance always defaults to true, don't load from saved state
 				}
 			});
 		} else {
@@ -909,7 +909,7 @@ function App(props) {
 						if (settings.allowSectionModifierUma2 !== allowSectionModifierUma2) toggleSectionModifierUma2(null);
 						if (settings.allowSkillCheckChanceUma1 !== allowSkillCheckChanceUma1) toggleSkillCheckChanceUma1(null);
 						if (settings.allowSkillCheckChanceUma2 !== allowSkillCheckChanceUma2) toggleSkillCheckChanceUma2(null);
-						if (settings.simWitVariance !== simWitVariance) toggleSimWitVariance(null);
+						// simWitVariance always defaults to true, don't load from saved state
 					}
 				}
 			});
@@ -1393,7 +1393,7 @@ function App(props) {
 					<div id="resultsHelp">Negative numbers mean <strong style="color:#2a77c5">Umamusume 1</strong> is faster, positive numbers mean <strong style="color:#c52a2a">Umamusume 2</strong> is faster.</div>
 					
 					
-					{(firstUmaStats || staminaStats) && (
+					{simWitVariance && (firstUmaStats || staminaStats) && (
 						<div style={{marginTop: '15px', marginBottom: '10px', textAlign: 'center'}}>
 							{firstUmaStats && (
 								<div style={{marginBottom: '2px', display: 'flex', justifyContent: 'center', gap: '40px'}}>
@@ -1428,7 +1428,13 @@ function App(props) {
 						</div>
 					)}
 					
-					<Histogram width={500} height={333} data={results} />
+					{simWitVariance ? (
+						<Histogram width={500} height={333} data={results} />
+					) : (
+						<div style={{marginTop: '15px', marginBottom: '10px', textAlign: 'center'}}>
+							<span style={{color: 'red', fontWeight: 'bold', fontSize: '100px'}}>Turn on Wit Variance to see the Spurt Chart.</span>
+						</div>
+					)}
 				</div>
 				<div id="infoTables">
 					<table>
@@ -1641,7 +1647,7 @@ function App(props) {
 								className="wit-variance-settings-btn" 
 								onClick={() => setShowWitVarianceSettings(true)}
 								title="Configure Wit Variance settings"
-								disabled={!simWitVariance}
+								disabled={simWitVariance}
 							>
 								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 									<circle cx="12" cy="12" r="3"></circle>

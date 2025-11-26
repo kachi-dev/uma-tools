@@ -39,7 +39,6 @@
 }
 
 .drag-textbox:hover {
-	opacity: 0.8;
 	cursor: grab !important;
 }
 
@@ -49,7 +48,8 @@
 }
 
 .drag-textbox text {
-	font-weight: bold;
+	font-weight: bolder;
+	opacity: 1;
 }
 
 .poskeep-label text {
