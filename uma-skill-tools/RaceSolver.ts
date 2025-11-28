@@ -662,17 +662,8 @@ export class RaceSolver {
 		}
 	}
 
-	getMaxSpeed() {
-		if (this.startDash) {
-			// target speed can be below 0.85 * BaseSpeed for non-runners if there is a hill at the start of the course
-			// in this case you actually don't exit start dash until your target speed is high enough to be over 0.85 * BaseSpeed
-			return Math.min(this.targetSpeed, 0.85 * baseSpeed(this.course));
-		} else  if (this.currentSpeed + this.modifiers.oneFrameAccel > this.targetSpeed) {
-			return 9999.0;  // allow decelerating if targetSpeed drops
-		} else {
-			return this.targetSpeed;
-		}
-		// technically, there's a hard cap of 30m/s, but there's no way to actually hit that without implementing the Pace Up Ex position keep mode
+	getMaxStartDashSpeed() {
+		return Math.min(this.targetSpeed, 0.85 * baseSpeed(this.course));
 	}
 
 	logVelocityData(dt: number) {
@@ -715,11 +706,24 @@ export class RaceSolver {
 		this.applyForces();
 		this.applyLaneMovement();
 
-		this.currentSpeed = Math.min(this.currentSpeed + this.accel * dt, this.getMaxSpeed());
+		let newSpeed = undefined;
 
-		if (!this.startDash && this.currentSpeed < this.minSpeed) {
-			this.currentSpeed = this.minSpeed;
+		if (this.currentSpeed < this.targetSpeed) {
+			newSpeed = Math.min(this.currentSpeed + this.accel * dt, this.targetSpeed);
 		}
+		else {
+			newSpeed = Math.max(this.currentSpeed + this.accel * dt, this.targetSpeed);
+		}
+
+		if (this.startDash && newSpeed > this.getMaxStartDashSpeed()) {
+			newSpeed = this.getMaxStartDashSpeed();
+		}
+		
+		if (!this.startDash && this.currentSpeed < this.minSpeed) {
+			newSpeed = this.minSpeed;
+		}
+
+		this.currentSpeed = newSpeed;
 
 		const displacement = this.currentSpeed + this.modifiers.currentSpeed.acc + this.modifiers.currentSpeed.err;
 

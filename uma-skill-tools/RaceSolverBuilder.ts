@@ -862,9 +862,7 @@ export class RaceSolverBuilder {
 			}));
 
 			const hpRng = new Rule30CARng(this._rng.int32());
-			const hpPolicy = this._useEnhancedSpurt
-				? new EnhancedHpPolicy(this._course, this._raceParams.groundCondition, hpRng, this._accuracyMode)
-				: new GameHpPolicy(this._course, this._raceParams.groundCondition, hpRng);
+			const hpPolicy = this._mode === 'compare' ? new GameHpPolicy(this._course, this._raceParams.groundCondition, hpRng) : NoopHpPolicy;
 
 			const redo: boolean = yield new RaceSolver({
 				horse,

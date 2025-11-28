@@ -872,7 +872,7 @@ function App(props) {
 					if (settings.allowSectionModifierUma2 !== allowSectionModifierUma2) toggleSectionModifierUma2(null);
 					if (settings.allowSkillCheckChanceUma1 !== allowSkillCheckChanceUma1) toggleSkillCheckChanceUma1(null);
 					if (settings.allowSkillCheckChanceUma2 !== allowSkillCheckChanceUma2) toggleSkillCheckChanceUma2(null);
-					// simWitVariance always defaults to true, don't load from saved state
+					if (settings.simWitVariance !== simWitVariance) toggleSimWitVariance(null);
 				}
 			});
 		} else {
@@ -909,7 +909,7 @@ function App(props) {
 						if (settings.allowSectionModifierUma2 !== allowSectionModifierUma2) toggleSectionModifierUma2(null);
 						if (settings.allowSkillCheckChanceUma1 !== allowSkillCheckChanceUma1) toggleSkillCheckChanceUma1(null);
 						if (settings.allowSkillCheckChanceUma2 !== allowSkillCheckChanceUma2) toggleSkillCheckChanceUma2(null);
-						// simWitVariance always defaults to true, don't load from saved state
+						if (settings.simWitVariance !== simWitVariance) toggleSimWitVariance(null);
 					}
 				}
 			});
@@ -1653,7 +1653,7 @@ function App(props) {
 								className="wit-variance-settings-btn" 
 								onClick={() => setShowWitVarianceSettings(true)}
 								title="Configure Wit Variance settings"
-								disabled={simWitVariance}
+								disabled={!simWitVariance}
 							>
 								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 									<circle cx="12" cy="12" r="3"></circle>
