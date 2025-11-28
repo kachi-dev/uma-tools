@@ -17,7 +17,7 @@ export class ApproximateStartContinue implements ApproximateCondition {
 	}
 
 	update(state: any, currentValue: number): number {
-		const rng: PRNG = state.simulation?.rng;
+		const rng: PRNG = state.simulation.specialConditionRng;
 
 		if (currentValue === 0) {
 			return rng.random() < this.startRate ? 1 : 0;
@@ -57,7 +57,7 @@ export class ApproximateMultiCondition implements ApproximateCondition {
 			return currentValue;
 		}
 
-		const rng: PRNG = state.simulation?.rng;
+		const rng: PRNG = state.simulation.specialConditionRng;
 
 		if (currentValue === 0) {
 			return rng.random() < condition.startRate ? 1 : 0;

@@ -5,7 +5,8 @@ import { CourseData, CourseHelpers, Phase } from './CourseData';
 import { Region } from './Region';
 import { PRNG, Rule30CARng } from './Random';
 import type { HpPolicy } from './HpPolicy';
-import { ApproximateCondition, ApproximateMultiCondition, ApproximateStartContinue, ConditionEntry } from './ApproximateStartContinue';
+import { ApproximateCondition } from './ApproximateConditions';
+import { createBlockedSideCondition, createOvertakeCondition } from './SpecialConditions';
 
 declare var CC_GLOBAL: boolean
 
@@ -240,6 +241,7 @@ export class RaceSolver {
 	wisdomRollRng: PRNG
 	posKeepRng: PRNG
 	laneMovementRng: PRNG
+	specialConditionRng: PRNG
 	timers: Timer[]
 	startDash: boolean
 	startDelay: number
@@ -372,6 +374,7 @@ export class RaceSolver {
 		this.wisdomRollRng = new Rule30CARng(this.rng.int32());
 		this.posKeepRng = new Rule30CARng(this.rng.int32());
 		this.laneMovementRng = new Rule30CARng(this.rng.int32());
+		this.specialConditionRng = new Rule30CARng(this.rng.int32());
 		this.timers = [];
 		this.conditionTimer = this.getNewTimer(-1.0);
 		this.accumulatetime = this.getNewTimer();
@@ -504,69 +507,8 @@ export class RaceSolver {
 
 		this.baseAccel = ([0,1,2,0,1,2] as Phase[]).map((phase,i) => baseAccel(i > 2 ? UphillBaseAccel : BaseAccel, this.horse, phase));
 
-		this.registerBlockedSideCondition();
-		this.registerOvertakeCondition();
-	}
-
-	private registerBlockedSideCondition(): void {
-		const conditions: ConditionEntry[] = [
-			{
-				condition: new ApproximateStartContinue("Outer lane", 0.0, 0.0),
-				predicate: (state: any) => {
-					const sim = state.simulation;
-					const section = Math.floor(sim.pos / sim.sectionLength);
-					return section >= 1 && section <= 3 && sim.currentLane > 3.0 * this.course.horseLane;
-				}
-			},
-			{
-				condition: new ApproximateStartContinue("Early race", 0.1, 0.85),
-				predicate: (state: any) => state.simulation.phase === 0
-			},
-			{
-				condition: new ApproximateStartContinue("Mid race", 0.08, 0.75),
-				predicate: (state: any) => state.simulation.phase === 1
-			},
-			{
-				condition: new ApproximateStartContinue("Other", 0.07, 0.50),
-				predicate: null
-			}
-		];
-
-		const blockedSideCondition = new ApproximateMultiCondition(
-			"blocked_side",
-			conditions,
-			1
-		);
-
-		this.registerCondition("blocked_side", blockedSideCondition);
-	}
-
-	private registerOvertakeCondition(): void {
-		const conditions: ConditionEntry[] = [
-			{
-				condition: new ApproximateStartContinue("逃げ", 0.05, 0.50),
-				predicate: (state: any) => {
-					return state.simulation.horse.strategy === Strategy.Nige;
-				}
-			},
-			{
-				condition: new ApproximateStartContinue("先行", 0.15, 0.55),
-				predicate: (state: any) => {
-					return state.simulation.horse.strategy === Strategy.Senkou;
-				}
-			},
-			{
-				condition: new ApproximateStartContinue("その他", 0.20, 0.60),
-				predicate: null
-			}
-		];
-
-		const overtakeCondition = new ApproximateMultiCondition(
-			"overtake",
-			conditions
-		);
-
-		this.registerCondition("overtake", overtakeCondition);
+		this.registerCondition("blocked_side", createBlockedSideCondition());
+		this.registerCondition("overtake", createOvertakeCondition());
 	}
 
 	initUmas(umas: RaceSolver[]) {
