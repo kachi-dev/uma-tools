@@ -253,7 +253,6 @@ function shiftRegionsForwardByMinTime(regions: RegionList, minTime: number, cour
 	const minDistance = 13 * minTime;
 	const shiftedRegions = new RegionList();
 	regions.forEach(r => {
-		console.log(r.start, r.end);
 		if (r.start === 0) {
 			shiftedRegions.push(new Region(r.start + minDistance, r.end));
 		} else {

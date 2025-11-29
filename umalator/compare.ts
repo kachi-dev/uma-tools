@@ -213,15 +213,18 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 	const uma2AdjustedStats = buildAdjustedStats(uma2BaseStats, course, racedef.groundCondition);
 	const uma2Wisdom = uma2AdjustedStats.wisdom;
 	
+	// Note for future self as to why we only add perspective other in non-chart mode:
+	// 1) this sucks
+	// 2) this is to fix a trigger region desync bug caused by skills that affect other umas (i.e. HRice unique)
 	uma1.skills.toArray().sort(sort).forEach(id => {
 		const skillId = id.split('-')[0];
 		const forcedPos = uma1.forcedSkillPositions.get(id);
 		if (forcedPos != null) {
 			standard.addSkillAtPosition(skillId, forcedPos, Perspective.Self);
-			compare.addSkill(skillId, Perspective.Other, undefined, uma1Wisdom);
+			if (options.mode === 'compare') { compare.addSkillAtPosition(skillId, forcedPos, Perspective.Other, uma1Wisdom); }
 		} else {
 			standard.addSkill(skillId, Perspective.Self);
-			compare.addSkill(skillId, Perspective.Other, undefined, uma1Wisdom);
+			if (options.mode === 'compare') { compare.addSkill(skillId, Perspective.Other, undefined, uma1Wisdom); }
 		}
 	});
 	uma2.skills.toArray().sort(sort).forEach(id => {
@@ -229,10 +232,10 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		const forcedPos = uma2.forcedSkillPositions.get(id);
 		if (forcedPos != null) {
 			compare.addSkillAtPosition(skillId, forcedPos, Perspective.Self);
-			standard.addSkill(skillId, Perspective.Other, undefined, uma2Wisdom);
+			if (options.mode === 'compare') { standard.addSkillAtPosition(skillId, forcedPos, Perspective.Other, uma2Wisdom); }
 		} else {
 			compare.addSkill(skillId, Perspective.Self);
-			standard.addSkill(skillId, Perspective.Other, undefined, uma2Wisdom);
+			if (options.mode === 'compare') { standard.addSkill(skillId, Perspective.Other, undefined, uma2Wisdom); }
 		}
 	});
 	if (!CC_GLOBAL) {
