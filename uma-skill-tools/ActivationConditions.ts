@@ -755,7 +755,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		}
 	}),
 	motivation: valueFilter((_0: CourseData, _1: HorseParameters, extra: RaceParameters) => extra.mood + 3),  // go from -2 to 2 to 1-5 scale
-	near_count: noopErlangRandom(3, 2.0),
+	near_count: noopErlangRandom(2.0, 2.0),
 	order: orderFilter((pos: number, _: number) => pos),
 	order_rate: orderFilter((rate: number, numUmas: number) => Math.round(numUmas * (rate / 100.0))),
 	order_rate_in20_continue: orderInFilter(0.2),

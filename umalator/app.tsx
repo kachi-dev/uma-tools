@@ -671,6 +671,54 @@ function WitVarianceSettingsPopup({
 	);
 }
 
+function StatsTable({ caption, captionColor, rows }) {
+	const formatValue = (value, label) => {
+		if (value == null) return 'N/A';
+		if (label === 'Velocity') {
+			return value.toFixed(3) + ' m/s';
+		}
+		return value.toFixed(2) + ' m';
+	};
+	
+	return (
+		<table style={{borderCollapse: 'collapse', marginTop: '0', width: '100%'}}>
+			<caption style={{fontWeight: 'bold', marginBottom: '8px', marginTop: '10px', color: captionColor}}>{caption}</caption>
+			<thead>
+				<tr>
+					<th style={{border: '1px solid #ccc', padding: '8px', textAlign: 'center'}}></th>
+					<th style={{border: '1px solid #ccc', padding: '8px', textAlign: 'center'}}>Count</th>
+					<th style={{border: '1px solid #ccc', padding: '8px', textAlign: 'center'}}>Min</th>
+					<th style={{border: '1px solid #ccc', padding: '8px', textAlign: 'center'}}>Max</th>
+					<th style={{border: '1px solid #ccc', padding: '8px', textAlign: 'center'}}>Mean</th>
+					<th style={{border: '1px solid #ccc', padding: '8px', textAlign: 'center'}}>Median</th>
+				</tr>
+			</thead>
+			<tbody>
+				{rows.map(({ label, stats }) => (
+					<tr key={label}>
+						<th style={{border: '1px solid #ccc', padding: '8px', textAlign: 'left'}}>{label}</th>
+						<td style={{border: '1px solid #ccc', padding: '8px', textAlign: 'center'}}>
+							{stats.count != null ? stats.count : 0}
+						</td>
+						<td style={{border: '1px solid #ccc', padding: '8px', textAlign: 'center'}}>
+							{formatValue(stats.min, label)}
+						</td>
+						<td style={{border: '1px solid #ccc', padding: '8px', textAlign: 'center'}}>
+							{formatValue(stats.max, label)}
+						</td>
+						<td style={{border: '1px solid #ccc', padding: '8px', textAlign: 'center'}}>
+							{formatValue(stats.mean, label)}
+						</td>
+						<td style={{border: '1px solid #ccc', padding: '8px', textAlign: 'center'}}>
+							{formatValue(stats.median, label)}
+						</td>
+					</tr>
+				))}
+			</tbody>
+		</table>
+	);
+}
+
 function App(props) {
 	//const [language, setLanguage] = useLanguageSelect(); 
 	const [darkMode, toggleDarkMode] = useReducer(b=>!b, false);
@@ -706,6 +754,7 @@ function App(props) {
 	const [allowSkillCheckChanceUma1, toggleSkillCheckChanceUma1] = useReducer((b,_) => !b, true);
 	const [allowSkillCheckChanceUma2, toggleSkillCheckChanceUma2] = useReducer((b,_) => !b, true);
 	const [simWitVariance, toggleSimWitVariance] = useReducer((b,_) => !b, true);
+	const [hpDeathPositionTab, setHpDeathPositionTab] = useState(0);
 	const [showWitVarianceSettings, setShowWitVarianceSettings] = useState(false);
 	const [showVirtualPacemakerOnGraph, toggleShowVirtualPacemakerOnGraph] = useReducer((b,_) => !b, false);
 	const [pacemakerCount, setPacemakerCount] = useState(1);
@@ -1441,6 +1490,70 @@ function App(props) {
 					)}
 					
 					<Histogram width={500} height={333} data={results} />
+					{simWitVariance && staminaStats && (
+						<div style={{marginTop: '20px', width: '500px', paddingBottom: '20px'}}>
+							<div style={{display: 'flex', marginBottom: '0'}}>
+								<div 
+									class={`umaTab staminaTab ${hpDeathPositionTab == 0 ? 'selected' : ''}`} 
+									onClick={() => setHpDeathPositionTab(0)}
+									style={{cursor: 'pointer'}}
+								>
+									Uma 1
+								</div>
+								<div 
+									class={`umaTab staminaTab ${hpDeathPositionTab == 1 ? 'selected' : ''}`} 
+									onClick={() => setHpDeathPositionTab(1)}
+									style={{cursor: 'pointer'}}
+								>
+									Uma 2
+								</div>
+							</div>
+							{hpDeathPositionTab == 0 && (
+								<>
+									<StatsTable 
+										caption="Stamina Death Stats"
+										captionColor="#2a77c5"
+										rows={[
+											{ label: 'Full Spurt', stats: staminaStats.uma1.hpDiedPositionStatsFullSpurt },
+											{ label: 'Non-Full Spurt', stats: staminaStats.uma1.hpDiedPositionStatsNonFullSpurt }
+										]}
+									/>
+									{staminaStats.uma1.nonFullSpurtVelocityStats && staminaStats.uma1.nonFullSpurtDelayStats && (
+										<StatsTable 
+											caption="Non-Full Spurt Stats"
+											captionColor="#2a77c5"
+											rows={[
+												{ label: 'Velocity', stats: staminaStats.uma1.nonFullSpurtVelocityStats },
+												{ label: 'Delay', stats: staminaStats.uma1.nonFullSpurtDelayStats }
+											]}
+										/>
+									)}
+								</>
+							)}
+							{hpDeathPositionTab == 1 && (
+								<>
+									<StatsTable 
+										caption="Stamina Death Stats"
+										captionColor="#c52a2a"
+										rows={[
+											{ label: 'Full Spurt', stats: staminaStats.uma2.hpDiedPositionStatsFullSpurt },
+											{ label: 'Non-Full Spurt', stats: staminaStats.uma2.hpDiedPositionStatsNonFullSpurt }
+										]}
+									/>
+									{staminaStats.uma2.nonFullSpurtVelocityStats && staminaStats.uma2.nonFullSpurtDelayStats && (
+										<StatsTable 
+											caption="Non-Full Spurt Stats"
+											captionColor="#c52a2a"
+											rows={[
+												{ label: 'Velocity', stats: staminaStats.uma2.nonFullSpurtVelocityStats },
+												{ label: 'Delay', stats: staminaStats.uma2.nonFullSpurtDelayStats }
+											]}
+										/>
+									)}
+								</>
+							)}
+						</div>
+					)}
 				</div>
 				<div id="infoTables">
 					<table>

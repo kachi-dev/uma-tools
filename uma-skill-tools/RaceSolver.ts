@@ -328,7 +328,10 @@ export class RaceSolver {
 	firstUmaInLateRace: boolean
 
 	hpDied: boolean
+	hpDiedPosition: number | null
 	fullSpurt: boolean
+	nonFullSpurtVelocityDiff: number | null
+	nonFullSpurtDelayDistance: number | null
 
 	modifiers: {
 		targetSpeed: CompensatedAccumulator
@@ -441,7 +444,10 @@ export class RaceSolver {
 		this.positionKeepActivations = [];
 		this.firstUmaInLateRace = false;
 		this.hpDied = false;
+		this.hpDiedPosition = null;
 		this.fullSpurt = false;
+		this.nonFullSpurtVelocityDiff = null;
+		this.nonFullSpurtDelayDistance = null;
 		// Calculate rushed chance and determine if/when it activates
 		this.initRushedState(params.disableRushed || false);
 
@@ -679,6 +685,7 @@ export class RaceSolver {
 
 		if (!this.hp.hasRemainingHp() && !this.hpDied) {
 			this.hpDied = true;
+			this.hpDiedPosition = this.course.distance - this.pos;
 		}
 
 		if (this.startDash && this.currentSpeed >= 0.85 * baseSpeed(this.course)) {
@@ -1076,11 +1083,15 @@ export class RaceSolver {
 	updateLastSpurtState() {
 		if (this.isLastSpurt || this.phase < 2) return;
 		if (this.lastSpurtTransition == -1) {
+			const initialLastSpurtSpeed = this.lastSpurtSpeed;
 			const v = this.hp.getLastSpurtPair(this, this.lastSpurtSpeed, this.baseTargetSpeed[2]);
 			this.lastSpurtTransition = v[0];
 			this.lastSpurtSpeed = v[1];
 			if ((this.hp as any).isMaxSpurt && (this.hp as any).isMaxSpurt()) {
 				this.fullSpurt = true;
+			} else {
+				this.nonFullSpurtVelocityDiff = this.lastSpurtSpeed - initialLastSpurtSpeed;
+				this.nonFullSpurtDelayDistance = this.lastSpurtTransition >= 0 ? this.lastSpurtTransition - (this.course.distance * 2 / 3) : null;
 			}
 		}
 		if (this.pos >= this.lastSpurtTransition) {

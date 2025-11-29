@@ -540,6 +540,14 @@ body {
 	border-top-right-radius: 12px;
 }
 
+.staminaTab:first-child {
+	border-top-left-radius: 0;
+}
+
+.staminaTab:last-child {
+	border-top-right-radius: 0;
+}
+
 .umaTab.selected {
 	background: linear-gradient(rgb(153, 219, 68), rgb(112, 190, 18));
 	color: white;

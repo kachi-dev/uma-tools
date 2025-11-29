@@ -317,8 +317,24 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 	
 	// Track stamina survival and full spurt statistics
 	const staminaStats = {
-		uma1: { hpDiedCount: 0, fullSpurtCount: 0, total: 0 },
-		uma2: { hpDiedCount: 0, fullSpurtCount: 0, total: 0 }
+		uma1: { 
+			hpDiedCount: 0, 
+			fullSpurtCount: 0, 
+			total: 0, 
+			hpDiedPositionsFullSpurt: [] as number[],
+			hpDiedPositionsNonFullSpurt: [] as number[],
+			nonFullSpurtVelocityDiffs: [] as number[],
+			nonFullSpurtDelayDistances: [] as number[]
+		},
+		uma2: { 
+			hpDiedCount: 0, 
+			fullSpurtCount: 0, 
+			total: 0, 
+			hpDiedPositionsFullSpurt: [] as number[],
+			hpDiedPositionsNonFullSpurt: [] as number[],
+			nonFullSpurtVelocityDiffs: [] as number[],
+			nonFullSpurtDelayDistances: [] as number[]
+		}
 	};
 	
 	// Track last spurt 1st place frequency
@@ -527,74 +543,62 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		const s1IsUma1 = aIsUma1;
 		const s2IsUma1 = !aIsUma1;
 		
-		// Track stats for s1's uma
-		const s1Stats = s1IsUma1 ? staminaStats.uma1 : staminaStats.uma2;
-		s1Stats.total++;
-		if (s1.hpDied) {
-			s1Stats.hpDiedCount++;
-		}
-		if (s1.fullSpurt) {
-			s1Stats.fullSpurtCount++;
-		}
+		const trackSolverStats = (solver: RaceSolver, isUma1: boolean) => {
+			const staminaStat = isUma1 ? staminaStats.uma1 : staminaStats.uma2;
+			staminaStat.total++;
+			
+			if (solver.hpDied) {
+				staminaStat.hpDiedCount++;
+				if (solver.hpDiedPosition != null) {
+					if (solver.fullSpurt) {
+						staminaStat.hpDiedPositionsFullSpurt.push(solver.hpDiedPosition);
+					} else {
+						staminaStat.hpDiedPositionsNonFullSpurt.push(solver.hpDiedPosition);
+					}
+				}
+			}
+			
+			if (solver.fullSpurt) {
+				staminaStat.fullSpurtCount++;
+			} else {
+				if (solver.nonFullSpurtVelocityDiff != null) {
+					staminaStat.nonFullSpurtVelocityDiffs.push(solver.nonFullSpurtVelocityDiff);
+				}
+				if (solver.nonFullSpurtDelayDistance != null) {
+					staminaStat.nonFullSpurtDelayDistances.push(solver.nonFullSpurtDelayDistance);
+				}
+			}
+			
+			const firstUmaStat = isUma1 ? firstUmaStats.uma1 : firstUmaStats.uma2;
+			firstUmaStat.total++;
+			if (solver.firstUmaInLateRace) {
+				firstUmaStat.firstPlaceCount++;
+			}
+			
+			if (solver.rushedActivations.length > 0) {
+				const [start, end] = solver.rushedActivations[0];
+				const length = end - start;
+				const rushedStat = isUma1 ? rushedStats.uma1 : rushedStats.uma2;
+				rushedStat.lengths.push(length);
+				rushedStat.count++;
+			}
+			
+			if (solver.leadCompetitionStart != null) {
+				const start = solver.leadCompetitionStart;
+				const end = solver.leadCompetitionEnd != null ? solver.leadCompetitionEnd : course.distance;
+				const length = end - start;
+				const leadCompStat = isUma1 ? leadCompetitionStats.uma1 : leadCompetitionStats.uma2;
+				leadCompStat.lengths.push(length);
+				leadCompStat.count++;
+			}
+		};
 		
-		// Track stats for s2's uma
-		const s2Stats = s2IsUma1 ? staminaStats.uma1 : staminaStats.uma2;
-		s2Stats.total++;
-		if (s2.hpDied) {
-			s2Stats.hpDiedCount++;
-		}
-		if (s2.fullSpurt) {
-			s2Stats.fullSpurtCount++;
-		}
-		
-		const s1FirstUmaStats = s1IsUma1 ? firstUmaStats.uma1 : firstUmaStats.uma2;
-		s1FirstUmaStats.total++;
-		if (s1.firstUmaInLateRace) {
-			s1FirstUmaStats.firstPlaceCount++;
-		}
-		
-		const s2FirstUmaStats = s2IsUma1 ? firstUmaStats.uma1 : firstUmaStats.uma2;
-		s2FirstUmaStats.total++;
-		if (s2.firstUmaInLateRace) {
-			s2FirstUmaStats.firstPlaceCount++;
-		}
-		
+		trackSolverStats(s1, s1IsUma1);
+		trackSolverStats(s2, s2IsUma1);
+
 		// Cleanup AFTER stat tracking
 		s2.cleanup();
 		s1.cleanup();
-		
-		// Collect rushed statistics (also based on which uma the solver represents)
-		if (s1.rushedActivations.length > 0) {
-			const [start, end] = s1.rushedActivations[0];
-			const length = end - start;
-			const s1RushedStats = s1IsUma1 ? rushedStats.uma1 : rushedStats.uma2;
-			s1RushedStats.lengths.push(length);
-			s1RushedStats.count++;
-		}
-		if (s2.rushedActivations.length > 0) {
-			const [start, end] = s2.rushedActivations[0];
-			const length = end - start;
-			const s2RushedStats = s2IsUma1 ? rushedStats.uma1 : rushedStats.uma2;
-			s2RushedStats.lengths.push(length);
-			s2RushedStats.count++;
-		}
-		
-		if (s1.leadCompetitionStart != null) {
-			const start = s1.leadCompetitionStart;
-			const end = s1.leadCompetitionEnd != null ? s1.leadCompetitionEnd : course.distance;
-			const length = end - start;
-			const s1LeadCompStats = s1IsUma1 ? leadCompetitionStats.uma1 : leadCompetitionStats.uma2;
-			s1LeadCompStats.lengths.push(length);
-			s1LeadCompStats.count++;
-		}
-		if (s2.leadCompetitionStart != null) {
-			const start = s2.leadCompetitionStart;
-			const end = s2.leadCompetitionEnd != null ? s2.leadCompetitionEnd : course.distance;
-			const length = end - start;
-			const s2LeadCompStats = s2IsUma1 ? leadCompetitionStats.uma1 : leadCompetitionStats.uma2;
-			s2LeadCompStats.lengths.push(length);
-			s2LeadCompStats.count++;
-		}
 		
 		const basinn = sign * posDifference / 2.5;
 		diff.push(basinn);
@@ -648,15 +652,38 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		uma2: calculateStats(leadCompetitionStats.uma2)
 	};
 	
+	const calculateHpDiedPositionStats = (positions: number[]) => {
+		if (positions.length === 0) {
+			return { count: 0, min: null, max: null, mean: null, median: null };
+		}
+		const sorted = [...positions].sort((a, b) => a - b);
+		const min = sorted[0];
+		const max = sorted[sorted.length - 1];
+		const mean = positions.reduce((a, b) => a + b, 0) / positions.length;
+		const mid = Math.floor(sorted.length / 2);
+		const median = sorted.length % 2 === 0 
+			? (sorted[mid - 1] + sorted[mid]) / 2 
+			: sorted[mid];
+		return { count: positions.length, min, max, mean, median };
+	};
+	
 	// Calculate stamina survival and full spurt rates
 	const staminaStatsSummary = {
 		uma1: {
 			staminaSurvivalRate: staminaStats.uma1.total > 0 ? ((staminaStats.uma1.total - staminaStats.uma1.hpDiedCount) / staminaStats.uma1.total * 100) : 0,
-			fullSpurtRate: staminaStats.uma1.total > 0 ? (staminaStats.uma1.fullSpurtCount / staminaStats.uma1.total * 100) : 0
+			fullSpurtRate: staminaStats.uma1.total > 0 ? (staminaStats.uma1.fullSpurtCount / staminaStats.uma1.total * 100) : 0,
+			hpDiedPositionStatsFullSpurt: calculateHpDiedPositionStats(staminaStats.uma1.hpDiedPositionsFullSpurt),
+			hpDiedPositionStatsNonFullSpurt: calculateHpDiedPositionStats(staminaStats.uma1.hpDiedPositionsNonFullSpurt),
+			nonFullSpurtVelocityStats: calculateHpDiedPositionStats(staminaStats.uma1.nonFullSpurtVelocityDiffs),
+			nonFullSpurtDelayStats: calculateHpDiedPositionStats(staminaStats.uma1.nonFullSpurtDelayDistances)
 		},
 		uma2: {
 			staminaSurvivalRate: staminaStats.uma2.total > 0 ? ((staminaStats.uma2.total - staminaStats.uma2.hpDiedCount) / staminaStats.uma2.total * 100) : 0,
-			fullSpurtRate: staminaStats.uma2.total > 0 ? (staminaStats.uma2.fullSpurtCount / staminaStats.uma2.total * 100) : 0
+			fullSpurtRate: staminaStats.uma2.total > 0 ? (staminaStats.uma2.fullSpurtCount / staminaStats.uma2.total * 100) : 0,
+			hpDiedPositionStatsFullSpurt: calculateHpDiedPositionStats(staminaStats.uma2.hpDiedPositionsFullSpurt),
+			hpDiedPositionStatsNonFullSpurt: calculateHpDiedPositionStats(staminaStats.uma2.hpDiedPositionsNonFullSpurt),
+			nonFullSpurtVelocityStats: calculateHpDiedPositionStats(staminaStats.uma2.nonFullSpurtVelocityDiffs),
+			nonFullSpurtDelayStats: calculateHpDiedPositionStats(staminaStats.uma2.nonFullSpurtDelayDistances)
 		}
 	};
 	
