@@ -140,7 +140,7 @@ export class GameHpPolicy {
 				)
 			);
 			const spurtDistance = spurtDuration * speed;
-			candidates.push([this.distance - spurtDistance, speed]);
+			candidates.push([this.distance - spurtDistance - 60, speed]);
 		}
 		candidates.sort((a,b) =>
 			((a[0] - state.pos) / baseTargetSpeed2 + (this.distance - a[0]) / a[1]) -
