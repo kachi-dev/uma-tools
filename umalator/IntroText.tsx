@@ -87,6 +87,15 @@ export function IntroText(props) {
 			<details>
 				<summary>Changelog</summary>
 				<section>
+					<h2>2025-11-29</h2>
+					<ul>
+						<li>Updated global data.</li>
+						<li>Fixed umalator target speed clamping during deceleration.</li>
+						<li>Fixed last spurt candidate selection logic.</li>
+						<li>Fixed skills that target other umas (i.e. HRice unique) causing desync issues with skill charts.</li>
+					</ul>
+				</section>
+				<section>
 					<h2>2025-11-14</h2>
 					<ul>
 						<li>Updated skill/uma/track data to latest global version.</li>
