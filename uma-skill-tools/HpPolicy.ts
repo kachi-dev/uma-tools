@@ -146,13 +146,8 @@ export class GameHpPolicy {
 			((a[0] - state.pos) / baseTargetSpeed2 + (this.distance - a[0]) / a[1]) -
 			((b[0] - state.pos) / baseTargetSpeed2 + (this.distance - b[0]) / b[1]));
 		
-		// PRE-ROLL the random value to ensure fixed RNG consumption
-		// This guarantees both horses in a comparison consume exactly 1 RNG call,
-		// preventing desynchronization of the random number streams
-		const randomRoll = this.rng.uniform(100000);
-		
 		for (let i = 0; i < candidates.length; ++i) {
-			if (randomRoll <= this.subparAcceptChance) {
+			if (this.rng.uniform(100000) <= this.subparAcceptChance) {
 				return candidates[i];
 			}
 		}

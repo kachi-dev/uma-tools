@@ -374,7 +374,7 @@ body {
 	filter: opacity(0.3);
 }
 
-.racetrackView .textbox text {
+.racetrackView .drag-textbox text {
 	filter: none !important;  /* TODO */
 	font-weight: bold;
 }
