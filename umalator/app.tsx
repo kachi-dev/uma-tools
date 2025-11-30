@@ -2226,7 +2226,7 @@ function App(props) {
 							}
 							
 							return (
-								<div>
+								<div style="position: relative;">
 									<div style={`margin-bottom: 8px; width: 300px;`}>
 										<div style={`font-size: 9px; margin-bottom: 2px;`}>Total samples: {totalCount} ({skillProcs} skill procs)</div>
 										<div style={`font-size: 9px; margin-bottom: 2px;`}>Effectiveness rate: {effectivenessRate.toFixed(1)}%</div>
@@ -2254,6 +2254,9 @@ function App(props) {
 											courseDistance={courseDistance}
 											displaying={currentDisplaying}
 										/>
+									</div>
+									<div style="position: absolute; bottom: 0; right: 0; font-size: 9px; font-style: italic; padding: 4px;">
+										(yes these graphs are copied from utools &gt;-&lt;)
 									</div>
 								</div>
 							);
@@ -2304,7 +2307,7 @@ function App(props) {
 							}
 							
 							return (
-								<div>
+								<div style="position: relative;">
 									<div style={`margin-bottom: 8px; width: 300px;`}>
 										<div style={`font-size: 9px; margin-bottom: 2px;`}>Total samples: {totalCount} ({skillProcs} skill procs)</div>
 										<div style={`font-size: 9px; margin-bottom: 2px;`}>Effectiveness rate: {effectivenessRate.toFixed(1)}%</div>
@@ -2332,6 +2335,9 @@ function App(props) {
 											courseDistance={courseDistance}
 											displaying={currentDisplaying}
 										/>
+									</div>
+									<div style="position: absolute; bottom: 0; right: 0; font-size: 9px; font-style: italic; padding: 4px;">
+										(yes these graphs are copied from utools &gt;-&lt;)
 									</div>
 								</div>
 							);
