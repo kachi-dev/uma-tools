@@ -87,6 +87,13 @@ export function IntroText(props) {
 			<details>
 				<summary>Changelog</summary>
 				<section>
+					<h2>2025-11-30</h2>
+					<ul>
+						<li>Fixed non-full spurts always being delayed by 60m.</li>
+						<li>Added cute utools graphs to skill/uma chart when you click on a skill.</li>
+					</ul>
+				</section>
+				<section>
 					<h2>2025-11-29</h2>
 					<ul>
 						<li>Updated global data.</li>

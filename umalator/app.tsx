@@ -5,7 +5,7 @@ import { Record, Set as ImmSet, Map as ImmMap } from 'immutable';
 import * as d3 from 'd3';
 import { computePosition, flip } from '@floating-ui/dom';
 
-import { CourseHelpers } from '../uma-skill-tools/CourseData';
+import { CourseHelpers, CourseData } from '../uma-skill-tools/CourseData';
 import { RaceParameters, Mood, GroundCondition, Weather, Season, Time, Grade } from '../uma-skill-tools/RaceParameters';
 import { PosKeepMode } from '../uma-skill-tools/RaceSolver';
 import type { GameHpPolicy } from '../uma-skill-tools/HpPolicy';
@@ -206,6 +206,572 @@ function Histogram(props) {
 			<g>{rects}</g>
 			<g ref={axes}></g>
 		</svg>
+	);
+}
+
+function BarChart(props) {
+	const {width, height, bins, xScale, yScale, phaseBackgrounds, xAxisTicks, yAxisTicks, yTickValues, yAxisFormat, barColor} = props;
+	const axes = useRef(null);
+	const gridLines = useRef(null);
+	const xH = 20;
+	const yW = 40;
+	const chartWidth = width - yW - 5;
+	const chartHeight = height - xH - 5;
+
+	useEffect(function () {
+		if (!axes.current || !gridLines.current) return;
+		const axesG = d3.select(axes.current);
+		axesG.selectAll('*').remove();
+		const xAxis = d3.axisBottom(xScale).ticks(xAxisTicks);
+		const yAxis = d3.axisLeft(yScale);
+		if (yTickValues) {
+			yAxis.tickValues(yTickValues);
+		} else {
+			yAxis.ticks(yAxisTicks);
+		}
+		if (yAxisFormat) {
+			yAxis.tickFormat(yAxisFormat);
+		}
+		
+		const xAxisG = axesG.append('g').attr('transform', `translate(0,${chartHeight})`).call(xAxis);
+		const yAxisG = axesG.append('g').attr('transform', `translate(0,0)`).call(yAxis);
+		
+		const gridG = d3.select(gridLines.current);
+		gridG.selectAll('*').remove();
+		
+		xScale.ticks(xAxisTicks).forEach(tickValue => {
+			gridG.append('line')
+				.attr('class', 'grid-line')
+				.attr('x1', xScale(tickValue))
+				.attr('x2', xScale(tickValue))
+				.attr('y1', 0)
+				.attr('y2', chartHeight)
+				.attr('stroke', 'rgba(128, 128, 128, 0.3)')
+				.attr('stroke-width', 0.5);
+		});
+		
+		const finalYTickValues = yTickValues || yScale.ticks(yAxisTicks);
+		finalYTickValues.forEach((tickValue) => {
+			gridG.append('line')
+				.attr('class', 'grid-line')
+				.attr('x1', 0)
+				.attr('x2', chartWidth)
+				.attr('y1', yScale(tickValue))
+				.attr('y2', yScale(tickValue))
+				.attr('stroke', 'rgba(128, 128, 128, 0.3)')
+				.attr('stroke-width', 0.5);
+		});
+	}, [xScale, yScale, chartHeight, chartWidth, xAxisTicks, yAxisTicks, yTickValues, yAxisFormat]);
+
+	const rects = bins.map((bin, i) => {
+		const barHeight = chartHeight - yScale(bin.value);
+		const binWidth = xScale(bin.end) - xScale(bin.start);
+		const barWidth = Math.max(3, binWidth * 1.5);
+		const barX = xScale(bin.start) + (binWidth - barWidth) / 2;
+		return (
+			<rect 
+				key={i} 
+				fill={barColor || "#2a77c5"} 
+				stroke="none" 
+				x={barX} 
+				y={yScale(bin.value)} 
+				width={barWidth} 
+				height={barHeight}
+			/>
+		);
+	});
+
+	return (
+		<div class="barChart" style={`width: ${width}px; height: ${height}px;`}>
+			<svg width={width} height={height} style="overflow: visible;">
+				<g transform={`translate(${yW},5)`}>
+					{phaseBackgrounds && phaseBackgrounds.map((phase, i) => (
+						<rect
+							key={i}
+							x={xScale(phase.start)}
+							y={0}
+							width={xScale(phase.end) - xScale(phase.start)}
+							height={chartHeight}
+							fill={phase.color}
+						/>
+					))}
+					<g ref={gridLines}></g>
+					{rects}
+					<g ref={axes}></g>
+				</g>
+			</svg>
+		</div>
+	);
+}
+
+function LengthDifferenceChart(props) {
+	const {skillId, runData, courseDistance} = props;
+	const width = 300;
+	const height = 150;
+
+	if (!skillId || !runData) {
+		return null;
+	}
+
+	if (!runData.allruns || !runData.allruns.skBasinn || !Array.isArray(runData.allruns.skBasinn)) {
+		return null;
+	}
+
+	const allActivations: Array<[number, number]> = [];
+	
+	runData.allruns.skBasinn.forEach((skBasinnMap: any) => {
+		if (!skBasinnMap) return;
+		let activations = null;
+		if (skBasinnMap instanceof Map || (typeof skBasinnMap.has === 'function' && typeof skBasinnMap.get === 'function')) {
+			if (skBasinnMap.has(skillId)) {
+				activations = skBasinnMap.get(skillId);
+			}
+		} else if (typeof skBasinnMap === 'object' && skillId in skBasinnMap) {
+			activations = skBasinnMap[skillId];
+		}
+		if (activations && Array.isArray(activations)) {
+			activations.forEach((activation: any) => {
+				if (Array.isArray(activation) && activation.length === 2 && 
+				    typeof activation[0] === 'number' && typeof activation[1] === 'number') {
+					allActivations.push([activation[0], activation[1]]);
+				}
+			});
+		}
+	});
+
+	if (allActivations.length === 0) {
+		return null;
+	}
+
+	const binSize = 10;
+	const maxDistance = Math.ceil(courseDistance / binSize) * binSize;
+	const bins = [];
+	for (let i = 0; i < maxDistance; i += binSize) {
+		bins.push({start: i, end: i + binSize, maxBasinn: 0});
+	}
+
+	allActivations.forEach(([activationPos, basinn]) => {
+		if (basinn > 0) {
+			const binIndex = Math.floor(activationPos / binSize);
+			if (binIndex >= 0 && binIndex < bins.length) {
+				bins[binIndex].maxBasinn = Math.max(bins[binIndex].maxBasinn, basinn);
+			}
+		}
+	});
+
+	bins.forEach(bin => {
+		bin.value = bin.maxBasinn;
+	});
+
+	const maxValue = Math.max(...bins.map(b => b.value), 0);
+	if (maxValue === 0) {
+		return null;
+	}
+
+	const x = d3.scaleLinear().domain([0, maxDistance]).range([0, width - 40 - 5]);
+	const y = d3.scaleLinear().domain([0, maxValue]).range([height - 20 - 5, 0]);
+
+	const baseTicks = y.ticks(5);
+	const threshold = Math.max(maxValue * 0.02, 0.05);
+	const yTickValues = baseTicks.filter(tick => Math.abs(tick - maxValue) >= threshold);
+	if (!yTickValues.some(tick => Math.abs(tick - maxValue) < 0.01)) {
+		yTickValues.push(maxValue);
+		yTickValues.sort((a, b) => a - b);
+	}
+
+	const phase0End = CourseHelpers.phaseStart(courseDistance, 1);
+	const phase1End = CourseHelpers.phaseStart(courseDistance, 2);
+	const phase2End = CourseHelpers.phaseStart(courseDistance, 3);
+	
+	const phaseBackgrounds = [
+		{start: 0, end: phase0End, color: 'rgba(173, 216, 230, 0.3)'},
+		{start: phase0End, end: phase1End, color: 'rgba(144, 238, 144, 0.3)'},
+		{start: phase1End, end: courseDistance, color: 'rgba(255, 182, 193, 0.3)'}
+	];
+
+	return (
+		<BarChart
+			width={width}
+			height={height}
+			bins={bins}
+			xScale={x}
+			yScale={y}
+			phaseBackgrounds={phaseBackgrounds}
+			xAxisTicks={Math.min(6, Math.floor(maxDistance / 200))}
+			yAxisTicks={5}
+			yTickValues={yTickValues}
+			yAxisFormat={(d, i, ticks) => {
+				return `${d.toFixed(1)}L`;
+			}}
+			barColor="#2a77c5"
+		/>
+	);
+}
+
+function getSkillPositionsFromRun(skillId: string, selectedRun: any): {positions: Array<[number, number]>, umaIndex: number} | null {
+	if (!selectedRun?.sk) return null;
+	
+	for (let i = 0; i < selectedRun.sk.length; i++) {
+		const skMap = selectedRun.sk[i];
+		if (!skMap) continue;
+		
+		let positions = null;
+		if (skMap instanceof Map || (typeof skMap.has === 'function' && typeof skMap.get === 'function')) {
+			if (skMap.has(skillId)) {
+				positions = skMap.get(skillId);
+			}
+		} else if (typeof skMap === 'object' && skillId in skMap) {
+			positions = skMap[skillId];
+		}
+		
+		if (positions && Array.isArray(positions) && positions.length > 0) {
+			return {positions, umaIndex: i};
+		}
+	}
+	return null;
+}
+
+function interpolateValue(
+	value: number,
+	valueArray: number[],
+	resultArray: number[]
+): number {
+	if (valueArray.length === 0 || resultArray.length === 0) return resultArray[0] || 0;
+	if (value <= valueArray[0]) return resultArray[0];
+	if (value >= valueArray[valueArray.length - 1]) return resultArray[resultArray.length - 1];
+	
+	for (let i = 0; i < valueArray.length - 1; i++) {
+		if (valueArray[i] <= value && value <= valueArray[i + 1]) {
+			const v1 = valueArray[i];
+			const v2 = valueArray[i + 1];
+			const r1 = resultArray[i];
+			const r2 = resultArray[i + 1];
+			if (v2 === v1) return r1;
+			return r1 + (r2 - r1) * (value - v1) / (v2 - v1);
+		}
+	}
+	return resultArray[resultArray.length - 1];
+}
+
+function calculatePhaseBackgrounds(
+	courseDistance: number,
+	positionData: Array<[number, number]>,
+	minTime: number,
+	maxTime: number
+): Array<{start: number, end: number, color: string}> {
+	if (!courseDistance || positionData.length === 0) return [];
+	
+	const phaseEndDistances = [
+		CourseHelpers.phaseStart(courseDistance, 1),
+		CourseHelpers.phaseStart(courseDistance, 2),
+		CourseHelpers.phaseStart(courseDistance, 3)
+	];
+	
+	const positions = positionData.map(([_, pos]) => pos);
+	const times = positionData.map(([time, _]) => time);
+	
+	const phaseEndTimes = phaseEndDistances.map(dist => 
+		interpolateValue(dist, positions, times)
+	);
+	
+	const phaseColors = [
+		'rgba(173, 216, 230, 0.3)',
+		'rgba(144, 238, 144, 0.3)',
+		'rgba(255, 182, 193, 0.3)',
+		'rgba(255, 182, 193, 0.3)'
+	];
+	
+	const backgrounds: Array<{start: number, end: number, color: string}> = [];
+	const phaseStarts = [Math.max(minTime, 0), ...phaseEndTimes];
+	const phaseEnds = [...phaseEndTimes, maxTime];
+	
+	for (let i = 0; i < phaseStarts.length; i++) {
+		const start = Math.max(minTime, phaseStarts[i]);
+		const end = Math.min(maxTime, phaseEnds[i]);
+		if (end > start) {
+			backgrounds.push({
+				start,
+				end,
+				color: phaseColors[i]
+			});
+		}
+	}
+	
+	return backgrounds;
+}
+
+function VelocityChart(props) {
+	const {skillId, runData, courseDistance, displaying} = props;
+	const width = 400;
+	const height = 200;
+	const margin = {top: 5, right: 5, bottom: 20, left: 40};
+	const chartWidth = width - margin.left - margin.right;
+	const chartHeight = height - margin.top - margin.bottom;
+	const axes = useRef(null);
+	const gridLines = useRef(null);
+	
+	const TIME_WINDOW_PADDING = 10;
+	const Y_MIN_VELOCITY = 18;
+	const TICK_EPSILON = 0.01;
+
+	if (!skillId || !runData || !displaying) {
+		return null;
+	}
+
+	const selectedRun = runData[displaying];
+	if (!selectedRun?.t || !selectedRun?.v || !selectedRun?.p || !selectedRun?.sk) {
+		return null;
+	}
+
+	const skillData = getSkillPositionsFromRun(skillId, selectedRun);
+	if (!skillData || skillData.positions.length === 0) {
+		return null;
+	}
+
+	const {positions: skillPositions, umaIndex} = skillData;
+	const times = selectedRun.t[umaIndex];
+	const velocities = selectedRun.v[umaIndex];
+	const positions = selectedRun.p[umaIndex];
+
+	if (!times || !velocities || !positions || times.length === 0) {
+		return null;
+	}
+
+	const [startPos, endPos] = skillPositions[0];
+	const startTime = interpolateValue(startPos, positions, times);
+	const endTime = interpolateValue(endPos, positions, times);
+
+	const timeWindowStart = Math.max(0, startTime - TIME_WINDOW_PADDING);
+	const timeWindowEnd = endTime + TIME_WINDOW_PADDING;
+
+	const velocityData: Array<[number, number]> = [];
+	const positionData: Array<[number, number]> = [];
+	
+	for (let i = 0; i < times.length; i++) {
+		const t = times[i];
+		if (t >= timeWindowStart && t <= timeWindowEnd) {
+			velocityData.push([t, velocities[i]]);
+			positionData.push([t, positions[i]]);
+		}
+	}
+
+	if (velocityData.length === 0) {
+		return null;
+	}
+
+	const minTime = velocityData[0][0];
+	const maxTime = velocityData[velocityData.length - 1][0];
+	const maxVelocity = Math.max(...velocityData.map(d => d[1]));
+	
+	const yMax = Math.max(Y_MIN_VELOCITY, maxVelocity);
+
+	const x = d3.scaleLinear().domain([minTime, maxTime]).range([0, chartWidth]);
+	const y = d3.scaleLinear().domain([Y_MIN_VELOCITY, yMax]).range([chartHeight, 0]);
+
+	const phaseBackgrounds = calculatePhaseBackgrounds(
+		courseDistance,
+		positionData,
+		minTime,
+		maxTime
+	);
+
+	const line = d3.line<[number, number]>()
+		.x(d => x(d[0]))
+		.y(d => y(d[1]))
+		.curve(d3.curveMonotoneX);
+
+	const pathData = line(velocityData);
+
+	useEffect(function() {
+		if (!axes.current || !gridLines.current) return;
+		
+		const axesG = d3.select(axes.current);
+		axesG.selectAll('*').remove();
+		
+		const suggestedTicks = y.ticks(5);
+		const step = suggestedTicks.length > 1 ? suggestedTicks[1] - suggestedTicks[0] : 1;
+		const startTick = Math.floor(Y_MIN_VELOCITY / step) * step;
+		
+		const yTickValues: number[] = [];
+		for (let v = startTick; v <= maxVelocity; v += step) {
+			if (v >= Y_MIN_VELOCITY) {
+				yTickValues.push(v);
+			}
+		}
+		
+		if (!yTickValues.some(tick => Math.abs(tick - maxVelocity) < TICK_EPSILON)) {
+			yTickValues.push(maxVelocity);
+			yTickValues.sort((a, b) => a - b);
+		}
+		
+		const xAxis = d3.axisBottom(x).ticks(5).tickFormat(d => `${d}s`);
+		const yAxis = d3.axisLeft(y).tickValues(yTickValues).tickFormat(d => `${Number(d).toFixed(1)}m/s`);
+		
+		axesG.append('g')
+			.attr('transform', `translate(0,${chartHeight})`)
+			.call(xAxis);
+		axesG.append('g')
+			.call(yAxis);
+		
+		const gridG = d3.select(gridLines.current);
+		gridG.selectAll('*').remove();
+		
+		yTickValues.forEach((tickValue) => {
+			gridG.append('line')
+				.attr('class', 'grid-line')
+				.attr('x1', 0)
+				.attr('x2', chartWidth)
+				.attr('y1', y(tickValue))
+				.attr('y2', y(tickValue))
+				.attr('stroke', 'rgba(128, 128, 128, 0.3)')
+				.attr('stroke-width', 0.5);
+		});
+		
+		x.ticks(5).forEach(tickValue => {
+			gridG.append('line')
+				.attr('class', 'grid-line')
+				.attr('x1', x(tickValue))
+				.attr('x2', x(tickValue))
+				.attr('y1', 0)
+				.attr('y2', chartHeight)
+				.attr('stroke', 'rgba(128, 128, 128, 0.3)')
+				.attr('stroke-width', 0.5);
+		});
+	}, [x, y, chartWidth, chartHeight, maxVelocity]);
+
+	return (
+		<div class="velocityChart" style={`width: ${width}px; height: ${height}px;`}>
+			<svg width={width} height={height} style="overflow: visible;">
+				<g transform={`translate(${margin.left},${margin.top})`}>
+					{phaseBackgrounds.map((phase, i) => (
+						<rect
+							key={`phase-${i}`}
+							x={x(phase.start)}
+							y={0}
+							width={x(phase.end) - x(phase.start)}
+							height={chartHeight}
+							fill={phase.color}
+						/>
+					))}
+					<g ref={gridLines}></g>
+					<g ref={axes}></g>
+					{pathData && (
+						<path
+							d={pathData}
+							fill="none"
+							stroke="#2a77c5"
+							stroke-width="2"
+						/>
+					)}
+					{velocityData.map((d, i) => {
+						const isActive = d[0] >= startTime && d[0] <= endTime;
+						return (
+							<circle
+								key={i}
+								cx={x(d[0])}
+								cy={y(d[1])}
+								r={1.5}
+								fill={isActive ? '#ff69b4' : '#2a77c5'}
+							/>
+						);
+					})}
+				</g>
+			</svg>
+		</div>
+	);
+}
+
+function ActivationFrequencyChart(props) {
+	const {skillId, runData, courseDistance} = props;
+	const width = 300;
+	const height = 50;
+	const yW = 40;
+	const chartWidth = width - yW - 5;
+	const chartHeight = height - 20 - 5;
+
+	if (!skillId || !runData) {
+		return null;
+	}
+
+	const activations = [];
+	if (!runData.allruns || !runData.allruns.sk || !Array.isArray(runData.allruns.sk)) {
+		return null;
+	}
+	
+	runData.allruns.sk.forEach((skMap: any) => {
+		if (!skMap) return;
+		let positions = null;
+		if (skMap instanceof Map || (typeof skMap.has === 'function' && typeof skMap.get === 'function')) {
+			if (skMap.has(skillId)) {
+				positions = skMap.get(skillId);
+			}
+		} else if (typeof skMap === 'object' && skillId in skMap) {
+			positions = skMap[skillId];
+		}
+		if (positions && Array.isArray(positions)) {
+			positions.forEach((pos: any) => {
+				if (typeof pos === 'number') {
+					activations.push(pos);
+				}
+			});
+		}
+	});
+
+	if (activations.length === 0) {
+		return null;
+	}
+
+	const binSize = 10;
+	const maxDistance = Math.ceil(courseDistance / binSize) * binSize;
+	const bins = [];
+	for (let i = 0; i < maxDistance; i += binSize) {
+		bins.push({start: i, end: i + binSize, count: 0});
+	}
+
+	activations.forEach(pos => {
+		const binIndex = Math.floor(pos / binSize);
+		if (binIndex >= 0 && binIndex < bins.length) {
+			bins[binIndex].count++;
+		}
+	});
+
+	const maxCount = Math.max(...bins.map(b => b.count));
+	const totalActivations = activations.length;
+
+	const phase0End = CourseHelpers.phaseStart(courseDistance, 1);
+	const phase1End = CourseHelpers.phaseStart(courseDistance, 2);
+	const phase2End = CourseHelpers.phaseStart(courseDistance, 3);
+	
+	const phaseBackgrounds = [
+		{start: 0, end: phase0End, color: 'rgba(173, 216, 230, 0.3)'},
+		{start: phase0End, end: phase1End, color: 'rgba(144, 238, 144, 0.3)'},
+		{start: phase1End, end: courseDistance, color: 'rgba(255, 182, 193, 0.3)'}
+	];
+
+	const chartBins = bins.map(bin => ({...bin, value: bin.count}));
+	const xScale = d3.scaleLinear().domain([0, maxDistance]).range([0, chartWidth]);
+	const yScale = d3.scaleLinear().domain([0, maxCount > 0 ? maxCount : 1]).range([chartHeight, 0]);
+
+	return (
+		<div class="activationFrequencyChart">
+			<BarChart
+				width={width}
+				height={height}
+				bins={chartBins}
+				xScale={xScale}
+				yScale={yScale}
+				phaseBackgrounds={phaseBackgrounds}
+				xAxisTicks={Math.min(6, Math.floor(maxDistance / 200))}
+				yAxisTicks={2}
+				yAxisFormat={(d, i, ticks) => {
+					if (i === 0 || i === ticks.length - 1) {
+						return `${Math.round((d / totalActivations) * 100)}%`;
+					}
+					return '';
+				}}
+				barColor="#2a77c5"
+			/>
+		</div>
 	);
 }
 
@@ -728,6 +1294,7 @@ function App(props) {
 	const [seed, setSeed] = useState(DEFAULT_SEED);
 	const [runOnceCounter, setRunOnceCounter] = useState(0);
 	const [isSimulationRunning, setIsSimulationRunning] = useState(false);
+	const [simulationProgress, setSimulationProgress] = useState<{round: number, total: number} | null>(null);
 	const chartWorkersCompletedRef = useRef(0);
 	const [posKeepMode, setPosKeepModeRaw] = useState(PosKeepMode.Approximate);
 	const [showHp, toggleShowHp] = useReducer((b,_) => !b, false);
@@ -864,7 +1431,7 @@ function App(props) {
 	const [worker1, worker2] = [1,2].map(_ => useMemo(() => {
 		const w = new Worker('./simulator.worker.js');
 		w.addEventListener('message', function (e) {
-			const {type, results} = e.data;
+			const {type, results, round, total} = e.data;
 			switch (type) {
 				case 'compare':
 					setResults(results);
@@ -872,13 +1439,18 @@ function App(props) {
 				case 'chart':
 					updateTableData(results);
 					break;
+				case 'chart-progress':
+					setSimulationProgress({round, total});
+					break;
 				case 'compare-complete':
 					setIsSimulationRunning(false);
+					setSimulationProgress(null);
 					break;
 				case 'chart-complete':
 					chartWorkersCompletedRef.current += 1;
 					if (chartWorkersCompletedRef.current >= 2) {
 						setIsSimulationRunning(false);
+						setSimulationProgress(null);
 						chartWorkersCompletedRef.current = 0;
 					}
 					break;
@@ -1027,6 +1599,7 @@ function App(props) {
 	function doComparison() {
 		postEvent('doComparison', {});
 		setIsSimulationRunning(true);
+		setSimulationProgress(null);
 		worker1.postMessage({
 			msg: 'compare',
 			data: {
@@ -1105,6 +1678,7 @@ function App(props) {
 		postEvent('doBasinnChart', {});
 		chartWorkersCompletedRef.current = 0;
 		setIsSimulationRunning(true);
+		setSimulationProgress(null);
 		const params = racedefToParams(racedef, uma1.strategy);
 
 		let skills, uma;
@@ -1167,9 +1741,16 @@ function App(props) {
 		});
 	}
 
+	const [selectedSkillId, setSelectedSkillId] = useState('');
+
 	function basinnChartSelection(skillId) {
 		const r = tableData.get(skillId);
-		if (r.runData != null) setResults(r);
+		if (r.runData != null) {
+			setResults(r);
+			setSelectedSkillId(skillId);
+		} else {
+			setSelectedSkillId('');
+		}
 	}
 
 	function addSkillFromTable(skillId) {
@@ -1611,7 +2192,75 @@ function App(props) {
 						onSelectionChange={basinnChartSelection}
 						onRunTypeChange={setChartData}
 						onDblClickRow={addSkillFromTable}
-						onInfoClick={showPopover} />
+						onInfoClick={showPopover}
+						courseDistance={course.distance}
+						expandedContent={(skillId, runData, courseDistance) => {
+							const currentDisplaying = displaying || 'meanrun';
+							let effectivenessRate = 0;
+							const totalCount = runData.allruns?.totalRuns || 0;
+							let skillProcs = 0;
+							if (runData.allruns && runData.allruns.skBasinn && Array.isArray(runData.allruns.skBasinn)) {
+								const allBasinnActivations: Array<[number, number]> = [];
+								runData.allruns.skBasinn.forEach((skBasinnMap: any) => {
+									if (!skBasinnMap) return;
+									let activations = null;
+									if (skBasinnMap instanceof Map || (typeof skBasinnMap.has === 'function' && typeof skBasinnMap.get === 'function')) {
+										if (skBasinnMap.has(skillId)) {
+											activations = skBasinnMap.get(skillId);
+										}
+									} else if (typeof skBasinnMap === 'object' && skillId in skBasinnMap) {
+										activations = skBasinnMap[skillId];
+									}
+									if (activations && Array.isArray(activations)) {
+										activations.forEach((activation: any) => {
+											if (Array.isArray(activation) && activation.length === 2 && 
+											    typeof activation[0] === 'number' && typeof activation[1] === 'number') {
+												allBasinnActivations.push([activation[0], activation[1]]);
+											}
+										});
+									}
+								});
+								skillProcs = allBasinnActivations.length;
+								const positiveCount = allBasinnActivations.filter(([_, basinn]) => basinn > 0).length;
+								effectivenessRate = totalCount > 0 ? (positiveCount / totalCount) * 100 : 0;
+							}
+							
+							return (
+								<div style="position: relative;">
+									<div style={`margin-bottom: 8px; width: 300px;`}>
+										<div style={`font-size: 9px; margin-bottom: 2px;`}>Total samples: {totalCount} ({skillProcs} skill procs)</div>
+										<div style={`font-size: 9px; margin-bottom: 2px;`}>Effectiveness rate: {effectivenessRate.toFixed(1)}%</div>
+										<div style={`display: flex; width: 100%; height: 8px; border: 1px solid #ccc; overflow: hidden;`}>
+											<div style={`width: ${effectivenessRate}%; background-color: #4caf50; height: 100%;`}></div>
+											<div style={`width: ${100 - effectivenessRate}%; background-color: #f44336; height: 100%;`}></div>
+										</div>
+									</div>
+									<div style={`display: flex; gap: 20px; align-items: flex-start;`}>
+										<div>
+											<LengthDifferenceChart 
+												skillId={skillId} 
+												runData={runData} 
+												courseDistance={courseDistance}
+											/>
+											<ActivationFrequencyChart 
+												skillId={skillId} 
+												runData={runData} 
+												courseDistance={courseDistance}
+											/>
+										</div>
+										<VelocityChart 
+											skillId={skillId} 
+											runData={runData}
+											courseDistance={courseDistance}
+											displaying={currentDisplaying}
+										/>
+									</div>
+									<div style="position: absolute; bottom: 0; right: 0; font-size: 9px; font-style: italic; padding: 4px;">
+										(yes these graphs are copied from utools &gt;-&lt;)
+									</div>
+								</div>
+							);
+						}} />
 				</div>
 			</div>
 		);
@@ -1624,7 +2273,75 @@ function App(props) {
 						onRunTypeChange={setChartData}
 						onDblClickRow={addSkillFromTable}
 						onInfoClick={showPopover}
-						showUmaIcons={true} />
+						showUmaIcons={true}
+						courseDistance={course.distance}
+						expandedContent={(skillId, runData, courseDistance) => {
+							const currentDisplaying = displaying || 'meanrun';
+							let effectivenessRate = 0;
+							const totalCount = runData.allruns?.totalRuns || 0;
+							let skillProcs = 0;
+							if (runData.allruns && runData.allruns.skBasinn && Array.isArray(runData.allruns.skBasinn)) {
+								const allBasinnActivations: Array<[number, number]> = [];
+								runData.allruns.skBasinn.forEach((skBasinnMap: any) => {
+									if (!skBasinnMap) return;
+									let activations = null;
+									if (skBasinnMap instanceof Map || (typeof skBasinnMap.has === 'function' && typeof skBasinnMap.get === 'function')) {
+										if (skBasinnMap.has(skillId)) {
+											activations = skBasinnMap.get(skillId);
+										}
+									} else if (typeof skBasinnMap === 'object' && skillId in skBasinnMap) {
+										activations = skBasinnMap[skillId];
+									}
+									if (activations && Array.isArray(activations)) {
+										activations.forEach((activation: any) => {
+											if (Array.isArray(activation) && activation.length === 2 && 
+											    typeof activation[0] === 'number' && typeof activation[1] === 'number') {
+												allBasinnActivations.push([activation[0], activation[1]]);
+											}
+										});
+									}
+								});
+								skillProcs = allBasinnActivations.length;
+								const positiveCount = allBasinnActivations.filter(([_, basinn]) => basinn > 0).length;
+								effectivenessRate = totalCount > 0 ? (positiveCount / totalCount) * 100 : 0;
+							}
+							
+							return (
+								<div style="position: relative;">
+									<div style={`margin-bottom: 8px; width: 300px;`}>
+										<div style={`font-size: 9px; margin-bottom: 2px;`}>Total samples: {totalCount} ({skillProcs} skill procs)</div>
+										<div style={`font-size: 9px; margin-bottom: 2px;`}>Effectiveness rate: {effectivenessRate.toFixed(1)}%</div>
+										<div style={`display: flex; width: 100%; height: 8px; border: 1px solid #ccc; overflow: hidden;`}>
+											<div style={`width: ${effectivenessRate}%; background-color: #4caf50; height: 100%;`}></div>
+											<div style={`width: ${100 - effectivenessRate}%; background-color: #f44336; height: 100%;`}></div>
+										</div>
+									</div>
+									<div style={`display: flex; gap: 20px; align-items: flex-start;`}>
+										<div>
+											<LengthDifferenceChart 
+												skillId={skillId} 
+												runData={runData} 
+												courseDistance={courseDistance}
+											/>
+											<ActivationFrequencyChart 
+												skillId={skillId} 
+												runData={runData} 
+												courseDistance={courseDistance}
+											/>
+										</div>
+										<VelocityChart 
+											skillId={skillId} 
+											runData={runData}
+											courseDistance={courseDistance}
+											displaying={currentDisplaying}
+										/>
+									</div>
+									<div style="position: absolute; bottom: 0; right: 0; font-size: 9px; font-style: italic; padding: 4px;">
+										(yes these graphs are copied from utools &gt;-&lt;)
+									</div>
+								</div>
+							);
+						}} />
 				</div>
 			</div>
 		);
@@ -1674,7 +2391,9 @@ function App(props) {
 						{
 							mode == Mode.Compare
 							? <button id="run" onClick={doComparison} tabindex={1} disabled={isSimulationRunning}>COMPARE</button>
-							: <button id="run" onClick={doBasinnChart} tabindex={1} disabled={isSimulationRunning}>RUN</button>
+							: <button id="run" onClick={doBasinnChart} tabindex={1} disabled={isSimulationRunning}>
+								{simulationProgress ? `Run (${simulationProgress.round}/${simulationProgress.total})` : 'RUN'}
+							</button>
 						}
 						{
 							mode == Mode.Compare
