@@ -372,9 +372,9 @@ function LengthDifferenceChart(props) {
 	const y = d3.scaleLinear().domain([0, maxValue]).range([height - 20 - 5, 0]);
 
 	const baseTicks = y.ticks(5);
-	const yTickValues = [...baseTicks];
-	const epsilon = 0.01;
-	if (!yTickValues.some(tick => Math.abs(tick - maxValue) < epsilon)) {
+	const threshold = Math.max(maxValue * 0.02, 0.05);
+	const yTickValues = baseTicks.filter(tick => Math.abs(tick - maxValue) >= threshold);
+	if (!yTickValues.some(tick => Math.abs(tick - maxValue) < 0.01)) {
 		yTickValues.push(maxValue);
 		yTickValues.sort((a, b) => a - b);
 	}
