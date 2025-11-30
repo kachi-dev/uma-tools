@@ -88,9 +88,7 @@ function runServer(ctx, port) {
 	http.createServer(async (req, res) => {
 		const url = req.url.endsWith('/') ? req.url + 'index.html' : req.url;
 		const filename = path.basename(url);
-		const urlPath = url.split('?')[0];
-		
-		if (urlPath.startsWith('/position-sampling-global/') && ARTIFACTS.indexOf(filename) > -1) {
+		if (ARTIFACTS.indexOf(filename) > -1) {
 			const requestN = requestCount.get(filename) + 1;
 			requestCount.set(filename, requestN);
 			if (requestN != buildCount) {

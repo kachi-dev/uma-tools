@@ -1408,7 +1408,7 @@ function App(props) {
 		<Fragment>
 			<div class={`umaTab ${currentIdx == 0 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx0)}>Umamusume 1</div>
 			{mode == Mode.Compare && <div class={`umaTab ${currentIdx == 1 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx1)}>Umamusume 2{posKeepMode != PosKeepMode.Virtual && <div id="expandBtn" title="Expand panel" onClick={toggleExpand} />}</div>}
-			{posKeepMode == PosKeepMode.Virtual && <div class={`umaTab ${currentIdx == 2 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx2)}>Virtual Pacemaker<div id="expandBtn" title="Expand panel" onClick={toggleExpand} /></div>}
+			{posKeepMode == PosKeepMode.Virtual && mode == Mode.Compare && <div class={`umaTab ${currentIdx == 2 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx2)}>Virtual Pacemaker<div id="expandBtn" title="Expand panel" onClick={toggleExpand} /></div>}
 		</Fragment>
 	);
 
@@ -1688,69 +1688,71 @@ function App(props) {
 							<input type="number" id="seed" value={seed} onInput={(e) => { setSeed(+e.currentTarget.value); setRunOnceCounter(0); }} />
 							<button title="Randomize seed" onClick={() => { setSeed(Math.floor(Math.random() * (-1 >>> 0)) >>> 0); setRunOnceCounter(0); }}>🎲</button>
 						</div>
-						<fieldset id="posKeepFieldset">
-							<legend>Position Keep:</legend>
-							<select id="poskeepmode" value={posKeepMode} onInput={(e) => setPosKeepMode(+e.currentTarget.value)}>
-								<option value={PosKeepMode.None}>None</option>
-								<option value={PosKeepMode.Approximate}>Approximate</option>
-								<option value={PosKeepMode.Virtual}>Virtual Pacemaker</option>
-							</select>
-							{posKeepMode == PosKeepMode.Approximate && (
-								<div id="pacemakerIndicator">
-									<span>Using default pacemaker</span>
-								</div>
-							)}
-							{posKeepMode == PosKeepMode.Virtual && (
-								<div id="pacemakerIndicator">
-									<div>
-										<label>Show Pacemakers:</label>
-										<div className="pacemaker-combobox">
-											<button 
-												className="pacemaker-combobox-button"
-												onClick={() => setIsPacemakerDropdownOpen(!isPacemakerDropdownOpen)}
-											>
-												{selectedPacemakerIndices.length === 0
-													? 'None'
-													: selectedPacemakerIndices.length === 1 
-													? `Pacemaker ${selectedPacemakerIndices[0] + 1}`
-													: selectedPacemakerIndices.length === pacemakerCount
-													? 'All Pacemakers'
-													: `${selectedPacemakerIndices.length} Pacemakers`
-												}
-												<span className="pacemaker-combobox-arrow">▼</span>
-											</button>
-											{isPacemakerDropdownOpen && (
-												<div className="pacemaker-combobox-dropdown">
-													{[...Array(pacemakerCount)].map((_, index) => (
-														<label key={index} className="pacemaker-combobox-option">
-															<input 
-																type="checkbox" 
-																checked={selectedPacemakerIndices.includes(index)}
-																onChange={() => togglePacemakerSelection(index)}
-															/>
-															<span style={{color: index === 0 ? '#22c55e' : index === 1 ? '#a855f7' : '#ec4899'}}>
-																Pacemaker {index + 1}
-															</span>
-														</label>
-													))}
-												</div>
-											)}
+						{mode == Mode.Compare && (
+							<fieldset id="posKeepFieldset">
+								<legend>Position Keep:</legend>
+								<select id="poskeepmode" value={posKeepMode} onInput={(e) => setPosKeepMode(+e.currentTarget.value)}>
+									<option value={PosKeepMode.None}>None</option>
+									<option value={PosKeepMode.Approximate}>Approximate</option>
+									<option value={PosKeepMode.Virtual}>Virtual Pacemaker</option>
+								</select>
+								{posKeepMode == PosKeepMode.Approximate && (
+									<div id="pacemakerIndicator">
+										<span>Using default pacemaker</span>
+									</div>
+								)}
+								{posKeepMode == PosKeepMode.Virtual && (
+									<div id="pacemakerIndicator">
+										<div>
+											<label>Show Pacemakers:</label>
+											<div className="pacemaker-combobox">
+												<button 
+													className="pacemaker-combobox-button"
+													onClick={() => setIsPacemakerDropdownOpen(!isPacemakerDropdownOpen)}
+												>
+													{selectedPacemakerIndices.length === 0
+														? 'None'
+														: selectedPacemakerIndices.length === 1 
+														? `Pacemaker ${selectedPacemakerIndices[0] + 1}`
+														: selectedPacemakerIndices.length === pacemakerCount
+														? 'All Pacemakers'
+														: `${selectedPacemakerIndices.length} Pacemakers`
+													}
+													<span className="pacemaker-combobox-arrow">▼</span>
+												</button>
+												{isPacemakerDropdownOpen && (
+													<div className="pacemaker-combobox-dropdown">
+														{[...Array(pacemakerCount)].map((_, index) => (
+															<label key={index} className="pacemaker-combobox-option">
+																<input 
+																	type="checkbox" 
+																	checked={selectedPacemakerIndices.includes(index)}
+																	onChange={() => togglePacemakerSelection(index)}
+																/>
+																<span style={{color: index === 0 ? '#22c55e' : index === 1 ? '#a855f7' : '#ec4899'}}>
+																	Pacemaker {index + 1}
+																</span>
+															</label>
+														))}
+													</div>
+												)}
+											</div>
+										</div>
+										<div id="pacemakerCountControl">
+											<label for="pacemakercount">Number of pacemakers: {pacemakerCount}</label>
+											<input 
+												type="range" 
+												id="pacemakercount" 
+												min="1" 
+												max="3" 
+												value={pacemakerCount} 
+												onInput={(e) => handlePacemakerCountChange(+e.currentTarget.value)} 
+											/>
 										</div>
 									</div>
-									<div id="pacemakerCountControl">
-										<label for="pacemakercount">Number of pacemakers: {pacemakerCount}</label>
-										<input 
-											type="range" 
-											id="pacemakercount" 
-											min="1" 
-											max="3" 
-											value={pacemakerCount} 
-											onInput={(e) => handlePacemakerCountChange(+e.currentTarget.value)} 
-										/>
-									</div>
-								</div>
-							)}
-						</fieldset>
+								)}
+							</fieldset>
+						)}
 						<div>
 							<label for="showhp">Show HP</label>
 							<input type="checkbox" id="showhp" checked={showHp} onClick={toggleShowHp} />
@@ -1759,21 +1761,23 @@ function App(props) {
 							<label for="showlanes">Show Lanes</label>
 							<input type="checkbox" id="showlanes" checked={showLanes} onClick={toggleShowLanes} />
 						</div>
-						<div>
-							<label for="simWitVariance">Wit Variance</label>
-							<input type="checkbox" id="simWitVariance" checked={simWitVariance} onClick={handleSimWitVarianceToggle} />
-							<button 
-								className="wit-variance-settings-btn" 
-								onClick={() => setShowWitVarianceSettings(true)}
-								title="Configure Wit Variance settings"
-								disabled={!simWitVariance}
-							>
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-									<circle cx="12" cy="12" r="3"></circle>
-									<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-								</svg>
-							</button>
-						</div>
+						{mode == Mode.Compare && (
+							<div>
+								<label for="simWitVariance">Wit Variance</label>
+								<input type="checkbox" id="simWitVariance" checked={simWitVariance} onClick={handleSimWitVarianceToggle} />
+								<button 
+									className="wit-variance-settings-btn" 
+									onClick={() => setShowWitVarianceSettings(true)}
+									title="Configure Wit Variance settings"
+									disabled={!simWitVariance}
+								>
+									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<circle cx="12" cy="12" r="3"></circle>
+										<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+									</svg>
+								</button>
+							</div>
+						)}
 
 						<a href="#" onClick={copyStateUrl}>Copy link</a>
 						<RacePresets set={(courseId, racedef) => { setCourseId(courseId); setRaceDef(racedef); }} />
@@ -1808,7 +1812,7 @@ function App(props) {
 							{expanded ? 'Umamusume 2' : umaTabs}
 						</HorseDef>
 					</div>}
-					{posKeepMode == PosKeepMode.Virtual && <div class={!expanded && currentIdx == 2 ? 'selected' : ''}>
+					{posKeepMode == PosKeepMode.Virtual && mode == Mode.Compare && <div class={!expanded && currentIdx == 2 ? 'selected' : ''}>
 						<HorseDef key={pacer.outfitId} state={pacer} setState={setPacer} courseDistance={course.distance} tabstart={() => 4 + (mode == Mode.Compare ? 2 : 1) * horseDefTabs()} onResetAll={resetAllUmas}>
 							{expanded ? 'Virtual Pacemaker' : umaTabs}
 						</HorseDef>
