@@ -507,12 +507,13 @@ function VelocityChart(props) {
 	const margin = {top: 5, right: 5, bottom: 20, left: 40};
 	const chartWidth = width - margin.left - margin.right;
 	const chartHeight = height - margin.top - margin.bottom;
-	const axes = useRef(null);
-	const gridLines = useRef(null);
+	const canvasRef = useRef<HTMLCanvasElement>(null);
+	const axesRef = useRef(null);
 	
 	const TIME_WINDOW_PADDING = 10;
 	const Y_MIN_VELOCITY = 18;
 	const TICK_EPSILON = 0.01;
+	const VELOCITY_CONVERGENCE_THRESHOLD = 0.02;
 
 	if (!skillId || !runData || !displaying) {
 		return null;
@@ -523,49 +524,75 @@ function VelocityChart(props) {
 		return null;
 	}
 
+	if (!selectedRun.t[0] || !selectedRun.v[0] || !selectedRun.p[0] ||
+		!selectedRun.t[1] || !selectedRun.v[1] || !selectedRun.p[1]) {
+		return null;
+	}
+
 	const skillData = getSkillPositionsFromRun(skillId, selectedRun);
 	if (!skillData || skillData.positions.length === 0) {
 		return null;
 	}
 
-	const {positions: skillPositions, umaIndex} = skillData;
-	const times = selectedRun.t[umaIndex];
-	const velocities = selectedRun.v[umaIndex];
-	const positions = selectedRun.p[umaIndex];
+	const uma1Times = selectedRun.t[0];
+	const uma1Velocities = selectedRun.v[0];
+	const uma1Positions = selectedRun.p[0];
+	
+	const uma2Times = selectedRun.t[1];
+	const uma2Velocities = selectedRun.v[1];
+	const uma2Positions = selectedRun.p[1];
 
-	if (!times || !velocities || !positions || times.length === 0) {
+	if (!uma1Times || !uma1Velocities || !uma1Positions || uma1Times.length === 0 ||
+		!uma2Times || !uma2Velocities || !uma2Positions || uma2Times.length === 0) {
 		return null;
 	}
 
+	const {positions: skillPositions} = skillData;
 	const [startPos, endPos] = skillPositions[0];
-	const startTime = interpolateValue(startPos, positions, times);
-	const endTime = interpolateValue(endPos, positions, times);
+	const startTime = interpolateValue(startPos, uma2Positions, uma2Times);
+	const endTime = interpolateValue(endPos, uma2Positions, uma2Times);
 
 	const timeWindowStart = Math.max(0, startTime - TIME_WINDOW_PADDING);
 	const timeWindowEnd = endTime + TIME_WINDOW_PADDING;
 
-	const velocityData: Array<[number, number]> = [];
+	const uma1VelocityData: Array<[number, number]> = [];
+	const uma2VelocityData: Array<[number, number]> = [];
 	const positionData: Array<[number, number]> = [];
 	
-	for (let i = 0; i < times.length; i++) {
-		const t = times[i];
+	for (let i = 0; i < uma1Times.length; i++) {
+		const t = uma1Times[i];
 		if (t >= timeWindowStart && t <= timeWindowEnd) {
-			velocityData.push([t, velocities[i]]);
-			positionData.push([t, positions[i]]);
+			uma1VelocityData.push([t, uma1Velocities[i]]);
+			positionData.push([t, uma1Positions[i]]);
 		}
 	}
 
-	if (velocityData.length === 0) {
+	for (let i = 0; i < uma2Times.length; i++) {
+		const t = uma2Times[i];
+		if (t >= timeWindowStart && t <= timeWindowEnd) {
+			uma2VelocityData.push([t, uma2Velocities[i]]);
+		}
+	}
+
+	if (uma1VelocityData.length === 0 || uma2VelocityData.length === 0) {
 		return null;
 	}
 
-	const minTime = velocityData[0][0];
-	const maxTime = velocityData[velocityData.length - 1][0];
-	const minVelocity = Math.min(...velocityData.map(d => d[1]));
-	const maxVelocity = Math.max(...velocityData.map(d => d[1]));
+	const minTime = timeWindowStart;
+	const maxTime = timeWindowEnd;
+	
+	const allVelocities = [...uma1VelocityData.map(d => d[1]), ...uma2VelocityData.map(d => d[1])];
+	const minVelocity = Math.min(...allVelocities);
+	const maxVelocity = Math.max(...allVelocities);
+
+	const maxVelocityEntireRace = Math.max(
+		Math.max(...uma1Velocities),
+		Math.max(...uma2Velocities)
+	);
+	const maxVelocityRoundedUp = Math.ceil(maxVelocityEntireRace) + 1;
 	
 	const yMin = Math.min(Y_MIN_VELOCITY, minVelocity);
-	const yMax = Math.max(Y_MIN_VELOCITY, maxVelocity);
+	const yMax = Math.max(Y_MIN_VELOCITY, maxVelocityRoundedUp);
 
 	const x = d3.scaleLinear().domain([minTime, maxTime]).range([0, chartWidth]);
 	const y = d3.scaleLinear().domain([yMin, yMax]).range([chartHeight, 0]);
@@ -582,12 +609,122 @@ function VelocityChart(props) {
 		.y(d => y(d[1]))
 		.curve(d3.curveMonotoneX);
 
-	const pathData = line(velocityData);
+	const uma1PathData = line(uma1VelocityData);
+
+	let convergenceTime = maxTime;
+	for (let i = 0; i < uma2Times.length; i++) {
+		const t = uma2Times[i];
+		if (t >= endTime) {
+			const uma2Vel = uma2Velocities[i];
+			const uma1Vel = uma1Velocities[i];
+			if (Math.abs(uma1Vel - uma2Vel) <= VELOCITY_CONVERGENCE_THRESHOLD) {
+				convergenceTime = t;
+				break;
+			}
+		}
+	}
+
+	const uma2VelocityDataFiltered: Array<[number, number]> = [];
+	for (let i = 0; i < uma2VelocityData.length; i++) {
+		const [t, v] = uma2VelocityData[i];
+		if (t >= startTime && t <= Math.min(convergenceTime, timeWindowEnd)) {
+			uma2VelocityDataFiltered.push([t, v]);
+		}
+	}
+
+	const uma2PathData = uma2VelocityDataFiltered.length > 0 ? line(uma2VelocityDataFiltered) : null;
 
 	useEffect(function() {
-		if (!axes.current || !gridLines.current) return;
+		if (!canvasRef.current) return;
 		
-		const axesG = d3.select(axes.current);
+		const canvas = canvasRef.current;
+		const ctx = canvas.getContext('2d');
+		if (!ctx) return;
+		
+		ctx.clearRect(0, 0, width, height);
+		
+		ctx.save();
+		ctx.translate(margin.left, margin.top);
+		
+		phaseBackgrounds.forEach(phase => {
+			ctx.fillStyle = phase.color;
+			ctx.fillRect(x(phase.start), 0, x(phase.end) - x(phase.start), chartHeight);
+		});
+		
+		const suggestedTicks = y.ticks(5);
+		const step = suggestedTicks.length > 1 ? suggestedTicks[1] - suggestedTicks[0] : 1;
+		const startTick = Math.floor(yMin / step) * step;
+		
+		const yTickValues: number[] = [];
+		for (let v = startTick; v <= maxVelocityRoundedUp; v += step) {
+			if (v >= yMin) {
+				yTickValues.push(v);
+			}
+		}
+		
+		if (!yTickValues.some(tick => Math.abs(tick - maxVelocityRoundedUp) < TICK_EPSILON)) {
+			yTickValues.push(maxVelocityRoundedUp);
+		}
+		yTickValues.sort((a, b) => a - b);
+		
+		ctx.strokeStyle = 'rgba(128, 128, 128, 0.3)';
+		ctx.lineWidth = 0.5;
+		
+		yTickValues.forEach(tickValue => {
+			const yPos = y(tickValue);
+			ctx.beginPath();
+			ctx.moveTo(0, yPos);
+			ctx.lineTo(chartWidth, yPos);
+			ctx.stroke();
+		});
+		
+		x.ticks(5).forEach(tickValue => {
+			const xPos = x(tickValue);
+			ctx.beginPath();
+			ctx.moveTo(xPos, 0);
+			ctx.lineTo(xPos, chartHeight);
+			ctx.stroke();
+		});
+		
+		if (uma1PathData && uma1VelocityData.length > 0) {
+			ctx.strokeStyle = '#2a77c5';
+			ctx.lineWidth = 2;
+			ctx.beginPath();
+			uma1VelocityData.forEach((d, i) => {
+				const roundedTime = Number(d[0].toFixed(2));
+				const roundedVelocity = Number(d[1].toFixed(2));
+				if (i === 0) {
+					ctx.moveTo(x(roundedTime), y(roundedVelocity));
+				} else {
+					ctx.lineTo(x(roundedTime), y(roundedVelocity));
+				}
+			});
+			ctx.stroke();
+		}
+		
+		if (uma2PathData && uma2VelocityDataFiltered.length > 0) {
+			ctx.strokeStyle = '#ff69b4';
+			ctx.lineWidth = 2;
+			ctx.beginPath();
+			uma2VelocityDataFiltered.forEach((d, i) => {
+				const roundedTime = Number(d[0].toFixed(2));
+				const roundedVelocity = Number(d[1].toFixed(2));
+				if (i === 0) {
+					ctx.moveTo(x(roundedTime), y(roundedVelocity));
+				} else {
+					ctx.lineTo(x(roundedTime), y(roundedVelocity));
+				}
+			});
+			ctx.stroke();
+		}
+		
+		ctx.restore();
+	}, [x, y, chartWidth, chartHeight, yMin, maxVelocityRoundedUp, phaseBackgrounds, uma1VelocityData, uma2VelocityDataFiltered, width, height, margin]);
+
+	useEffect(function() {
+		if (!axesRef.current) return;
+		
+		const axesG = d3.select(axesRef.current);
 		axesG.selectAll('*').remove();
 		
 		const suggestedTicks = y.ticks(5);
@@ -595,17 +732,14 @@ function VelocityChart(props) {
 		const startTick = Math.floor(yMin / step) * step;
 		
 		const yTickValues: number[] = [];
-		for (let v = startTick; v <= maxVelocity; v += step) {
+		for (let v = startTick; v <= maxVelocityRoundedUp; v += step) {
 			if (v >= yMin) {
 				yTickValues.push(v);
 			}
 		}
 		
-		if (!yTickValues.some(tick => Math.abs(tick - minVelocity) < TICK_EPSILON)) {
-			yTickValues.push(minVelocity);
-		}
-		if (!yTickValues.some(tick => Math.abs(tick - maxVelocity) < TICK_EPSILON)) {
-			yTickValues.push(maxVelocity);
+		if (!yTickValues.some(tick => Math.abs(tick - maxVelocityRoundedUp) < TICK_EPSILON)) {
+			yTickValues.push(maxVelocityRoundedUp);
 		}
 		yTickValues.sort((a, b) => a - b);
 		
@@ -613,74 +747,18 @@ function VelocityChart(props) {
 		const yAxis = d3.axisLeft(y).tickValues(yTickValues).tickFormat(d => `${Number(d).toFixed(1)}m/s`);
 		
 		axesG.append('g')
-			.attr('transform', `translate(0,${chartHeight})`)
+			.attr('transform', `translate(${margin.left},${height - margin.bottom})`)
 			.call(xAxis);
 		axesG.append('g')
+			.attr('transform', `translate(${margin.left},${margin.top})`)
 			.call(yAxis);
-		
-		const gridG = d3.select(gridLines.current);
-		gridG.selectAll('*').remove();
-		
-		yTickValues.forEach((tickValue) => {
-			gridG.append('line')
-				.attr('class', 'grid-line')
-				.attr('x1', 0)
-				.attr('x2', chartWidth)
-				.attr('y1', y(tickValue))
-				.attr('y2', y(tickValue))
-				.attr('stroke', 'rgba(128, 128, 128, 0.3)')
-				.attr('stroke-width', 0.5);
-		});
-		
-		x.ticks(5).forEach(tickValue => {
-			gridG.append('line')
-				.attr('class', 'grid-line')
-				.attr('x1', x(tickValue))
-				.attr('x2', x(tickValue))
-				.attr('y1', 0)
-				.attr('y2', chartHeight)
-				.attr('stroke', 'rgba(128, 128, 128, 0.3)')
-				.attr('stroke-width', 0.5);
-		});
-	}, [x, y, chartWidth, chartHeight, minVelocity, maxVelocity, yMin, yMax]);
+	}, [x, y, chartWidth, chartHeight, yMin, maxVelocityRoundedUp, width, height, margin]);
 
 	return (
-		<div class="velocityChart" style={`width: ${width}px; height: ${height}px;`}>
-			<svg width={width} height={height} style="overflow: visible;">
-				<g transform={`translate(${margin.left},${margin.top})`}>
-					{phaseBackgrounds.map((phase, i) => (
-						<rect
-							key={`phase-${i}`}
-							x={x(phase.start)}
-							y={0}
-							width={x(phase.end) - x(phase.start)}
-							height={chartHeight}
-							fill={phase.color}
-						/>
-					))}
-					<g ref={gridLines}></g>
-					<g ref={axes}></g>
-					{pathData && (
-						<path
-							d={pathData}
-							fill="none"
-							stroke="#2a77c5"
-							stroke-width="2"
-						/>
-					)}
-					{velocityData.map((d, i) => {
-						const isActive = d[0] >= startTime && d[0] <= endTime;
-						return (
-							<circle
-								key={i}
-								cx={x(d[0])}
-								cy={y(d[1])}
-								r={1.5}
-								fill={isActive ? '#ff69b4' : '#2a77c5'}
-							/>
-						);
-					})}
-				</g>
+		<div class="velocityChart" style={`width: ${width}px; height: ${height}px; position: relative; overflow: visible;`}>
+			<canvas ref={canvasRef} width={width} height={height} style="position: absolute; top: 0; left: 0;" />
+			<svg width={width + margin.left} height={height} style="position: absolute; top: 0; left: 0; pointer-events: none; overflow: visible;">
+				<g ref={axesRef}></g>
 			</svg>
 		</div>
 	);
@@ -756,6 +834,8 @@ function ActivationFrequencyChart(props) {
 	const chartBins = bins.map(bin => ({...bin, value: bin.count}));
 	const xScale = d3.scaleLinear().domain([0, maxDistance]).range([0, chartWidth]);
 	const yScale = d3.scaleLinear().domain([0, maxCount > 0 ? maxCount : 1]).range([chartHeight, 0]);
+	
+	const yTickValues = [0, maxCount > 0 ? maxCount : 1];
 
 	return (
 		<div class="activationFrequencyChart">
@@ -768,6 +848,7 @@ function ActivationFrequencyChart(props) {
 				phaseBackgrounds={phaseBackgrounds}
 				xAxisTicks={Math.min(6, Math.floor(maxDistance / 200))}
 				yAxisTicks={2}
+				yTickValues={yTickValues}
 				yAxisFormat={(d, i, ticks) => {
 					if (i === 0 || i === ticks.length - 1) {
 						return `${Math.round((d / totalActivations) * 100)}%`;
@@ -1796,8 +1877,11 @@ function App(props) {
 		const safeI0 = Math.max(0, Math.min(i0, chartData.v[0].length - 1));
 		const safeI1 = Math.max(0, Math.min(i1, chartData.v[1].length - 1));
 		
-		document.getElementById('rtV1').textContent = `${chartData.v[0][safeI0].toFixed(2)} m/s  t=${chartData.t[0][safeI0].toFixed(2)} s  (${chartData.hp[0][safeI0].toFixed(0)} hp remaining)`;
-		document.getElementById('rtV2').textContent = `${chartData.v[1][safeI1].toFixed(2)} m/s  t=${chartData.t[1][safeI1].toFixed(2)} s  (${chartData.hp[1][safeI1].toFixed(0)} hp remaining)`;
+		const hp0 = chartData.hp && chartData.hp[0] && safeI0 < chartData.hp[0].length ? chartData.hp[0][safeI0].toFixed(0) : 'N/A';
+		const hp1 = chartData.hp && chartData.hp[1] && safeI1 < chartData.hp[1].length ? chartData.hp[1][safeI1].toFixed(0) : 'N/A';
+		
+		document.getElementById('rtV1').textContent = `${chartData.v[0][safeI0].toFixed(2)} m/s  t=${chartData.t[0][safeI0].toFixed(2)} s  (${hp0} hp remaining)`;
+		document.getElementById('rtV2').textContent = `${chartData.v[1][safeI1].toFixed(2)} m/s  t=${chartData.t[1][safeI1].toFixed(2)} s  (${hp1} hp remaining)`;
 	}
 
 	function rtMouseLeave() {
