@@ -5,6 +5,16 @@ import { Map as ImmMap } from 'immutable';
 import { HorseState, SkillSet } from '../components/HorseDefTypes';
 import { runComparison } from './compare';
 
+function mergeSkillMaps(map1, map2) {
+	const obj1 = map1 instanceof Map ? Object.fromEntries(map1) : (map1 || {});
+	const obj2 = map2 instanceof Map ? Object.fromEntries(map2) : (map2 || {});
+	const merged = { ...obj1 };
+	Object.entries(obj2).forEach(([skillId, values]: [string, any]) => {
+		merged[skillId] = [...(merged[skillId] || []), ...(values || [])];
+	});
+	return merged;
+}
+
 function mergeResults(results1, results2) {
 	console.assert(results1.id == results2.id, `mergeResults: ${results1.id} != ${results2.id}`);
 	const n1 = results1.results.length, n2 = results2.results.length;
@@ -12,6 +22,36 @@ function mergeResults(results1, results2) {
 	const combinedMean = (results1.mean * n1 + results2.mean * n2) / (n1 + n2);
 	const mid = Math.floor(combinedResults.length / 2);
 	const newMedian = combinedResults.length % 2 == 0 ? (combinedResults[mid-1] + combinedResults[mid]) / 2 : combinedResults[mid];
+	
+	const allruns1 = results1.runData?.allruns || {};
+	const allruns2 = results2.runData?.allruns || {};
+	const {skBasinn: skBasinn1, sk: sk1, totalRuns: totalRuns1, ...rest1} = allruns1;
+	const {skBasinn: skBasinn2, sk: sk2, totalRuns: totalRuns2, ...rest2} = allruns2;
+	
+	const mergedAllRuns: any = {
+		...rest1,
+		...rest2,
+		totalRuns: (totalRuns1 || 0) + (totalRuns2 || 0)
+	};
+	
+	if (skBasinn1 && skBasinn2) {
+		mergedAllRuns.skBasinn = [
+			mergeSkillMaps(skBasinn1[0] || {}, skBasinn2[0] || {}),
+			mergeSkillMaps(skBasinn1[1] || {}, skBasinn2[1] || {})
+		];
+	} else if (skBasinn1 || skBasinn2) {
+		mergedAllRuns.skBasinn = skBasinn1 || skBasinn2;
+	}
+	
+	if (sk1 && sk2) {
+		mergedAllRuns.sk = [
+			mergeSkillMaps(sk1[0] || {}, sk2[0] || {}),
+			mergeSkillMaps(sk1[1] || {}, sk2[1] || {})
+		];
+	} else if (sk1 || sk2) {
+		mergedAllRuns.sk = sk1 || sk2;
+	}
+	
 	return {
 		id: results1.id,
 		results: combinedResults,
@@ -20,8 +60,8 @@ function mergeResults(results1, results2) {
 		mean: combinedMean,
 		median: newMedian,
 		runData: {
-			// TODO should re-compute the bashin gain from .t/.p and pick whichever is closer to new mean/median
 			...(n2 > n1 ? results2.runData : results1.runData),
+			allruns: mergedAllRuns,
 			minrun: results1.min < results2.min ? results1.runData.minrun : results2.runData.minrun,
 			maxrun: results1.max > results2.max ? results1.runData.maxrun : results2.runData.maxrun,
 		}
@@ -60,16 +100,20 @@ function runChart({skills, course, racedef, uma, pacer, options}) {
 	const pacer_ = pacer ? new HorseState(pacer)
 		.set('skills', SkillSet(pacer.skills || []))
 		.set('forcedSkillPositions', ImmMap(pacer.forcedSkillPositions || {})) : null;
+	postMessage({type: 'chart-progress', round: 1, total: 4});
 	let results = run1Round(5, skills, course, racedef, uma_, pacer_, options);
 	postMessage({type: 'chart', results});
 	skills = skills.filter(id => results.get(id).max > 0.1);
+	postMessage({type: 'chart-progress', round: 2, total: 4});
 	let update = run1Round(20, skills, course, racedef, uma_, pacer_, options);
 	mergeResultSets(results, update);
 	postMessage({type: 'chart', results});
 	skills = skills.filter(id => Math.abs(results.get(id).max - results.get(id).min) > 0.1);
+	postMessage({type: 'chart-progress', round: 3, total: 4});
 	update = run1Round(50, skills, course, racedef, uma_, pacer_, options);
 	mergeResultSets(results, update);
 	postMessage({type: 'chart', results});
+	postMessage({type: 'chart-progress', round: 4, total: 4});
 	update = run1Round(200, skills, course, racedef, uma_, pacer_, options);
 	mergeResultSets(results, update);
 	postMessage({type: 'chart', results});

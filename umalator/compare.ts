@@ -300,6 +300,8 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 	const diff = [];
 	let min = Infinity, max = -Infinity, estMean, estMedian, bestMeanDiff = Infinity, bestMedianDiff = Infinity;
 	let minrun, maxrun, meanrun, medianrun;
+	const allSkillActivations = [new Map<string, number[]>(), new Map<string, number[]>()];
+	const allSkillActivationBasinn = [new Map<string, Array<[number, number]>>(), new Map<string, Array<[number, number]>>()];
 	const sampleCutoff = Math.max(Math.floor(nsamples * 0.8), nsamples - 200);
 	let retry = false;
 	let retryCount = 0;
@@ -515,8 +517,37 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		cleanupActiveSkills(s2, skillPos2, skillPos1);
 
 		data.sk[1] = new Map(skillPos2);  // NOT ai (NB. why not?)
-		skillPos2.clear();
 		data.sk[0] = new Map(skillPos1);  // NOT bi (NB. why not?)
+		
+		const runSkillActivations: Array<{skillId: string, activationPos: number, umaIndex: number}> = [];
+		
+		skillPos1.forEach((positions, skillId) => {
+			if (!allSkillActivations[0].has(skillId)) {
+				allSkillActivations[0].set(skillId, []);
+			}
+			positions.forEach(pos => {
+				if (Array.isArray(pos) && pos.length >= 1 && typeof pos[0] === 'number') {
+					const activationPos = pos[0];
+					allSkillActivations[0].get(skillId)!.push(activationPos);
+					runSkillActivations.push({skillId, activationPos, umaIndex: 0});
+				}
+			});
+		});
+		
+		skillPos2.forEach((positions, skillId) => {
+			if (!allSkillActivations[1].has(skillId)) {
+				allSkillActivations[1].set(skillId, []);
+			}
+			positions.forEach(pos => {
+				if (Array.isArray(pos) && pos.length >= 1 && typeof pos[0] === 'number') {
+					const activationPos = pos[0];
+					allSkillActivations[1].get(skillId)!.push(activationPos);
+					runSkillActivations.push({skillId, activationPos, umaIndex: 1});
+				}
+			});
+		});
+		
+		skillPos2.clear();
 		skillPos1.clear();
 
 		retry = false;
@@ -602,6 +633,14 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		
 		const basinn = sign * posDifference / 2.5;
 		diff.push(basinn);
+		
+		runSkillActivations.forEach(({skillId, activationPos, umaIndex}) => {
+			if (!allSkillActivationBasinn[umaIndex].has(skillId)) {
+				allSkillActivationBasinn[umaIndex].set(skillId, []);
+			}
+			allSkillActivationBasinn[umaIndex].get(skillId)!.push([activationPos, basinn]);
+		});
+		
 		if (basinn < min) {
 			min = basinn;
 			minrun = data;
@@ -700,9 +739,21 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 	// We don't need to overwrite it - just ensure the rushed field is properly formatted
 	// The rushed data comes from the RaceSolver.rushedActivations collected during each specific run
 	
+	const allRunsData = {
+		sk: [
+			allSkillActivations[0],
+			allSkillActivations[1]
+		],
+		skBasinn: [
+			allSkillActivationBasinn[0],
+			allSkillActivationBasinn[1]
+		],
+		totalRuns: nsamples
+	};
+	
 	return {
 		results: diff, 
-		runData: {minrun, maxrun, meanrun, medianrun},
+		runData: {minrun, maxrun, meanrun, medianrun, allruns: allRunsData},
 		rushedStats: rushedStatsSummary,
 		leadCompetitionStats: leadCompetitionStatsSummary,
 		spurtInfo: options.useEnhancedSpurt ? { uma1: spurtInfo1, uma2: spurtInfo2 } : null,

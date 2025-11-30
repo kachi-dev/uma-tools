@@ -209,70 +209,236 @@ function Histogram(props) {
 	);
 }
 
-function ActivationFrequencyChart(props) {
-	const {skillId, runData, courseDistance} = props;
+function BarChart(props) {
+	const {width, height, bins, xScale, yScale, phaseBackgrounds, xAxisTicks, yAxisTicks, yTickValues, yAxisFormat, barColor} = props;
 	const axes = useRef(null);
 	const gridLines = useRef(null);
-	const width = 300;
-	const height = 100;
 	const xH = 20;
 	const yW = 40;
 	const chartWidth = width - yW - 5;
 	const chartHeight = height - xH - 5;
+
+	useEffect(function () {
+		if (!axes.current || !gridLines.current) return;
+		const axesG = d3.select(axes.current);
+		axesG.selectAll('*').remove();
+		const xAxis = d3.axisBottom(xScale).ticks(xAxisTicks);
+		const yAxis = d3.axisLeft(yScale);
+		if (yTickValues) {
+			yAxis.tickValues(yTickValues);
+		} else {
+			yAxis.ticks(yAxisTicks);
+		}
+		if (yAxisFormat) {
+			yAxis.tickFormat(yAxisFormat);
+		}
+		
+		const xAxisG = axesG.append('g').attr('transform', `translate(0,${chartHeight})`).call(xAxis);
+		const yAxisG = axesG.append('g').attr('transform', `translate(0,0)`).call(yAxis);
+		
+		const gridG = d3.select(gridLines.current);
+		gridG.selectAll('*').remove();
+		
+		xScale.ticks(xAxisTicks).forEach(tickValue => {
+			gridG.append('line')
+				.attr('class', 'grid-line')
+				.attr('x1', xScale(tickValue))
+				.attr('x2', xScale(tickValue))
+				.attr('y1', 0)
+				.attr('y2', chartHeight)
+				.attr('stroke', 'rgba(128, 128, 128, 0.3)')
+				.attr('stroke-width', 0.5);
+		});
+		
+		const finalYTickValues = yTickValues || yScale.ticks(yAxisTicks);
+		finalYTickValues.forEach((tickValue) => {
+			gridG.append('line')
+				.attr('class', 'grid-line')
+				.attr('x1', 0)
+				.attr('x2', chartWidth)
+				.attr('y1', yScale(tickValue))
+				.attr('y2', yScale(tickValue))
+				.attr('stroke', 'rgba(128, 128, 128, 0.3)')
+				.attr('stroke-width', 0.5);
+		});
+	}, [xScale, yScale, chartHeight, chartWidth, xAxisTicks, yAxisTicks, yTickValues, yAxisFormat]);
+
+	const rects = bins.map((bin, i) => {
+		const barHeight = chartHeight - yScale(bin.value);
+		const binWidth = xScale(bin.end) - xScale(bin.start);
+		const barWidth = Math.max(3, binWidth * 1.5);
+		const barX = xScale(bin.start) + (binWidth - barWidth) / 2;
+		return (
+			<rect 
+				key={i} 
+				fill={barColor || "#2a77c5"} 
+				stroke="none" 
+				x={barX} 
+				y={yScale(bin.value)} 
+				width={barWidth} 
+				height={barHeight}
+			/>
+		);
+	});
+
+	return (
+		<div class="barChart" style={`width: ${width}px; height: ${height}px;`}>
+			<svg width={width} height={height} style="overflow: visible;">
+				<g transform={`translate(${yW},5)`}>
+					{phaseBackgrounds && phaseBackgrounds.map((phase, i) => (
+						<rect
+							key={i}
+							x={xScale(phase.start)}
+							y={0}
+							width={xScale(phase.end) - xScale(phase.start)}
+							height={chartHeight}
+							fill={phase.color}
+						/>
+					))}
+					<g ref={gridLines}></g>
+					{rects}
+					<g ref={axes}></g>
+				</g>
+			</svg>
+		</div>
+	);
+}
+
+function LengthDifferenceChart(props) {
+	const {skillId, runData, courseDistance} = props;
+	const width = 300;
+	const height = 150;
+
+	if (!skillId || !runData) {
+		return null;
+	}
+
+	if (!runData.allruns || !runData.allruns.skBasinn || !Array.isArray(runData.allruns.skBasinn)) {
+		return null;
+	}
+
+	const allActivations: Array<[number, number]> = [];
+	
+	runData.allruns.skBasinn.forEach((skBasinnMap: any) => {
+		if (!skBasinnMap) return;
+		let activations = null;
+		if (skBasinnMap instanceof Map || (typeof skBasinnMap.has === 'function' && typeof skBasinnMap.get === 'function')) {
+			if (skBasinnMap.has(skillId)) {
+				activations = skBasinnMap.get(skillId);
+			}
+		} else if (typeof skBasinnMap === 'object' && skillId in skBasinnMap) {
+			activations = skBasinnMap[skillId];
+		}
+		if (activations && Array.isArray(activations)) {
+			activations.forEach((activation: any) => {
+				if (Array.isArray(activation) && activation.length === 2 && 
+				    typeof activation[0] === 'number' && typeof activation[1] === 'number') {
+					allActivations.push([activation[0], activation[1]]);
+				}
+			});
+		}
+	});
+
+	if (allActivations.length === 0) {
+		return null;
+	}
+
+	const binSize = 10;
+	const maxDistance = Math.ceil(courseDistance / binSize) * binSize;
+	const bins = [];
+	for (let i = 0; i < maxDistance; i += binSize) {
+		bins.push({start: i, end: i + binSize, maxBasinn: 0});
+	}
+
+	allActivations.forEach(([activationPos, basinn]) => {
+		if (basinn > 0) {
+			const binIndex = Math.floor(activationPos / binSize);
+			if (binIndex >= 0 && binIndex < bins.length) {
+				bins[binIndex].maxBasinn = Math.max(bins[binIndex].maxBasinn, basinn);
+			}
+		}
+	});
+
+	bins.forEach(bin => {
+		bin.value = bin.maxBasinn;
+	});
+
+	const maxValue = Math.max(...bins.map(b => b.value), 0);
+	if (maxValue === 0) {
+		return null;
+	}
+
+	const x = d3.scaleLinear().domain([0, maxDistance]).range([0, width - 40 - 5]);
+	const y = d3.scaleLinear().domain([0, maxValue]).range([height - 20 - 5, 0]);
+
+	const baseTicks = y.ticks(5);
+	const yTickValues = [...baseTicks];
+	const epsilon = 0.01;
+	if (!yTickValues.some(tick => Math.abs(tick - maxValue) < epsilon)) {
+		yTickValues.push(maxValue);
+		yTickValues.sort((a, b) => a - b);
+	}
+
+	const phase0End = CourseHelpers.phaseStart(courseDistance, 1);
+	const phase1End = CourseHelpers.phaseStart(courseDistance, 2);
+	const phase2End = CourseHelpers.phaseStart(courseDistance, 3);
+	
+	const phaseBackgrounds = [
+		{start: 0, end: phase0End, color: 'rgba(173, 216, 230, 0.3)'},
+		{start: phase0End, end: phase1End, color: 'rgba(144, 238, 144, 0.3)'},
+		{start: phase1End, end: courseDistance, color: 'rgba(255, 182, 193, 0.3)'}
+	];
+
+	return (
+		<BarChart
+			width={width}
+			height={height}
+			bins={bins}
+			xScale={x}
+			yScale={y}
+			phaseBackgrounds={phaseBackgrounds}
+			xAxisTicks={Math.min(6, Math.floor(maxDistance / 200))}
+			yAxisTicks={5}
+			yTickValues={yTickValues}
+			yAxisFormat={(d, i, ticks) => {
+				return `${d.toFixed(1)}L`;
+			}}
+			barColor="#2a77c5"
+		/>
+	);
+}
+
+function ActivationFrequencyChart(props) {
+	const {skillId, runData, courseDistance} = props;
+	const width = 300;
+	const height = 50;
+	const yW = 40;
+	const chartWidth = width - yW - 5;
+	const chartHeight = height - 20 - 5;
 
 	if (!skillId || !runData) {
 		return null;
 	}
 
 	const activations = [];
-	Object.values(runData).forEach((run: any) => {
-		if (run && run.sk && Array.isArray(run.sk)) {
-			run.sk.forEach((skMap: any) => {
-				if (!skMap) return;
-				
-				let positions = null;
-				if (skMap instanceof Map || (typeof skMap.has === 'function' && typeof skMap.get === 'function')) {
-					if (skMap.has(skillId)) {
-						positions = skMap.get(skillId);
-					}
-				} else if (typeof skMap === 'object') {
-					if (skillId in skMap) {
-						positions = skMap[skillId];
-					} else if (typeof skMap.entries === 'function') {
-						try {
-							const entries = Array.from(skMap.entries() as Iterable<[any, any]>);
-							for (const [id, posArray] of entries) {
-								if (id === skillId) {
-									positions = posArray;
-									break;
-								}
-							}
-						} catch (e) {
-							const entries = Array.from(skMap.entries() as Iterable<[any, any]>);
-							for (const [id, posArray] of entries) {
-								if (id === skillId) {
-									positions = posArray;
-									break;
-								}
-							}
-						}
-					} else {
-						const keys = Object.keys(skMap);
-						for (const key of keys) {
-							if (key === skillId) {
-								positions = skMap[key];
-								break;
-							}
-						}
-					}
-				}
-				
-				if (positions && Array.isArray(positions)) {
-					positions.forEach((pos: any) => {
-						if (Array.isArray(pos) && pos.length >= 1 && typeof pos[0] === 'number') {
-							activations.push(pos[0]);
-						}
-					});
+	if (!runData.allruns || !runData.allruns.sk || !Array.isArray(runData.allruns.sk)) {
+		return null;
+	}
+	
+	runData.allruns.sk.forEach((skMap: any) => {
+		if (!skMap) return;
+		let positions = null;
+		if (skMap instanceof Map || (typeof skMap.has === 'function' && typeof skMap.get === 'function')) {
+			if (skMap.has(skillId)) {
+				positions = skMap.get(skillId);
+			}
+		} else if (typeof skMap === 'object' && skillId in skMap) {
+			positions = skMap[skillId];
+		}
+		if (positions && Array.isArray(positions)) {
+			positions.forEach((pos: any) => {
+				if (typeof pos === 'number') {
+					activations.push(pos);
 				}
 			});
 		}
@@ -298,8 +464,6 @@ function ActivationFrequencyChart(props) {
 
 	const maxCount = Math.max(...bins.map(b => b.count));
 	const totalActivations = activations.length;
-	const x = d3.scaleLinear().domain([0, maxDistance]).range([0, chartWidth]);
-	const y = d3.scaleLinear().domain([0, maxCount > 0 ? maxCount : 1]).range([chartHeight, 0]);
 
 	const phase0End = CourseHelpers.phaseStart(courseDistance, 1);
 	const phase1End = CourseHelpers.phaseStart(courseDistance, 2);
@@ -311,78 +475,29 @@ function ActivationFrequencyChart(props) {
 		{start: phase1End, end: courseDistance, color: 'rgba(255, 182, 193, 0.3)'}
 	];
 
-	useEffect(function () {
-		const axesG = d3.select(axes.current);
-		axesG.selectAll('*').remove();
-		const xAxis = d3.axisBottom(x).ticks(Math.min(6, Math.floor(maxDistance / 200)));
-		const yAxis = d3.axisLeft(y).ticks(4).tickFormat(d => `${Math.round((d / totalActivations) * 100)}%`);
-		
-		const xAxisG = axesG.append('g').attr('transform', `translate(0,${chartHeight})`).call(xAxis);
-		const yAxisG = axesG.append('g').attr('transform', `translate(0,0)`).call(yAxis);
-		
-		const gridG = d3.select(gridLines.current);
-		gridG.selectAll('*').remove();
-		
-		x.ticks(Math.min(6, Math.floor(maxDistance / 200))).forEach(tickValue => {
-			gridG.append('line')
-				.attr('class', 'grid-line')
-				.attr('x1', x(tickValue))
-				.attr('x2', x(tickValue))
-				.attr('y1', 0)
-				.attr('y2', chartHeight)
-				.attr('stroke', 'rgba(128, 128, 128, 0.3)')
-				.attr('stroke-width', 0.5);
-		});
-		
-		y.ticks(4).forEach(tickValue => {
-			gridG.append('line')
-				.attr('class', 'grid-line')
-				.attr('x1', 0)
-				.attr('x2', chartWidth)
-				.attr('y1', y(tickValue))
-				.attr('y2', y(tickValue))
-				.attr('stroke', 'rgba(128, 128, 128, 0.3)')
-				.attr('stroke-width', 0.5);
-		});
-	}, [skillId, runData, courseDistance, maxDistance, totalActivations, chartHeight, chartWidth, x, y]);
-
-	const rects = bins.map((bin, i) => {
-		const barHeight = maxCount > 0 ? chartHeight - y(bin.count) : 0;
-		const binWidth = x(bin.end) - x(bin.start);
-		const barWidth = Math.max(3, binWidth * 1.5);
-		const barX = x(bin.start) + (binWidth - barWidth) / 2;
-		return (
-			<rect 
-				key={i} 
-				fill="#2a77c5" 
-				stroke="none" 
-				x={barX} 
-				y={y(bin.count)} 
-				width={barWidth} 
-				height={barHeight}
-			/>
-		);
-	});
+	const chartBins = bins.map(bin => ({...bin, value: bin.count}));
+	const xScale = d3.scaleLinear().domain([0, maxDistance]).range([0, chartWidth]);
+	const yScale = d3.scaleLinear().domain([0, maxCount > 0 ? maxCount : 1]).range([chartHeight, 0]);
 
 	return (
 		<div class="activationFrequencyChart">
-			<svg width={width} height={height} style="overflow: visible;">
-				<g transform={`translate(${yW},5)`}>
-					{phaseBackgrounds.map((phase, i) => (
-						<rect
-							key={i}
-							x={x(phase.start)}
-							y={0}
-							width={x(phase.end) - x(phase.start)}
-							height={chartHeight}
-							fill={phase.color}
-						/>
-					))}
-					<g ref={gridLines}></g>
-					{rects}
-					<g ref={axes}></g>
-				</g>
-			</svg>
+			<BarChart
+				width={width}
+				height={height}
+				bins={chartBins}
+				xScale={xScale}
+				yScale={yScale}
+				phaseBackgrounds={phaseBackgrounds}
+				xAxisTicks={Math.min(6, Math.floor(maxDistance / 200))}
+				yAxisTicks={2}
+				yAxisFormat={(d, i, ticks) => {
+					if (i === 0 || i === ticks.length - 1) {
+						return `${Math.round((d / totalActivations) * 100)}%`;
+					}
+					return '';
+				}}
+				barColor="#2a77c5"
+			/>
 		</div>
 	);
 }
@@ -906,6 +1021,7 @@ function App(props) {
 	const [seed, setSeed] = useState(DEFAULT_SEED);
 	const [runOnceCounter, setRunOnceCounter] = useState(0);
 	const [isSimulationRunning, setIsSimulationRunning] = useState(false);
+	const [simulationProgress, setSimulationProgress] = useState<{round: number, total: number} | null>(null);
 	const chartWorkersCompletedRef = useRef(0);
 	const [posKeepMode, setPosKeepModeRaw] = useState(PosKeepMode.Approximate);
 	const [showHp, toggleShowHp] = useReducer((b,_) => !b, false);
@@ -1042,7 +1158,7 @@ function App(props) {
 	const [worker1, worker2] = [1,2].map(_ => useMemo(() => {
 		const w = new Worker('./simulator.worker.js');
 		w.addEventListener('message', function (e) {
-			const {type, results} = e.data;
+			const {type, results, round, total} = e.data;
 			switch (type) {
 				case 'compare':
 					setResults(results);
@@ -1050,13 +1166,18 @@ function App(props) {
 				case 'chart':
 					updateTableData(results);
 					break;
+				case 'chart-progress':
+					setSimulationProgress({round, total});
+					break;
 				case 'compare-complete':
 					setIsSimulationRunning(false);
+					setSimulationProgress(null);
 					break;
 				case 'chart-complete':
 					chartWorkersCompletedRef.current += 1;
 					if (chartWorkersCompletedRef.current >= 2) {
 						setIsSimulationRunning(false);
+						setSimulationProgress(null);
 						chartWorkersCompletedRef.current = 0;
 					}
 					break;
@@ -1205,6 +1326,7 @@ function App(props) {
 	function doComparison() {
 		postEvent('doComparison', {});
 		setIsSimulationRunning(true);
+		setSimulationProgress(null);
 		worker1.postMessage({
 			msg: 'compare',
 			data: {
@@ -1283,6 +1405,7 @@ function App(props) {
 		postEvent('doBasinnChart', {});
 		chartWorkersCompletedRef.current = 0;
 		setIsSimulationRunning(true);
+		setSimulationProgress(null);
 		const params = racedefToParams(racedef, uma1.strategy);
 
 		let skills, uma;
@@ -1798,13 +1921,59 @@ function App(props) {
 						onDblClickRow={addSkillFromTable}
 						onInfoClick={showPopover}
 						courseDistance={course.distance}
-						expandedContent={(skillId, runData, courseDistance) => (
-							<ActivationFrequencyChart 
-								skillId={skillId} 
-								runData={runData} 
-								courseDistance={courseDistance}
-							/>
-						)} />
+						expandedContent={(skillId, runData, courseDistance) => {
+							let effectivenessRate = 0;
+							const totalCount = runData.allruns?.totalRuns || 0;
+							let skillProcs = 0;
+							if (runData.allruns && runData.allruns.skBasinn && Array.isArray(runData.allruns.skBasinn)) {
+								const allBasinnActivations: Array<[number, number]> = [];
+								runData.allruns.skBasinn.forEach((skBasinnMap: any) => {
+									if (!skBasinnMap) return;
+									let activations = null;
+									if (skBasinnMap instanceof Map || (typeof skBasinnMap.has === 'function' && typeof skBasinnMap.get === 'function')) {
+										if (skBasinnMap.has(skillId)) {
+											activations = skBasinnMap.get(skillId);
+										}
+									} else if (typeof skBasinnMap === 'object' && skillId in skBasinnMap) {
+										activations = skBasinnMap[skillId];
+									}
+									if (activations && Array.isArray(activations)) {
+										activations.forEach((activation: any) => {
+											if (Array.isArray(activation) && activation.length === 2 && 
+											    typeof activation[0] === 'number' && typeof activation[1] === 'number') {
+												allBasinnActivations.push([activation[0], activation[1]]);
+											}
+										});
+									}
+								});
+								skillProcs = allBasinnActivations.length;
+								const positiveCount = allBasinnActivations.filter(([_, basinn]) => basinn > 0).length;
+								effectivenessRate = totalCount > 0 ? (positiveCount / totalCount) * 100 : 0;
+							}
+							
+							return (
+								<div>
+									<div style={`margin-bottom: 8px; width: 300px;`}>
+										<div style={`font-size: 9px; margin-bottom: 2px;`}>Total samples: {totalCount} ({skillProcs} skill procs)</div>
+										<div style={`font-size: 9px; margin-bottom: 2px;`}>Effectiveness rate: {effectivenessRate.toFixed(1)}%</div>
+										<div style={`display: flex; width: 100%; height: 8px; border: 1px solid #ccc; overflow: hidden;`}>
+											<div style={`width: ${effectivenessRate}%; background-color: #4caf50; height: 100%;`}></div>
+											<div style={`width: ${100 - effectivenessRate}%; background-color: #f44336; height: 100%;`}></div>
+										</div>
+									</div>
+									<LengthDifferenceChart 
+										skillId={skillId} 
+										runData={runData} 
+										courseDistance={courseDistance}
+									/>
+									<ActivationFrequencyChart 
+										skillId={skillId} 
+										runData={runData} 
+										courseDistance={courseDistance}
+									/>
+								</div>
+							);
+						}} />
 				</div>
 			</div>
 		);
@@ -1819,13 +1988,59 @@ function App(props) {
 						onInfoClick={showPopover}
 						showUmaIcons={true}
 						courseDistance={course.distance}
-						expandedContent={(skillId, runData, courseDistance) => (
-							<ActivationFrequencyChart 
-								skillId={skillId} 
-								runData={runData} 
-								courseDistance={courseDistance}
-							/>
-						)} />
+						expandedContent={(skillId, runData, courseDistance) => {
+							let effectivenessRate = 0;
+							const totalCount = runData.allruns?.totalRuns || 0;
+							let skillProcs = 0;
+							if (runData.allruns && runData.allruns.skBasinn && Array.isArray(runData.allruns.skBasinn)) {
+								const allBasinnActivations: Array<[number, number]> = [];
+								runData.allruns.skBasinn.forEach((skBasinnMap: any) => {
+									if (!skBasinnMap) return;
+									let activations = null;
+									if (skBasinnMap instanceof Map || (typeof skBasinnMap.has === 'function' && typeof skBasinnMap.get === 'function')) {
+										if (skBasinnMap.has(skillId)) {
+											activations = skBasinnMap.get(skillId);
+										}
+									} else if (typeof skBasinnMap === 'object' && skillId in skBasinnMap) {
+										activations = skBasinnMap[skillId];
+									}
+									if (activations && Array.isArray(activations)) {
+										activations.forEach((activation: any) => {
+											if (Array.isArray(activation) && activation.length === 2 && 
+											    typeof activation[0] === 'number' && typeof activation[1] === 'number') {
+												allBasinnActivations.push([activation[0], activation[1]]);
+											}
+										});
+									}
+								});
+								skillProcs = allBasinnActivations.length;
+								const positiveCount = allBasinnActivations.filter(([_, basinn]) => basinn > 0).length;
+								effectivenessRate = totalCount > 0 ? (positiveCount / totalCount) * 100 : 0;
+							}
+							
+							return (
+								<div>
+									<div style={`margin-bottom: 8px; width: 300px;`}>
+										<div style={`font-size: 9px; margin-bottom: 2px;`}>Total samples: {totalCount} ({skillProcs} skill procs)</div>
+										<div style={`font-size: 9px; margin-bottom: 2px;`}>Effectiveness rate: {effectivenessRate.toFixed(1)}%</div>
+										<div style={`display: flex; width: 100%; height: 8px; border: 1px solid #ccc; overflow: hidden;`}>
+											<div style={`width: ${effectivenessRate}%; background-color: #4caf50; height: 100%;`}></div>
+											<div style={`width: ${100 - effectivenessRate}%; background-color: #f44336; height: 100%;`}></div>
+										</div>
+									</div>
+									<LengthDifferenceChart 
+										skillId={skillId} 
+										runData={runData} 
+										courseDistance={courseDistance}
+									/>
+									<ActivationFrequencyChart 
+										skillId={skillId} 
+										runData={runData} 
+										courseDistance={courseDistance}
+									/>
+								</div>
+							);
+						}} />
 				</div>
 			</div>
 		);
@@ -1875,7 +2090,9 @@ function App(props) {
 						{
 							mode == Mode.Compare
 							? <button id="run" onClick={doComparison} tabindex={1} disabled={isSimulationRunning}>COMPARE</button>
-							: <button id="run" onClick={doBasinnChart} tabindex={1} disabled={isSimulationRunning}>RUN</button>
+							: <button id="run" onClick={doBasinnChart} tabindex={1} disabled={isSimulationRunning}>
+								{simulationProgress ? `Run (${simulationProgress.round}/${simulationProgress.total})` : 'RUN'}
+							</button>
 						}
 						{
 							mode == Mode.Compare
