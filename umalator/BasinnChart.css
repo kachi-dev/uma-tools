@@ -63,8 +63,18 @@
 	transform: rotate(45deg);
 }
 
-.basinnChart tr.selected {
+.basinnChart tr.expanded {
 	background: rgb(121, 216, 35);
+}
+
+.basinnChart tr.expanded-content-row {
+	background: rgb(248, 248, 248);
+}
+
+.basinnChart tr.expanded-content-row td {
+	padding: 10px;
+	border-top: 2px solid rgb(181, 174, 187);
+	width: 100%;
 }
 
 .basinnChart td {

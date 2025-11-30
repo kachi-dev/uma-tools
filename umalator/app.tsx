@@ -5,7 +5,7 @@ import { Record, Set as ImmSet, Map as ImmMap } from 'immutable';
 import * as d3 from 'd3';
 import { computePosition, flip } from '@floating-ui/dom';
 
-import { CourseHelpers } from '../uma-skill-tools/CourseData';
+import { CourseHelpers, CourseData } from '../uma-skill-tools/CourseData';
 import { RaceParameters, Mood, GroundCondition, Weather, Season, Time, Grade } from '../uma-skill-tools/RaceParameters';
 import { PosKeepMode } from '../uma-skill-tools/RaceSolver';
 import type { GameHpPolicy } from '../uma-skill-tools/HpPolicy';
@@ -206,6 +206,184 @@ function Histogram(props) {
 			<g>{rects}</g>
 			<g ref={axes}></g>
 		</svg>
+	);
+}
+
+function ActivationFrequencyChart(props) {
+	const {skillId, runData, courseDistance} = props;
+	const axes = useRef(null);
+	const gridLines = useRef(null);
+	const width = 300;
+	const height = 100;
+	const xH = 20;
+	const yW = 40;
+	const chartWidth = width - yW - 5;
+	const chartHeight = height - xH - 5;
+
+	if (!skillId || !runData) {
+		return null;
+	}
+
+	const activations = [];
+	Object.values(runData).forEach((run: any) => {
+		if (run && run.sk && Array.isArray(run.sk)) {
+			run.sk.forEach((skMap: any) => {
+				if (!skMap) return;
+				
+				let positions = null;
+				if (skMap instanceof Map || (typeof skMap.has === 'function' && typeof skMap.get === 'function')) {
+					if (skMap.has(skillId)) {
+						positions = skMap.get(skillId);
+					}
+				} else if (typeof skMap === 'object') {
+					if (skillId in skMap) {
+						positions = skMap[skillId];
+					} else if (typeof skMap.entries === 'function') {
+						try {
+							const entries = Array.from(skMap.entries() as Iterable<[any, any]>);
+							for (const [id, posArray] of entries) {
+								if (id === skillId) {
+									positions = posArray;
+									break;
+								}
+							}
+						} catch (e) {
+							const entries = Array.from(skMap.entries() as Iterable<[any, any]>);
+							for (const [id, posArray] of entries) {
+								if (id === skillId) {
+									positions = posArray;
+									break;
+								}
+							}
+						}
+					} else {
+						const keys = Object.keys(skMap);
+						for (const key of keys) {
+							if (key === skillId) {
+								positions = skMap[key];
+								break;
+							}
+						}
+					}
+				}
+				
+				if (positions && Array.isArray(positions)) {
+					positions.forEach((pos: any) => {
+						if (Array.isArray(pos) && pos.length >= 1 && typeof pos[0] === 'number') {
+							activations.push(pos[0]);
+						}
+					});
+				}
+			});
+		}
+	});
+
+	if (activations.length === 0) {
+		return null;
+	}
+
+	const binSize = 10;
+	const maxDistance = Math.ceil(courseDistance / binSize) * binSize;
+	const bins = [];
+	for (let i = 0; i < maxDistance; i += binSize) {
+		bins.push({start: i, end: i + binSize, count: 0});
+	}
+
+	activations.forEach(pos => {
+		const binIndex = Math.floor(pos / binSize);
+		if (binIndex >= 0 && binIndex < bins.length) {
+			bins[binIndex].count++;
+		}
+	});
+
+	const maxCount = Math.max(...bins.map(b => b.count));
+	const totalActivations = activations.length;
+	const x = d3.scaleLinear().domain([0, maxDistance]).range([0, chartWidth]);
+	const y = d3.scaleLinear().domain([0, maxCount > 0 ? maxCount : 1]).range([chartHeight, 0]);
+
+	const phase0End = CourseHelpers.phaseStart(courseDistance, 1);
+	const phase1End = CourseHelpers.phaseStart(courseDistance, 2);
+	const phase2End = CourseHelpers.phaseStart(courseDistance, 3);
+	
+	const phaseBackgrounds = [
+		{start: 0, end: phase0End, color: 'rgba(173, 216, 230, 0.3)'},
+		{start: phase0End, end: phase1End, color: 'rgba(144, 238, 144, 0.3)'},
+		{start: phase1End, end: courseDistance, color: 'rgba(255, 182, 193, 0.3)'}
+	];
+
+	useEffect(function () {
+		const axesG = d3.select(axes.current);
+		axesG.selectAll('*').remove();
+		const xAxis = d3.axisBottom(x).ticks(Math.min(6, Math.floor(maxDistance / 200)));
+		const yAxis = d3.axisLeft(y).ticks(4).tickFormat(d => `${Math.round((d / totalActivations) * 100)}%`);
+		
+		const xAxisG = axesG.append('g').attr('transform', `translate(0,${chartHeight})`).call(xAxis);
+		const yAxisG = axesG.append('g').attr('transform', `translate(0,0)`).call(yAxis);
+		
+		const gridG = d3.select(gridLines.current);
+		gridG.selectAll('*').remove();
+		
+		x.ticks(Math.min(6, Math.floor(maxDistance / 200))).forEach(tickValue => {
+			gridG.append('line')
+				.attr('class', 'grid-line')
+				.attr('x1', x(tickValue))
+				.attr('x2', x(tickValue))
+				.attr('y1', 0)
+				.attr('y2', chartHeight)
+				.attr('stroke', 'rgba(128, 128, 128, 0.3)')
+				.attr('stroke-width', 0.5);
+		});
+		
+		y.ticks(4).forEach(tickValue => {
+			gridG.append('line')
+				.attr('class', 'grid-line')
+				.attr('x1', 0)
+				.attr('x2', chartWidth)
+				.attr('y1', y(tickValue))
+				.attr('y2', y(tickValue))
+				.attr('stroke', 'rgba(128, 128, 128, 0.3)')
+				.attr('stroke-width', 0.5);
+		});
+	}, [skillId, runData, courseDistance, maxDistance, totalActivations, chartHeight, chartWidth, x, y]);
+
+	const rects = bins.map((bin, i) => {
+		const barHeight = maxCount > 0 ? chartHeight - y(bin.count) : 0;
+		const binWidth = x(bin.end) - x(bin.start);
+		const barWidth = Math.max(3, binWidth * 1.5);
+		const barX = x(bin.start) + (binWidth - barWidth) / 2;
+		return (
+			<rect 
+				key={i} 
+				fill="#2a77c5" 
+				stroke="none" 
+				x={barX} 
+				y={y(bin.count)} 
+				width={barWidth} 
+				height={barHeight}
+			/>
+		);
+	});
+
+	return (
+		<div class="activationFrequencyChart">
+			<svg width={width} height={height} style="overflow: visible;">
+				<g transform={`translate(${yW},5)`}>
+					{phaseBackgrounds.map((phase, i) => (
+						<rect
+							key={i}
+							x={x(phase.start)}
+							y={0}
+							width={x(phase.end) - x(phase.start)}
+							height={chartHeight}
+							fill={phase.color}
+						/>
+					))}
+					<g ref={gridLines}></g>
+					{rects}
+					<g ref={axes}></g>
+				</g>
+			</svg>
+		</div>
 	);
 }
 
@@ -1167,9 +1345,16 @@ function App(props) {
 		});
 	}
 
+	const [selectedSkillId, setSelectedSkillId] = useState('');
+
 	function basinnChartSelection(skillId) {
 		const r = tableData.get(skillId);
-		if (r.runData != null) setResults(r);
+		if (r.runData != null) {
+			setResults(r);
+			setSelectedSkillId(skillId);
+		} else {
+			setSelectedSkillId('');
+		}
 	}
 
 	function addSkillFromTable(skillId) {
@@ -1611,7 +1796,15 @@ function App(props) {
 						onSelectionChange={basinnChartSelection}
 						onRunTypeChange={setChartData}
 						onDblClickRow={addSkillFromTable}
-						onInfoClick={showPopover} />
+						onInfoClick={showPopover}
+						courseDistance={course.distance}
+						expandedContent={(skillId, runData, courseDistance) => (
+							<ActivationFrequencyChart 
+								skillId={skillId} 
+								runData={runData} 
+								courseDistance={courseDistance}
+							/>
+						)} />
 				</div>
 			</div>
 		);
@@ -1624,7 +1817,15 @@ function App(props) {
 						onRunTypeChange={setChartData}
 						onDblClickRow={addSkillFromTable}
 						onInfoClick={showPopover}
-						showUmaIcons={true} />
+						showUmaIcons={true}
+						courseDistance={course.distance}
+						expandedContent={(skillId, runData, courseDistance) => (
+							<ActivationFrequencyChart 
+								skillId={skillId} 
+								runData={runData} 
+								courseDistance={courseDistance}
+							/>
+						)} />
 				</div>
 			</div>
 		);

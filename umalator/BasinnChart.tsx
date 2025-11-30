@@ -1,5 +1,5 @@
 import { h, Fragment } from 'preact';
-import { useState, useMemo, useId } from 'preact/hooks';
+import { useState, useMemo, useId, useRef } from 'preact/hooks';
 import { Text, Localizer } from 'preact-i18n';
 
 import {
@@ -111,12 +111,24 @@ function headerRenderer(radioGroup, selectedType, type, text, onClick) {
 
 export function BasinnChart(props) {
 	const radioGroup = useId();
-	const [selected, setSelected] = useState('');
+	const [expanded, setExpanded] = useState('');
 	const [selectedType, setSelectedType] = useState('mean');
+	const clickTimeoutRef = useRef(null);
+	const lastClickRef = useRef({id: '', time: 0});
 
 	function headerClick(type) {
 		setSelectedType(type);
 		props.onRunTypeChange(type + 'run');
+	}
+
+	function toggleExpand(skillId) {
+		if (expanded === skillId) {
+			setExpanded('');
+			props.onSelectionChange('');
+		} else {
+			setExpanded(skillId);
+			props.onSelectionChange(skillId);
+		}
 	}
 
 	const columns = useMemo(() => [{
@@ -164,17 +176,47 @@ export function BasinnChart(props) {
 		const id = tr.dataset.skillid;
 		if (e.target.tagName == 'IMG') {
 			props.onInfoClick(id);
-		} else {
-			setSelected(id);
-			props.onSelectionChange(id);
+			return;
 		}
+		
+		const now = Date.now();
+		const isDoubleClick = lastClickRef.current.id === id && (now - lastClickRef.current.time) < 300;
+		
+		if (clickTimeoutRef.current) {
+			clearTimeout(clickTimeoutRef.current);
+			clickTimeoutRef.current = null;
+			if (!isDoubleClick) {
+				toggleExpand(id);
+			}
+			return;
+		}
+		
+		lastClickRef.current = {id, time: now};
+		clickTimeoutRef.current = setTimeout(() => {
+			clickTimeoutRef.current = null;
+			if (lastClickRef.current.id === id && (Date.now() - lastClickRef.current.time) >= 300) {
+				toggleExpand(id);
+			}
+		}, 300);
 	}
 
 	function handleDblClick(e) {
+		if (clickTimeoutRef.current) {
+			clearTimeout(clickTimeoutRef.current);
+			clickTimeoutRef.current = null;
+		}
 		const tr = e.target.closest('tr');
 		if (tr == null) return;
 		e.stopPropagation();
+		e.preventDefault();
 		const id = tr.dataset.skillid;
+		if (e.target.tagName == 'IMG') {
+			return;
+		}
+		if (expanded === id) {
+			return;
+		}
+		lastClickRef.current = {id: '', time: 0};
 		props.onDblClickRow(id);
 	}
 
@@ -210,12 +252,23 @@ export function BasinnChart(props) {
 				<tbody onClick={handleClick} onDblClick={handleDblClick}>
 					{table.getRowModel().rows.map(row => {
 						const id = row.getValue('id');
+						const isExpanded = expanded === id;
+						const rowData = props.data.find(d => d.id === id);
 						return (
-							<tr key={row.id} data-skillid={id} class={id == selected && 'selected'} style={props.hidden.has(id) && 'display:none'}>
-								{row.getAllCells().map(cell => (
-									<td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-								))}
-							</tr>
+							<Fragment key={row.id}>
+								<tr data-skillid={id} class={isExpanded ? 'expanded' : ''} style={props.hidden.has(id) && 'display:none'}>
+									{row.getAllCells().map(cell => (
+										<td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+									))}
+								</tr>
+								{isExpanded && rowData && rowData.runData && props.expandedContent && (
+									<tr class="expanded-content-row" data-skillid={id}>
+										<td colSpan={row.getAllCells().length}>
+											{props.expandedContent(id, rowData.runData, props.courseDistance)}
+										</td>
+									</tr>
+								)}
+							</Fragment>
 						);
 					})}
 				</tbody>
