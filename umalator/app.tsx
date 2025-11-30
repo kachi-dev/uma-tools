@@ -561,12 +561,14 @@ function VelocityChart(props) {
 
 	const minTime = velocityData[0][0];
 	const maxTime = velocityData[velocityData.length - 1][0];
+	const minVelocity = Math.min(...velocityData.map(d => d[1]));
 	const maxVelocity = Math.max(...velocityData.map(d => d[1]));
 	
+	const yMin = Math.min(Y_MIN_VELOCITY, minVelocity);
 	const yMax = Math.max(Y_MIN_VELOCITY, maxVelocity);
 
 	const x = d3.scaleLinear().domain([minTime, maxTime]).range([0, chartWidth]);
-	const y = d3.scaleLinear().domain([Y_MIN_VELOCITY, yMax]).range([chartHeight, 0]);
+	const y = d3.scaleLinear().domain([yMin, yMax]).range([chartHeight, 0]);
 
 	const phaseBackgrounds = calculatePhaseBackgrounds(
 		courseDistance,
@@ -590,19 +592,22 @@ function VelocityChart(props) {
 		
 		const suggestedTicks = y.ticks(5);
 		const step = suggestedTicks.length > 1 ? suggestedTicks[1] - suggestedTicks[0] : 1;
-		const startTick = Math.floor(Y_MIN_VELOCITY / step) * step;
+		const startTick = Math.floor(yMin / step) * step;
 		
 		const yTickValues: number[] = [];
 		for (let v = startTick; v <= maxVelocity; v += step) {
-			if (v >= Y_MIN_VELOCITY) {
+			if (v >= yMin) {
 				yTickValues.push(v);
 			}
 		}
 		
+		if (!yTickValues.some(tick => Math.abs(tick - minVelocity) < TICK_EPSILON)) {
+			yTickValues.push(minVelocity);
+		}
 		if (!yTickValues.some(tick => Math.abs(tick - maxVelocity) < TICK_EPSILON)) {
 			yTickValues.push(maxVelocity);
-			yTickValues.sort((a, b) => a - b);
 		}
+		yTickValues.sort((a, b) => a - b);
 		
 		const xAxis = d3.axisBottom(x).ticks(5).tickFormat(d => `${d}s`);
 		const yAxis = d3.axisLeft(y).tickValues(yTickValues).tickFormat(d => `${Number(d).toFixed(1)}m/s`);
@@ -637,7 +642,7 @@ function VelocityChart(props) {
 				.attr('stroke', 'rgba(128, 128, 128, 0.3)')
 				.attr('stroke-width', 0.5);
 		});
-	}, [x, y, chartWidth, chartHeight, maxVelocity]);
+	}, [x, y, chartWidth, chartHeight, minVelocity, maxVelocity, yMin, yMax]);
 
 	return (
 		<div class="velocityChart" style={`width: ${width}px; height: ${height}px;`}>
