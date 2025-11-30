@@ -408,6 +408,279 @@ function LengthDifferenceChart(props) {
 	);
 }
 
+function getSkillPositionsFromRun(skillId: string, selectedRun: any): {positions: Array<[number, number]>, umaIndex: number} | null {
+	if (!selectedRun?.sk) return null;
+	
+	for (let i = 0; i < selectedRun.sk.length; i++) {
+		const skMap = selectedRun.sk[i];
+		if (!skMap) continue;
+		
+		let positions = null;
+		if (skMap instanceof Map || (typeof skMap.has === 'function' && typeof skMap.get === 'function')) {
+			if (skMap.has(skillId)) {
+				positions = skMap.get(skillId);
+			}
+		} else if (typeof skMap === 'object' && skillId in skMap) {
+			positions = skMap[skillId];
+		}
+		
+		if (positions && Array.isArray(positions) && positions.length > 0) {
+			return {positions, umaIndex: i};
+		}
+	}
+	return null;
+}
+
+function interpolateValue(
+	value: number,
+	valueArray: number[],
+	resultArray: number[]
+): number {
+	if (valueArray.length === 0 || resultArray.length === 0) return resultArray[0] || 0;
+	if (value <= valueArray[0]) return resultArray[0];
+	if (value >= valueArray[valueArray.length - 1]) return resultArray[resultArray.length - 1];
+	
+	for (let i = 0; i < valueArray.length - 1; i++) {
+		if (valueArray[i] <= value && value <= valueArray[i + 1]) {
+			const v1 = valueArray[i];
+			const v2 = valueArray[i + 1];
+			const r1 = resultArray[i];
+			const r2 = resultArray[i + 1];
+			if (v2 === v1) return r1;
+			return r1 + (r2 - r1) * (value - v1) / (v2 - v1);
+		}
+	}
+	return resultArray[resultArray.length - 1];
+}
+
+function calculatePhaseBackgrounds(
+	courseDistance: number,
+	positionData: Array<[number, number]>,
+	minTime: number,
+	maxTime: number
+): Array<{start: number, end: number, color: string}> {
+	if (!courseDistance || positionData.length === 0) return [];
+	
+	const phaseEndDistances = [
+		CourseHelpers.phaseStart(courseDistance, 1),
+		CourseHelpers.phaseStart(courseDistance, 2),
+		CourseHelpers.phaseStart(courseDistance, 3)
+	];
+	
+	const positions = positionData.map(([_, pos]) => pos);
+	const times = positionData.map(([time, _]) => time);
+	
+	const phaseEndTimes = phaseEndDistances.map(dist => 
+		interpolateValue(dist, positions, times)
+	);
+	
+	const phaseColors = [
+		'rgba(173, 216, 230, 0.3)',
+		'rgba(144, 238, 144, 0.3)',
+		'rgba(255, 182, 193, 0.3)',
+		'rgba(255, 182, 193, 0.3)'
+	];
+	
+	const backgrounds: Array<{start: number, end: number, color: string}> = [];
+	const phaseStarts = [Math.max(minTime, 0), ...phaseEndTimes];
+	const phaseEnds = [...phaseEndTimes, maxTime];
+	
+	for (let i = 0; i < phaseStarts.length; i++) {
+		const start = Math.max(minTime, phaseStarts[i]);
+		const end = Math.min(maxTime, phaseEnds[i]);
+		if (end > start) {
+			backgrounds.push({
+				start,
+				end,
+				color: phaseColors[i]
+			});
+		}
+	}
+	
+	return backgrounds;
+}
+
+function VelocityChart(props) {
+	const {skillId, runData, courseDistance, displaying} = props;
+	const width = 400;
+	const height = 200;
+	const margin = {top: 5, right: 5, bottom: 20, left: 40};
+	const chartWidth = width - margin.left - margin.right;
+	const chartHeight = height - margin.top - margin.bottom;
+	const axes = useRef(null);
+	const gridLines = useRef(null);
+	
+	const TIME_WINDOW_PADDING = 10;
+	const Y_MIN_VELOCITY = 18;
+	const TICK_EPSILON = 0.01;
+
+	if (!skillId || !runData || !displaying) {
+		return null;
+	}
+
+	const selectedRun = runData[displaying];
+	if (!selectedRun?.t || !selectedRun?.v || !selectedRun?.p || !selectedRun?.sk) {
+		return null;
+	}
+
+	const skillData = getSkillPositionsFromRun(skillId, selectedRun);
+	if (!skillData || skillData.positions.length === 0) {
+		return null;
+	}
+
+	const {positions: skillPositions, umaIndex} = skillData;
+	const times = selectedRun.t[umaIndex];
+	const velocities = selectedRun.v[umaIndex];
+	const positions = selectedRun.p[umaIndex];
+
+	if (!times || !velocities || !positions || times.length === 0) {
+		return null;
+	}
+
+	const [startPos, endPos] = skillPositions[0];
+	const startTime = interpolateValue(startPos, positions, times);
+	const endTime = interpolateValue(endPos, positions, times);
+
+	const timeWindowStart = Math.max(0, startTime - TIME_WINDOW_PADDING);
+	const timeWindowEnd = endTime + TIME_WINDOW_PADDING;
+
+	const velocityData: Array<[number, number]> = [];
+	const positionData: Array<[number, number]> = [];
+	
+	for (let i = 0; i < times.length; i++) {
+		const t = times[i];
+		if (t >= timeWindowStart && t <= timeWindowEnd) {
+			velocityData.push([t, velocities[i]]);
+			positionData.push([t, positions[i]]);
+		}
+	}
+
+	if (velocityData.length === 0) {
+		return null;
+	}
+
+	const minTime = velocityData[0][0];
+	const maxTime = velocityData[velocityData.length - 1][0];
+	const maxVelocity = Math.max(...velocityData.map(d => d[1]));
+	
+	const yMax = Math.max(Y_MIN_VELOCITY, maxVelocity);
+
+	const x = d3.scaleLinear().domain([minTime, maxTime]).range([0, chartWidth]);
+	const y = d3.scaleLinear().domain([Y_MIN_VELOCITY, yMax]).range([chartHeight, 0]);
+
+	const phaseBackgrounds = calculatePhaseBackgrounds(
+		courseDistance,
+		positionData,
+		minTime,
+		maxTime
+	);
+
+	const line = d3.line<[number, number]>()
+		.x(d => x(d[0]))
+		.y(d => y(d[1]))
+		.curve(d3.curveMonotoneX);
+
+	const pathData = line(velocityData);
+
+	useEffect(function() {
+		if (!axes.current || !gridLines.current) return;
+		
+		const axesG = d3.select(axes.current);
+		axesG.selectAll('*').remove();
+		
+		const suggestedTicks = y.ticks(5);
+		const step = suggestedTicks.length > 1 ? suggestedTicks[1] - suggestedTicks[0] : 1;
+		const startTick = Math.floor(Y_MIN_VELOCITY / step) * step;
+		
+		const yTickValues: number[] = [];
+		for (let v = startTick; v <= maxVelocity; v += step) {
+			if (v >= Y_MIN_VELOCITY) {
+				yTickValues.push(v);
+			}
+		}
+		
+		if (!yTickValues.some(tick => Math.abs(tick - maxVelocity) < TICK_EPSILON)) {
+			yTickValues.push(maxVelocity);
+			yTickValues.sort((a, b) => a - b);
+		}
+		
+		const xAxis = d3.axisBottom(x).ticks(5).tickFormat(d => `${d}s`);
+		const yAxis = d3.axisLeft(y).tickValues(yTickValues).tickFormat(d => `${Number(d).toFixed(1)}m/s`);
+		
+		axesG.append('g')
+			.attr('transform', `translate(0,${chartHeight})`)
+			.call(xAxis);
+		axesG.append('g')
+			.call(yAxis);
+		
+		const gridG = d3.select(gridLines.current);
+		gridG.selectAll('*').remove();
+		
+		yTickValues.forEach((tickValue) => {
+			gridG.append('line')
+				.attr('class', 'grid-line')
+				.attr('x1', 0)
+				.attr('x2', chartWidth)
+				.attr('y1', y(tickValue))
+				.attr('y2', y(tickValue))
+				.attr('stroke', 'rgba(128, 128, 128, 0.3)')
+				.attr('stroke-width', 0.5);
+		});
+		
+		x.ticks(5).forEach(tickValue => {
+			gridG.append('line')
+				.attr('class', 'grid-line')
+				.attr('x1', x(tickValue))
+				.attr('x2', x(tickValue))
+				.attr('y1', 0)
+				.attr('y2', chartHeight)
+				.attr('stroke', 'rgba(128, 128, 128, 0.3)')
+				.attr('stroke-width', 0.5);
+		});
+	}, [x, y, chartWidth, chartHeight, maxVelocity]);
+
+	return (
+		<div class="velocityChart" style={`width: ${width}px; height: ${height}px;`}>
+			<svg width={width} height={height} style="overflow: visible;">
+				<g transform={`translate(${margin.left},${margin.top})`}>
+					{phaseBackgrounds.map((phase, i) => (
+						<rect
+							key={`phase-${i}`}
+							x={x(phase.start)}
+							y={0}
+							width={x(phase.end) - x(phase.start)}
+							height={chartHeight}
+							fill={phase.color}
+						/>
+					))}
+					<g ref={gridLines}></g>
+					<g ref={axes}></g>
+					{pathData && (
+						<path
+							d={pathData}
+							fill="none"
+							stroke="#2a77c5"
+							stroke-width="2"
+						/>
+					)}
+					{velocityData.map((d, i) => {
+						const isActive = d[0] >= startTime && d[0] <= endTime;
+						return (
+							<circle
+								key={i}
+								cx={x(d[0])}
+								cy={y(d[1])}
+								r={1.5}
+								fill={isActive ? '#ff69b4' : '#2a77c5'}
+							/>
+						);
+					})}
+				</g>
+			</svg>
+		</div>
+	);
+}
+
 function ActivationFrequencyChart(props) {
 	const {skillId, runData, courseDistance} = props;
 	const width = 300;
@@ -1922,6 +2195,7 @@ function App(props) {
 						onInfoClick={showPopover}
 						courseDistance={course.distance}
 						expandedContent={(skillId, runData, courseDistance) => {
+							const currentDisplaying = displaying || 'meanrun';
 							let effectivenessRate = 0;
 							const totalCount = runData.allruns?.totalRuns || 0;
 							let skillProcs = 0;
@@ -1961,16 +2235,26 @@ function App(props) {
 											<div style={`width: ${100 - effectivenessRate}%; background-color: #f44336; height: 100%;`}></div>
 										</div>
 									</div>
-									<LengthDifferenceChart 
-										skillId={skillId} 
-										runData={runData} 
-										courseDistance={courseDistance}
-									/>
-									<ActivationFrequencyChart 
-										skillId={skillId} 
-										runData={runData} 
-										courseDistance={courseDistance}
-									/>
+									<div style={`display: flex; gap: 20px; align-items: flex-start;`}>
+										<div>
+											<LengthDifferenceChart 
+												skillId={skillId} 
+												runData={runData} 
+												courseDistance={courseDistance}
+											/>
+											<ActivationFrequencyChart 
+												skillId={skillId} 
+												runData={runData} 
+												courseDistance={courseDistance}
+											/>
+										</div>
+										<VelocityChart 
+											skillId={skillId} 
+											runData={runData}
+											courseDistance={courseDistance}
+											displaying={currentDisplaying}
+										/>
+									</div>
 								</div>
 							);
 						}} />
@@ -1989,6 +2273,7 @@ function App(props) {
 						showUmaIcons={true}
 						courseDistance={course.distance}
 						expandedContent={(skillId, runData, courseDistance) => {
+							const currentDisplaying = displaying || 'meanrun';
 							let effectivenessRate = 0;
 							const totalCount = runData.allruns?.totalRuns || 0;
 							let skillProcs = 0;
@@ -2028,16 +2313,26 @@ function App(props) {
 											<div style={`width: ${100 - effectivenessRate}%; background-color: #f44336; height: 100%;`}></div>
 										</div>
 									</div>
-									<LengthDifferenceChart 
-										skillId={skillId} 
-										runData={runData} 
-										courseDistance={courseDistance}
-									/>
-									<ActivationFrequencyChart 
-										skillId={skillId} 
-										runData={runData} 
-										courseDistance={courseDistance}
-									/>
+									<div style={`display: flex; gap: 20px; align-items: flex-start;`}>
+										<div>
+											<LengthDifferenceChart 
+												skillId={skillId} 
+												runData={runData} 
+												courseDistance={courseDistance}
+											/>
+											<ActivationFrequencyChart 
+												skillId={skillId} 
+												runData={runData} 
+												courseDistance={courseDistance}
+											/>
+										</div>
+										<VelocityChart 
+											skillId={skillId} 
+											runData={runData}
+											courseDistance={courseDistance}
+											displaying={currentDisplaying}
+										/>
+									</div>
 								</div>
 							);
 						}} />
