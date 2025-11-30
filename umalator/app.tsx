@@ -1866,6 +1866,15 @@ function App(props) {
 		return () => document.removeEventListener('click', handleClickOutside);
 	}, [isPacemakerDropdownOpen]);
 
+	useEffect(function () {
+		if (selectedSkillId && tableData.has(selectedSkillId)) {
+			const r = tableData.get(selectedSkillId);
+			if (r && r.runData != null) {
+				setResults(r);
+			}
+		}
+	}, [tableData, selectedSkillId]);
+
 	function rtMouseMove(pos) {
 		if (chartData == null) return;
 		document.getElementById('rtMouseOverBox').style.display = 'block';
