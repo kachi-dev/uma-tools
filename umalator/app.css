@@ -471,6 +471,7 @@ body {
 
 #infoTables {
 	margin: 0 auto;
+	padding-right: 165px;
 	min-width: 150px;
 }
 
@@ -482,9 +483,8 @@ body {
 #infoTables tbody {
 	border-bottom: 1px solid rgb(121, 64, 22);
 	display: block;
-	table-layout: fixed;
-	padding-top: 20px;
-	padding-right: 600px;
+	width: 360px;
+	padding-top: 10px;
 }
 
 #infoTables tbody:last-child {
@@ -497,24 +497,12 @@ body {
 /* cant have normal margins on table elements for some reason */
 #infoTables tbody::before, #infoTables tbody::after {
 	content: '';
-	padding-left: 550px;
-	
-	padding-bottom: 30px;
 	display: block;
 	height: 5px;
 }
-/* 
-	fuck you css bitches you guys fucking suck at your job idgaf you guys should never be working in a company
-	if I ever see one of your names in the credits of a different website, I will deliberately click off that website.
-
-	people who worked on this og umalator never used canva in their life. Fake ass mofos. I swear to god.
-
-	also to those og umalator devs ur css coding sucks and has no flexibility. Fucking retire holy shit.
-*/
 
 #infoTables caption{
-	padding-top: 20px;
-	padding-right: 600px;
+	padding-right: 50px;
 	padding-bottom: 5px;
 	font-weight: bold;
 	
