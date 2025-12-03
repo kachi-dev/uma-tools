@@ -1139,6 +1139,69 @@ async function saveToLocalStorage(courseId: number, nsamples: number, seed: numb
 	}
 }
 
+function mergeSkillMaps(map1, map2) {
+	const obj1 = map1 instanceof Map ? Object.fromEntries(map1) : (map1 || {});
+	const obj2 = map2 instanceof Map ? Object.fromEntries(map2) : (map2 || {});
+	const merged = { ...obj1 };
+	Object.entries(obj2).forEach(([skillId, values]: [string, any]) => {
+		merged[skillId] = [...(merged[skillId] || []), ...(values || [])];
+	});
+	return merged;
+}
+
+function mergeResults(results1, results2) {
+	console.assert(results1.id == results2.id, `mergeResults: ${results1.id} != ${results2.id}`);
+	const n1 = results1.results.length, n2 = results2.results.length;
+	const combinedResults = results1.results.concat(results2.results).sort((a,b) => a - b);
+	const combinedMean = (results1.mean * n1 + results2.mean * n2) / (n1 + n2);
+	const mid = Math.floor(combinedResults.length / 2);
+	const newMedian = combinedResults.length % 2 == 0 ? (combinedResults[mid-1] + combinedResults[mid]) / 2 : combinedResults[mid];
+	
+	const allruns1 = results1.runData?.allruns || {};
+	const allruns2 = results2.runData?.allruns || {};
+	const {skBasinn: skBasinn1, sk: sk1, totalRuns: totalRuns1, ...rest1} = allruns1;
+	const {skBasinn: skBasinn2, sk: sk2, totalRuns: totalRuns2, ...rest2} = allruns2;
+	
+	const mergedAllRuns: any = {
+		...rest1,
+		...rest2,
+		totalRuns: (totalRuns1 || 0) + (totalRuns2 || 0)
+	};
+	
+	if (skBasinn1 && skBasinn2) {
+		mergedAllRuns.skBasinn = [
+			mergeSkillMaps(skBasinn1[0] || {}, skBasinn2[0] || {}),
+			mergeSkillMaps(skBasinn1[1] || {}, skBasinn2[1] || {})
+		];
+	} else if (skBasinn1 || skBasinn2) {
+		mergedAllRuns.skBasinn = skBasinn1 || skBasinn2;
+	}
+	
+	if (sk1 && sk2) {
+		mergedAllRuns.sk = [
+			mergeSkillMaps(sk1[0] || {}, sk2[0] || {}),
+			mergeSkillMaps(sk1[1] || {}, sk2[1] || {})
+		];
+	} else if (sk1 || sk2) {
+		mergedAllRuns.sk = sk1 || sk2;
+	}
+	
+	return {
+		id: results1.id,
+		results: combinedResults,
+		min: Math.min(results1.min, results2.min),
+		max: Math.max(results1.max, results2.max),
+		mean: combinedMean,
+		median: newMedian,
+		runData: {
+			...(n2 > n1 ? results2.runData : results1.runData),
+			allruns: mergedAllRuns,
+			minrun: results1.min < results2.min ? results1.runData.minrun : results2.runData.minrun,
+			maxrun: results1.max > results2.max ? results1.runData.maxrun : results2.runData.maxrun,
+		}
+	};
+}
+
 async function loadFromLocalStorage() {
 	try {
 		const hash = localStorage.getItem('umalator-settings');
@@ -1494,6 +1557,11 @@ function App(props) {
 		newData.forEach((v,k) => merged.set(k,v));
 		return merged;
 	}, new Map());
+	const tableDataRef = useRef(tableData);
+	const selectedSkillIdRef = useRef('');
+	useEffect(() => {
+		tableDataRef.current = tableData;
+	}, [tableData]);
 
 	const [popoverSkill, setPopoverSkill] = useState('');
 
@@ -1514,10 +1582,13 @@ function App(props) {
 		updateUiState(UiStateMsg.ToggleExpand);
 	}
 
-	const [worker1, worker2] = [1,2].map(_ => useMemo(() => {
+	const [loadingAdditionalSamples, setLoadingAdditionalSamples] = useState<Set<string>>(new Set());
+	const [additionalSamplesRunCount, setAdditionalSamplesRunCount] = useState<Map<string, number>>(new Map());
+
+	const [worker1, worker2, worker3, worker4] = [1,2,3,4].map(_ => useMemo(() => {
 		const w = new Worker('./simulator.worker.js');
 		w.addEventListener('message', function (e) {
-			const {type, results, round, total} = e.data;
+			const {type, results, round, total, skillId, result} = e.data;
 			switch (type) {
 				case 'compare':
 					setResults(results);
@@ -1534,11 +1605,30 @@ function App(props) {
 					break;
 				case 'chart-complete':
 					chartWorkersCompletedRef.current += 1;
-					if (chartWorkersCompletedRef.current >= 2) {
+					if (chartWorkersCompletedRef.current >= 4) {
 						setIsSimulationRunning(false);
 						setSimulationProgress(null);
 						chartWorkersCompletedRef.current = 0;
 					}
+					break;
+				case 'additional-samples':
+					if (skillId && result) {
+						const existingResult = tableDataRef.current.get(skillId);
+						if (existingResult) {
+							const merged = mergeResults(existingResult, result);
+							const updatedMap = new Map(tableDataRef.current);
+							updatedMap.set(skillId, merged);
+							updateTableData(updatedMap);
+							if (selectedSkillIdRef.current === skillId) {
+								setResults(merged);
+							}
+						}
+					}
+					setLoadingAdditionalSamples(prev => {
+						const next = new Set(prev);
+						next.delete(skillId);
+						return next;
+					});
 					break;
 			}
 		});
@@ -1780,54 +1870,59 @@ function App(props) {
 		
 		const filler = new Map();
 		skills.forEach(id => filler.set(id, getNullRow(id)));
-		const skills1 = skills.slice(0,Math.floor(skills.length/2));
-		const skills2 = skills.slice(Math.floor(skills.length/2));
+		const quarter = Math.floor(skills.length/4);
+		const skills1 = skills.slice(0, quarter);
+		const skills2 = skills.slice(quarter, quarter * 2);
+		const skills3 = skills.slice(quarter * 2, quarter * 3);
+		const skills4 = skills.slice(quarter * 3);
 		updateTableData('reset');
 		updateTableData(filler);
+		setAdditionalSamplesRunCount(new Map());
+		const chartOptions = {
+			seed, 
+			posKeepMode: PosKeepMode.Approximate, 
+			allowRushedUma1: false,
+			allowRushedUma2: false,
+			allowDownhillUma1: false,
+			allowDownhillUma2: false,
+			allowSectionModifierUma1: false,
+			allowSectionModifierUma2: false,
+			useEnhancedSpurt: false,
+			accuracyMode: false,
+			skillCheckChanceUma1: false,
+			skillCheckChanceUma2: false,
+			pacemakerCount: 1
+		};
 		worker1.postMessage({
 			msg: 'chart', 
 			data: {
-				skills: skills1, course, racedef: params, uma, pacer: pacer.toJS(), options: {
-					seed, 
-					posKeepMode: PosKeepMode.Approximate, 
-					allowRushedUma1: false,
-					allowRushedUma2: false,
-					allowDownhillUma1: false,
-					allowDownhillUma2: false,
-					allowSectionModifierUma1: false,
-					allowSectionModifierUma2: false,
-					useEnhancedSpurt: false,
-					accuracyMode: false,
-					skillCheckChanceUma1: false,
-					skillCheckChanceUma2: false,
-					pacemakerCount: 1
-				}
+				skills: skills1, course, racedef: params, uma, pacer: pacer.toJS(), options: chartOptions
 			}
 		});
 		worker2.postMessage({
 			msg: 'chart', 
 			data: {
-				skills: skills2, course, racedef: params, uma, pacer: pacer.toJS(), 
-				options: {
-					seed, 
-					posKeepMode: PosKeepMode.Approximate, 
-					allowRushedUma1: false,
-					allowRushedUma2: false,
-					allowDownhillUma1: false,
-					allowDownhillUma2: false,
-					allowSectionModifierUma1: false,
-					allowSectionModifierUma2: false,
-					useEnhancedSpurt: false,
-					accuracyMode: false,
-					skillCheckChanceUma1: false,
-					skillCheckChanceUma2: false,
-					pacemakerCount: 1
-				}
+				skills: skills2, course, racedef: params, uma, pacer: pacer.toJS(), options: chartOptions
+			}
+		});
+		worker3.postMessage({
+			msg: 'chart', 
+			data: {
+				skills: skills3, course, racedef: params, uma, pacer: pacer.toJS(), options: chartOptions
+			}
+		});
+		worker4.postMessage({
+			msg: 'chart', 
+			data: {
+				skills: skills4, course, racedef: params, uma, pacer: pacer.toJS(), options: chartOptions
 			}
 		});
 	}
 
 	const [selectedSkillId, setSelectedSkillId] = useState('');
+	useEffect(() => {
+		selectedSkillIdRef.current = selectedSkillId;
+	}, [selectedSkillId]);
 
 	function basinnChartSelection(skillId) {
 		const r = tableData.get(skillId);
@@ -1837,6 +1932,56 @@ function App(props) {
 		} else {
 			setSelectedSkillId('');
 		}
+	}
+
+	function runAdditionalSamplesForSkill(skillId: string) {
+		if (loadingAdditionalSamples.has(skillId) || isSimulationRunning) return;
+		
+		setLoadingAdditionalSamples(prev => new Set(prev).add(skillId));
+		
+		const currentRunCount = additionalSamplesRunCount.get(skillId) || 0;
+		const effectiveSeed = seed + currentRunCount + 1;
+		setAdditionalSamplesRunCount(prev => {
+			const next = new Map(prev);
+			next.set(skillId, currentRunCount + 1);
+			return next;
+		});
+		
+		const params = racedefToParams(racedef, uma1.strategy);
+		let uma;
+		if (mode === Mode.UniquesChart) {
+			const umaWithoutUniques = removeUniqueSkills(uma1);
+			uma = umaWithoutUniques.toJS();
+		} else {
+			uma = uma1.toJS();
+		}
+		
+		worker1.postMessage({
+			msg: 'additional-samples',
+			data: {
+				skillId,
+				nsamples: 1000,
+				course,
+				racedef: params,
+				uma,
+				pacer: pacer.toJS(),
+				options: {
+					seed: effectiveSeed,
+					posKeepMode: PosKeepMode.Approximate,
+					allowRushedUma1: false,
+					allowRushedUma2: false,
+					allowDownhillUma1: false,
+					allowDownhillUma2: false,
+					allowSectionModifierUma1: false,
+					allowSectionModifierUma2: false,
+					useEnhancedSpurt: false,
+					accuracyMode: false,
+					skillCheckChanceUma1: false,
+					skillCheckChanceUma2: false,
+					pacemakerCount: 1
+				}
+			}
+		});
 	}
 
 	function addSkillFromTable(skillId) {
@@ -2326,7 +2471,16 @@ function App(props) {
 							return (
 								<div style="position: relative;">
 									<div style={`margin-bottom: 8px; width: 300px;`}>
-										<div style={`font-size: 9px; margin-bottom: 2px;`}>Total samples: {totalCount} ({skillProcs} skill procs)</div>
+										<div style={`font-size: 9px; margin-bottom: 2px; display: flex; align-items: center; gap: 8px;`}>
+											<span>Total samples: {totalCount} ({skillProcs} skill procs)</span>
+											<button 
+												class="runAdditionalSamples"
+												onClick={(e) => { e.stopPropagation(); runAdditionalSamplesForSkill(skillId); }}
+												disabled={loadingAdditionalSamples.has(skillId) || isSimulationRunning}
+											>
+												{loadingAdditionalSamples.has(skillId) ? 'Running...' : isSimulationRunning ? 'Simulation Running...' : 'Run Additional Samples'}
+											</button>
+										</div>
 										<div style={`font-size: 9px; margin-bottom: 2px;`}>Effectiveness rate: {effectivenessRate.toFixed(1)}%</div>
 										<div style={`display: flex; width: 100%; height: 8px; border: 1px solid #ccc; overflow: hidden;`}>
 											<div style={`width: ${effectivenessRate}%; background-color: #4caf50; height: 100%;`}></div>
@@ -2407,7 +2561,16 @@ function App(props) {
 							return (
 								<div style="position: relative;">
 									<div style={`margin-bottom: 8px; width: 300px;`}>
-										<div style={`font-size: 9px; margin-bottom: 2px;`}>Total samples: {totalCount} ({skillProcs} skill procs)</div>
+										<div style={`font-size: 9px; margin-bottom: 2px; display: flex; align-items: center; gap: 8px;`}>
+											<span>Total samples: {totalCount} ({skillProcs} skill procs)</span>
+											<button 
+												class="runAdditionalSamples"
+												onClick={(e) => { e.stopPropagation(); runAdditionalSamplesForSkill(skillId); }}
+												disabled={loadingAdditionalSamples.has(skillId) || isSimulationRunning}
+											>
+												{loadingAdditionalSamples.has(skillId) ? 'Running...' : isSimulationRunning ? 'Simulation Running...' : 'Run Additional Samples'}
+											</button>
+										</div>
 										<div style={`font-size: 9px; margin-bottom: 2px;`}>Effectiveness rate: {effectivenessRate.toFixed(1)}%</div>
 										<div style={`display: flex; width: 100%; height: 8px; border: 1px solid #ccc; overflow: hidden;`}>
 											<div style={`width: ${effectivenessRate}%; background-color: #4caf50; height: 100%;`}></div>
@@ -2460,7 +2623,7 @@ function App(props) {
 			<IntlProvider definition={strings}>
 				<div id="topPane" class={chartData ? 'hasResults' : ''}>
 					<RaceTrack courseid={courseId} width={960} height={240} xOffset={20} yOffset={15} yExtra={20} mouseMove={rtMouseMove} mouseLeave={rtMouseLeave} onSkillDrag={handleSkillDrag} regions={[...skillActivations, ...rushedIndicators]} posKeepLabels={posKeepLabels} uma1={uma1} uma2={uma2} pacer={pacer}>
-						<VelocityLines data={chartData} courseDistance={course.distance} width={960} height={250} xOffset={20} showHp={showHp} showLanes={showLanes} horseLane={course.horseLane} showVirtualPacemaker={showVirtualPacemakerOnGraph && posKeepMode === PosKeepMode.Virtual} selectedPacemakers={getSelectedPacemakers()} />
+						<VelocityLines data={chartData} courseDistance={course.distance} width={960} height={250} xOffset={20} showHp={showHp} showLanes={mode == Mode.Compare ? showLanes : false} horseLane={course.horseLane} showVirtualPacemaker={showVirtualPacemakerOnGraph && posKeepMode === PosKeepMode.Virtual} selectedPacemakers={getSelectedPacemakers()} />
 						
 						<g id="rtMouseOverBox" style="display:none">
 							<text id="rtV1" x="25" y="10" fill="#2a77c5" font-size="10px"></text>
@@ -2488,14 +2651,14 @@ function App(props) {
 						</fieldset>
 						{
 							mode == Mode.Compare
-							? <button id="run" onClick={doComparison} tabindex={1} disabled={isSimulationRunning}>COMPARE</button>
-							: <button id="run" onClick={doBasinnChart} tabindex={1} disabled={isSimulationRunning}>
+							? <button id="run" onClick={doComparison} tabindex={1} disabled={isSimulationRunning || loadingAdditionalSamples.size > 0}>COMPARE</button>
+							: <button id="run" onClick={doBasinnChart} tabindex={1} disabled={isSimulationRunning || loadingAdditionalSamples.size > 0}>
 								{simulationProgress ? `Run (${simulationProgress.round}/${simulationProgress.total})` : 'RUN'}
 							</button>
 						}
 						{
 							mode == Mode.Compare
-							? <button id="runOnce" onClick={doRunOnce} tabindex={1} disabled={isSimulationRunning}>Run Once</button>
+							? <button id="runOnce" onClick={doRunOnce} tabindex={1} disabled={isSimulationRunning || loadingAdditionalSamples.size > 0}>Run Once</button>
 							: null
 						}
 						<label for="nsamples">Samples:</label>
@@ -2574,10 +2737,12 @@ function App(props) {
 							<label for="showhp">Show HP</label>
 							<input type="checkbox" id="showhp" checked={showHp} onClick={toggleShowHp} />
 						</div>
-						<div>
-							<label for="showlanes">Show Lanes</label>
-							<input type="checkbox" id="showlanes" checked={showLanes} onClick={toggleShowLanes} />
-						</div>
+						{mode == Mode.Compare && (
+							<div>
+								<label for="showlanes">Show Lanes</label>
+								<input type="checkbox" id="showlanes" checked={showLanes} onClick={toggleShowLanes} />
+							</div>
+						)}
 						{mode == Mode.Compare && (
 							<div>
 								<label for="simWitVariance">Wit Variance</label>
@@ -2664,4 +2829,5 @@ function App(props) {
 
 initTelemetry();
 render(<App lang="en-ja" />, document.getElementById('app'));
+
 

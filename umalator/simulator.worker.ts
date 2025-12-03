@@ -4,6 +4,11 @@ import type { RaceParameters } from '../uma-skill-tools/RaceParameters';
 import { Map as ImmMap } from 'immutable';
 import { HorseState, SkillSet } from '../components/HorseDefTypes';
 import { runComparison } from './compare';
+import skill_meta from '../skill_meta.json';
+
+function skillmeta(id: string) {
+	return skill_meta[id.split('-')[0]];
+}
 
 function mergeSkillMaps(map1, map2) {
 	const obj1 = map1 instanceof Map ? Object.fromEntries(map1) : (map1 || {});
@@ -77,7 +82,17 @@ function mergeResultSets(data1, data2) {
 function run1Round(nsamples: number, skills: string[], course: CourseData, racedef: RaceParameters, uma, pacer, options) {
 	const data = new Map();
 	skills.forEach(id => {
-		const withSkill = uma.set('skills', uma.skills.add(id));
+		const newSkillGroupId = skillmeta(id)?.groupId;
+		let skillsToUse = uma.skills;
+		
+		if (newSkillGroupId) {
+			skillsToUse = skillsToUse.filter((existingSkillId: string) => {
+				const existingGroupId = skillmeta(existingSkillId)?.groupId;
+				return existingGroupId !== newSkillGroupId;
+			});
+		}
+		
+		const withSkill = uma.set('skills', skillsToUse.add(id));
 		const {results, runData} = runComparison(nsamples, course, racedef, uma, withSkill, pacer, options);
 		const mid = Math.floor(results.length / 2);
 		const median = results.length % 2 == 0 ? (results[mid-1] + results[mid]) / 2 : results[mid];
@@ -141,6 +156,41 @@ function runCompare({nsamples, course, racedef, uma1, uma2, pacer, options}) {
 	postMessage({type: 'compare-complete'});
 }
 
+function runAdditionalSamples({skillId, nsamples, course, racedef, uma, pacer, options}) {
+	const uma_ = new HorseState(uma)
+		.set('skills', SkillSet(uma.skills))
+		.set('forcedSkillPositions', ImmMap(uma.forcedSkillPositions || {}));
+	const pacer_ = pacer ? new HorseState(pacer)
+		.set('skills', SkillSet(pacer.skills || []))
+		.set('forcedSkillPositions', ImmMap(pacer.forcedSkillPositions || {})) : null;
+	
+	const newSkillGroupId = skillmeta(skillId)?.groupId;
+	let skillsToUse = uma_.skills;
+	
+	if (newSkillGroupId) {
+		skillsToUse = skillsToUse.filter((existingSkillId: string) => {
+			const existingGroupId = skillmeta(existingSkillId)?.groupId;
+			return existingGroupId !== newSkillGroupId;
+		});
+	}
+	
+	const withSkill = uma_.set('skills', skillsToUse.add(skillId));
+	const {results, runData} = runComparison(nsamples, course, racedef, uma_, withSkill, pacer_, options);
+	const mid = Math.floor(results.length / 2);
+	const median = results.length % 2 == 0 ? (results[mid-1] + results[mid]) / 2 : results[mid];
+	const mean = results.reduce((a,b) => a+b, 0) / results.length;
+	const newResult = {
+		id: skillId,
+		results,
+		runData,
+		min: results[0],
+		max: results[results.length-1],
+		mean,
+		median
+	};
+	postMessage({type: 'additional-samples', skillId, result: newResult});
+}
+
 self.addEventListener('message', function (e) {
 	const {msg, data} = e.data;
 	switch (msg) {
@@ -149,6 +199,9 @@ self.addEventListener('message', function (e) {
 			break;
 		case 'compare':
 			runCompare(data);
+			break;
+		case 'additional-samples':
+			runAdditionalSamples(data);
 			break;
 	}
 });

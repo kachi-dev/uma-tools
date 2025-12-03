@@ -383,6 +383,7 @@ body {
 	display: flex;
 	/* might cause a fatass white space*/
 	clear: both;
+	max-width: 980px;
 }
 
 #resultsPane {
@@ -392,6 +393,7 @@ body {
 	justify-content: center;
 	/* Add spacing so the right pane controls don't collide with tables */
 	margin-top: 8px;
+	margin-right: 24px;
 }
 
 #resultsPane.mode-chart {
@@ -471,7 +473,6 @@ body {
 
 #infoTables {
 	margin: 0 auto;
-	padding-right: 165px;
 	min-width: 150px;
 }
 
@@ -483,7 +484,7 @@ body {
 #infoTables tbody {
 	border-bottom: 1px solid rgb(121, 64, 22);
 	display: block;
-	width: 360px;
+	width: 380px;
 	padding-top: 10px;
 }
 
@@ -890,6 +891,39 @@ body {
 .wit-variance-checkbox-group input[type="checkbox"] {
 	margin: 0;
 	transform: scale(1.2);
+}
+
+.runAdditionalSamples {
+	background: #3b82f6;
+	border: 1px solid #1e40af;
+	border-radius: 4px;
+	color: white;
+	cursor: pointer;
+	font-size: 0.7em;
+	font-weight: 500;
+	padding: 4px 8px;
+	transition: background 0.15s ease;
+	white-space: nowrap;
+}
+
+.runAdditionalSamples:hover {
+	background: #2563eb;
+}
+
+.runAdditionalSamples:active {
+	background: #1d4ed8;
+}
+
+.runAdditionalSamples:disabled {
+	background: #9ca3af;
+	border-color: #6b7280;
+	color: #d1d5db;
+	cursor: not-allowed;
+	opacity: 0.6;
+}
+
+.runAdditionalSamples:disabled:hover {
+	background: #9ca3af;
 }
 
 .dark .wit-variance-popup {
