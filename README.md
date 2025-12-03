@@ -4,7 +4,7 @@ Umalator is a great CM-planning tool to check where skills proc and how effectiv
 
 Comparing 2 umas in the vacuum of a simulation is inherently flawed regardless, and should never, ever be the end-all decider of which uma you use. But if we're going to have a tool that lets you compare 2 umas, it should at least be somewhat accurate.
 
-# Improvements
+# 'Improvements'
 - Implemented wit variance mechanics: Downhill Mode, Rushed, Skill Proc Chance.
   - This is primarily for accurate spurt rate calculations - which after cross-referencing with in-game packet data umalator with wit variance gives you an accurate spurt rate within a few %
 - Extended position keep functionality
@@ -14,7 +14,9 @@ Comparing 2 umas in the vacuum of a simulation is inherently flawed regardless, 
 - Desynced uma 1 and 2 race solver RNG in compare mode to simulate race-by-race variance even between identical umas. For identical umas, there's no reason to have this, but when we want to investigate the impact of Wit on position keep, downhill mode, etc this is a requirement (i.e. 1200 wit v 400 wit).
   - The skill chart remains synced, so you can still simulate the raw length gain of skills without caring about RNG mechanics. Arguably, this is what the umalator modes *should* be: Skill chart mode for simple skill length gains, and compare mode to more comprehensively compare 2 different umas.
   <br><br>However... it does mean you can no longer quickly add 1 skill (i.e. Red Shift) to an uma and run the Compare mode sim to check its length gain - you have to run the full skill chart simulation.
-  <br>TODO: Just add a 'sync RNG' checkbox to Compare mode?
+- Removed HP consumption when using the skill/uma chart.
+  - Spurt/survival rate is the only thing that should ever be used to determine course stam requirements - people have been abusing the skill chart to check at what point recovery skills stop giving +L which has resulted in a lot of misinformation RE: stam requirements (hai refdoc)
+  <br><br>TODO: Remove stam skills from the skill chart entirely (unless they have a velocity component)
 - Aaaand something that's not exactly an improvement... and makes the sim run slower... and maybe should be disabled... lane movement! We can now evaluate the effectiveness of lane movement skills which is fairly niche, but interesting nonetheless.
 
 One thing that's not an improvement is the code quality (and not all of it is my fault >x< - this is actually a fork of a fork: https://github.com/IHATEJEKUTO/VFalator-Umalator-Fork-Yeah) buuut at least I fixed some of the base umalator bugs.
