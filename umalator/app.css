@@ -484,7 +484,7 @@ body {
 	display: block;
 	table-layout: fixed;
 	padding-top: 20px;
-	padding-right: 600px;
+	transform: translateX(-190px);
 }
 
 #infoTables tbody:last-child {
@@ -497,7 +497,6 @@ body {
 /* cant have normal margins on table elements for some reason */
 #infoTables tbody::before, #infoTables tbody::after {
 	content: '';
-	padding-left: 550px;
 	
 	padding-bottom: 30px;
 	display: block;
@@ -513,8 +512,8 @@ body {
 */
 
 #infoTables caption{
+	padding-right: 250px;
 	padding-top: 20px;
-	padding-right: 600px;
 	padding-bottom: 5px;
 	font-weight: bold;
 	
