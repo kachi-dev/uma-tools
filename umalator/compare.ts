@@ -11,136 +11,7 @@ import { HorseState } from '../components/HorseDefTypes';
 import skilldata from '../uma-skill-tools/data/skill_data.json';
 import { Rule30CARng } from '../uma-skill-tools/Random';
 
-// Calculate theoretical max spurt based purely on stats (no RNG)
-function calculateTheoreticalMaxSpurt(horse: any, course: CourseData, ground: GroundCondition): {
-	canMaxSpurt: boolean,
-	maxHp: number,
-	hpNeededForMaxSpurt: number,
-	maxSpurtSpeed: number,
-	baseTargetSpeed2: number
-} {
-	const HpStrategyCoefficient = [0, 0.95, 0.89, 1.0, 0.995, 0.86];
-	const HpConsumptionGroundModifier = [
-		[],
-		[0, 1.0, 1.0, 1.02, 1.02],
-		[0, 1.0, 1.0, 1.01, 1.02]
-	];
-	const StrategyPhaseCoefficient = [
-		[],
-		[1.0, 0.98, 0.962],
-		[0.978, 0.991, 0.975],
-		[0.938, 0.998, 0.994],
-		[0.931, 1.0, 1.0],
-		[1.063, 0.962, 0.95]
-	];
-	const DistanceProficiencyModifier = [1.05, 1.0, 0.9, 0.8, 0.6, 0.4, 0.2, 0.1];
-	
-	// Parse strategy and aptitude from strings to numeric enums if needed
-	const strategy = parseStrategy(horse.strategy);
-	const distanceAptitude = parseAptitude(horse.distanceAptitude, 'distance');
-	
-	const baseSpeed = 20.0 - (course.distance - 2000) / 1000.0;
-	const maxHp = 0.8 * HpStrategyCoefficient[strategy] * horse.stamina + course.distance;
-	const groundModifier = HpConsumptionGroundModifier[course.surface][ground];
-	const gutsModifier = 1.0 + 200.0 / Math.sqrt(600.0 * horse.guts);
-	
-	// Calculate base target speed for phase 2
-	const baseTargetSpeed2 = baseSpeed * StrategyPhaseCoefficient[strategy][2] +
-		Math.sqrt(500.0 * horse.speed) * DistanceProficiencyModifier[distanceAptitude] * 0.002;
-	
-	// Calculate max spurt speed
-	const maxSpurtSpeed = (baseSpeed * (StrategyPhaseCoefficient[strategy][2] + 0.01) +
-		Math.sqrt(horse.speed / 500.0) * DistanceProficiencyModifier[distanceAptitude]) * 1.05 +
-		Math.sqrt(500.0 * horse.speed) * DistanceProficiencyModifier[distanceAptitude] * 0.002 +
-		Math.pow(450.0 * horse.guts, 0.597) * 0.0001;
-	
-	// Calculate HP consumption for the entire race
-	// Phase 0: 0 to 1/6 of course (acceleration phase)
-	const phase0Distance = course.distance / 6;
-	const phase0Speed = baseSpeed * StrategyPhaseCoefficient[strategy][0];
-	const phase0HpPerSec = 20.0 * Math.pow(phase0Speed - baseSpeed + 12.0, 2) / 144.0 * groundModifier;
-	const phase0Time = phase0Distance / phase0Speed;
-	const phase0Hp = phase0HpPerSec * phase0Time;
-	
-	// Phase 1: 1/6 to 2/3 of course (middle phase)
-	const phase1Distance = course.distance * 2 / 3 - phase0Distance;
-	const phase1Speed = baseSpeed * StrategyPhaseCoefficient[strategy][1];
-	const phase1HpPerSec = 20.0 * Math.pow(phase1Speed - baseSpeed + 12.0, 2) / 144.0 * groundModifier;
-	const phase1Time = phase1Distance / phase1Speed;
-	const phase1Hp = phase1HpPerSec * phase1Time;
-	
-	// Phase 2: 2/3 to finish (spurt phase)
-	const spurtEntryPos = course.distance * 2 / 3;
-	const remainingDistance = course.distance - spurtEntryPos;
-	const spurtDistance = remainingDistance - 60; // 60m buffer
-	
-	// HP consumption during spurt at max speed
-	const spurtHpPerSec = 20.0 * Math.pow(maxSpurtSpeed - baseSpeed + 12.0, 2) / 144.0 * groundModifier * gutsModifier;
-	const spurtTime = spurtDistance / maxSpurtSpeed;
-	const spurtHp = spurtHpPerSec * spurtTime;
-	
-	// Total HP needed for the entire race with max spurt
-	const totalHpNeeded = phase0Hp + phase1Hp + spurtHp;
-	
-	// HP remaining after race (can be negative if horse runs out)
-	const hpRemaining = maxHp - totalHpNeeded;
-	
-	// Can max spurt if we have enough HP
-	const canMaxSpurt = hpRemaining >= 0;
-	
-	return {
-		canMaxSpurt,
-		maxHp,
-		hpNeededForMaxSpurt: totalHpNeeded,
-		maxSpurtSpeed,
-		baseTargetSpeed2,
-		hpRemaining
-	};
-}
-
 export function runComparison(nsamples: number, course: CourseData, racedef: RaceParameters, uma1: HorseState, uma2: HorseState, pacer: HorseState, options) {
-	// Pre-calculate heal skills from uma's skill lists before race starts
-	const uma1HealSkills = [];
-	const uma2HealSkills = [];
-	
-	uma1.skills.forEach(skillId => {
-		const skill = skilldata[skillId.split('-')[0]];
-		if (skill && skill.alternatives) {
-			skill.alternatives.forEach(alt => {
-				if (alt.effects) {
-					alt.effects.forEach(effect => {
-						if (effect.type === 9) { // Recovery/Heal skill
-							uma1HealSkills.push({
-								id: skillId,
-								heal: effect.modifier,
-								duration: alt.baseDuration || 0
-							});
-						}
-					});
-				}
-			});
-		}
-	});
-	
-	uma2.skills.forEach(skillId => {
-		const skill = skilldata[skillId.split('-')[0]];
-		if (skill && skill.alternatives) {
-			skill.alternatives.forEach(alt => {
-				if (alt.effects) {
-					alt.effects.forEach(effect => {
-						if (effect.type === 9) { // Recovery/Heal skill
-							uma2HealSkills.push({
-								id: skillId,
-								heal: effect.modifier,
-								duration: alt.baseDuration || 0
-							});
-						}
-					});
-				}
-			});
-		}
-	});
-	
 	const standard = new RaceSolverBuilder(nsamples)
 		.seed(options.seed)
 		.course(course)
@@ -148,8 +19,6 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		.weather(racedef.weather)
 		.season(racedef.season)
 		.time(racedef.time)
-		.useEnhancedSpurt(options.useEnhancedSpurt || false)
-		.accuracyMode(options.accuracyMode || false)
 		.posKeepMode(options.posKeepMode)
 		.mode(options.mode);
 	if (racedef.orderRange != null) {
@@ -160,7 +29,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 	// Fork to share RNG - both horses face the same random events for fair comparison
 	const compare = standard.fork();
 	
-	if (options.mode === 'compare') {
+	if (options.mode === 'compare' && !options.syncRng) {
 		standard.desync();
 	}
 	
@@ -756,7 +625,6 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		runData: {minrun, maxrun, meanrun, medianrun, allruns: allRunsData},
 		rushedStats: rushedStatsSummary,
 		leadCompetitionStats: leadCompetitionStatsSummary,
-		spurtInfo: options.useEnhancedSpurt ? { uma1: spurtInfo1, uma2: spurtInfo2 } : null,
 		staminaStats: staminaStatsSummary,
 		firstUmaStats: firstUmaStatsSummary
 	};

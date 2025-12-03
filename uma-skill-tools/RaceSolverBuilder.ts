@@ -408,8 +408,6 @@ export class RaceSolverBuilder {
 	_disableRushed: boolean
 	_disableDownhill: boolean
 	_disableSectionModifier: boolean
-	_useEnhancedSpurt: boolean
-	_accuracyMode: boolean
 	_skillCheckChance: boolean
 	_posKeepMode: PosKeepMode
 	_mode: string | undefined
@@ -442,8 +440,6 @@ export class RaceSolverBuilder {
 		this._disableRushed = false;
 		this._disableDownhill = false;
 		this._disableSectionModifier = false;
-		this._useEnhancedSpurt = false;
-		this._accuracyMode = false;
 		this._skillCheckChance = true;
 		this._posKeepMode = PosKeepMode.None;
 		this._mode = undefined;
@@ -763,16 +759,6 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
-	useEnhancedSpurt(enabled: boolean = true) {
-		this._useEnhancedSpurt = enabled;
-		return this;
-	}
-
-	accuracyMode(enabled: boolean = true) {
-		this._accuracyMode = enabled;
-		return this;
-	}
-
 	posKeepMode(mode: PosKeepMode) {
 		this._posKeepMode = mode;
 		return this;
@@ -815,8 +801,6 @@ export class RaceSolverBuilder {
 		clone._disableRushed = this._disableRushed;
 		clone._disableDownhill = this._disableDownhill;
 		clone._disableSectionModifier = this._disableSectionModifier;
-		clone._useEnhancedSpurt = this._useEnhancedSpurt;
-		clone._accuracyMode = this._accuracyMode;
 		clone._skillCheckChance = this._skillCheckChance;
 		clone._posKeepMode = this._posKeepMode;
 		clone._mode = this._mode;

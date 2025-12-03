@@ -1001,7 +1001,8 @@ async function serialize(courseId: number, nsamples: number, seed: number, posKe
 	allowSectionModifierUma2: boolean,
 	allowSkillCheckChanceUma1: boolean,
 	allowSkillCheckChanceUma2: boolean,
-	simWitVariance: boolean
+	simWitVariance: boolean,
+	syncRng: boolean
 }) {
 	const json = JSON.stringify({
 		courseId,
@@ -1080,7 +1081,8 @@ async function deserialize(hash) {
 						allowSectionModifierUma2: true,
 						allowSkillCheckChanceUma1: true,
 						allowSkillCheckChanceUma2: true,
-						simWitVariance: true
+						simWitVariance: true,
+						syncRng: false
 					},
 					showVirtualPacemakerOnGraph: o.showVirtualPacemakerOnGraph != null ? o.showVirtualPacemakerOnGraph : false,
 					pacemakerCount: o.pacemakerCount != null ? o.pacemakerCount : 1,
@@ -1106,7 +1108,8 @@ async function deserialize(hash) {
 						allowSectionModifierUma2: true,
 						allowSkillCheckChanceUma1: true,
 						allowSkillCheckChanceUma2: true,
-						simWitVariance: true
+						simWitVariance: true,
+						syncRng: false
 					},
 					showVirtualPacemakerOnGraph: false,
 					pacemakerCount: 1,
@@ -1129,7 +1132,8 @@ async function saveToLocalStorage(courseId: number, nsamples: number, seed: numb
 	allowSectionModifierUma2: boolean,
 	allowSkillCheckChanceUma1: boolean,
 	allowSkillCheckChanceUma2: boolean,
-	simWitVariance: boolean
+	simWitVariance: boolean,
+	syncRng: boolean
 }) {
 	try {
 		const hash = await serialize(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakers, showLanes, witVarianceSettings);
@@ -1470,6 +1474,7 @@ function App(props) {
 	const [allowSkillCheckChanceUma1, toggleSkillCheckChanceUma1] = useReducer((b,_) => !b, true);
 	const [allowSkillCheckChanceUma2, toggleSkillCheckChanceUma2] = useReducer((b,_) => !b, true);
 	const [simWitVariance, toggleSimWitVariance] = useReducer((b,_) => !b, true);
+	const [syncRng, toggleSyncRng] = useReducer((b,_) => !b, false);
 	const [hpDeathPositionTab, setHpDeathPositionTab] = useState(0);
 	const [showWitVarianceSettings, setShowWitVarianceSettings] = useState(false);
 	const [showVirtualPacemakerOnGraph, toggleShowVirtualPacemakerOnGraph] = useReducer((b,_) => !b, false);
@@ -1515,6 +1520,10 @@ function App(props) {
 		toggleSimWitVariance(null);
 	}
 	
+	function handleSyncRngToggle() {
+		toggleSyncRng(null);
+	}
+	
 	function autoSaveSettings() {
 		saveToLocalStorage(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, getSelectedPacemakers(), showLanes, {
 			allowRushedUma1,
@@ -1525,7 +1534,8 @@ function App(props) {
 			allowSectionModifierUma2,
 			allowSkillCheckChanceUma1,
 			allowSkillCheckChanceUma2,
-			simWitVariance
+			simWitVariance,
+			syncRng
 		});
 	}
 
@@ -1670,6 +1680,7 @@ function App(props) {
 					if (settings.allowSkillCheckChanceUma1 !== allowSkillCheckChanceUma1) toggleSkillCheckChanceUma1(null);
 					if (settings.allowSkillCheckChanceUma2 !== allowSkillCheckChanceUma2) toggleSkillCheckChanceUma2(null);
 					if (settings.simWitVariance !== simWitVariance) toggleSimWitVariance(null);
+					if (settings.syncRng !== undefined && settings.syncRng !== syncRng) toggleSyncRng(null);
 				}
 			});
 		} else {
@@ -1707,6 +1718,7 @@ function App(props) {
 						if (settings.allowSkillCheckChanceUma1 !== allowSkillCheckChanceUma1) toggleSkillCheckChanceUma1(null);
 						if (settings.allowSkillCheckChanceUma2 !== allowSkillCheckChanceUma2) toggleSkillCheckChanceUma2(null);
 						if (settings.simWitVariance !== simWitVariance) toggleSimWitVariance(null);
+						if (settings.syncRng !== undefined && settings.syncRng !== syncRng) toggleSyncRng(null);
 					}
 				}
 			});
@@ -1721,7 +1733,7 @@ function App(props) {
 	// Auto-save settings whenever they change
 	useEffect(() => {
 		autoSaveSettings();
-	}, [courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, allowRushedUma1, allowRushedUma2, allowDownhillUma1, allowDownhillUma2, allowSectionModifierUma1, allowSectionModifierUma2, allowSkillCheckChanceUma1, allowSkillCheckChanceUma2, simWitVariance, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakerIndices]);
+	}, [courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, allowRushedUma1, allowRushedUma2, allowDownhillUma1, allowDownhillUma2, allowSectionModifierUma1, allowSectionModifierUma2, allowSkillCheckChanceUma1, allowSkillCheckChanceUma2, simWitVariance, syncRng, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakerIndices]);
 	
 	useEffect(() => {
 		const shouldShow = posKeepMode === PosKeepMode.Virtual && selectedPacemakerIndices.length > 0;
@@ -1745,7 +1757,8 @@ function App(props) {
 			allowSectionModifierUma2,
 			allowSkillCheckChanceUma1,
 			allowSkillCheckChanceUma2,
-			simWitVariance
+			simWitVariance,
+			syncRng
 		}).then(hash => {
 			const url = window.location.protocol + '//' + window.location.host + window.location.pathname;
 			window.navigator.clipboard.writeText(url + '#' + hash);
@@ -1794,11 +1807,10 @@ function App(props) {
 					allowDownhillUma2: simWitVariance ? allowDownhillUma2 : false,
 					allowSectionModifierUma1: simWitVariance ? allowSectionModifierUma1 : false,
 					allowSectionModifierUma2: simWitVariance ? allowSectionModifierUma2 : false,
-					useEnhancedSpurt: false,
-					accuracyMode: false,
 					skillCheckChanceUma1: simWitVariance ? allowSkillCheckChanceUma1 : false,
 					skillCheckChanceUma2: simWitVariance ? allowSkillCheckChanceUma2 : false,
-					pacemakerCount: posKeepMode === PosKeepMode.Virtual ? pacemakerCount : 1
+					pacemakerCount: posKeepMode === PosKeepMode.Virtual ? pacemakerCount : 1,
+					syncRng: simWitVariance ? false : syncRng,
 				}
 			}
 		});
@@ -1827,8 +1839,6 @@ function App(props) {
 					allowDownhillUma2: simWitVariance ? allowDownhillUma2 : false,
 					allowSectionModifierUma1: simWitVariance ? allowSectionModifierUma1 : false,
 					allowSectionModifierUma2: simWitVariance ? allowSectionModifierUma2 : false,
-					useEnhancedSpurt: false,
-					accuracyMode: false,
 					skillCheckChanceUma1: simWitVariance ? allowSkillCheckChanceUma1 : false,
 					skillCheckChanceUma2: simWitVariance ? allowSkillCheckChanceUma2 : false,
 					pacemakerCount: posKeepMode === PosKeepMode.Virtual ? pacemakerCount : 1
@@ -1887,8 +1897,6 @@ function App(props) {
 			allowDownhillUma2: false,
 			allowSectionModifierUma1: false,
 			allowSectionModifierUma2: false,
-			useEnhancedSpurt: false,
-			accuracyMode: false,
 			skillCheckChanceUma1: false,
 			skillCheckChanceUma2: false,
 			pacemakerCount: 1
@@ -1974,8 +1982,6 @@ function App(props) {
 					allowDownhillUma2: false,
 					allowSectionModifierUma1: false,
 					allowSectionModifierUma2: false,
-					useEnhancedSpurt: false,
-					accuracyMode: false,
 					skillCheckChanceUma1: false,
 					skillCheckChanceUma2: false,
 					pacemakerCount: 1
@@ -2737,12 +2743,13 @@ function App(props) {
 							<label for="showhp">Show HP</label>
 							<input type="checkbox" id="showhp" checked={showHp} onClick={toggleShowHp} />
 						</div>
+						{/**
 						{mode == Mode.Compare && (
 							<div>
 								<label for="showlanes">Show Lanes</label>
 								<input type="checkbox" id="showlanes" checked={showLanes} onClick={toggleShowLanes} />
 							</div>
-						)}
+						)} **/}
 						{mode == Mode.Compare && (
 							<div>
 								<label for="simWitVariance">Wit Variance</label>
@@ -2758,6 +2765,12 @@ function App(props) {
 										<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
 									</svg>
 								</button>
+								{!simWitVariance && (
+									<div>
+										<label for="syncRng">Sync RNG</label>
+										<input type="checkbox" id="syncRng" checked={syncRng} onClick={handleSyncRngToggle} />
+									</div>
+								)}
 							</div>
 						)}
 
