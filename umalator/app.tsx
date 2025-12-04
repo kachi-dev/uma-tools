@@ -1841,7 +1841,8 @@ function App(props) {
 					allowSectionModifierUma2: simWitVariance ? allowSectionModifierUma2 : false,
 					skillCheckChanceUma1: simWitVariance ? allowSkillCheckChanceUma1 : false,
 					skillCheckChanceUma2: simWitVariance ? allowSkillCheckChanceUma2 : false,
-					pacemakerCount: posKeepMode === PosKeepMode.Virtual ? pacemakerCount : 1
+					pacemakerCount: posKeepMode === PosKeepMode.Virtual ? pacemakerCount : 1,
+					syncRng: simWitVariance ? false : syncRng,
 				}
 			}
 		});

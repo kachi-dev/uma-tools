@@ -878,7 +878,7 @@ export class RaceSolver {
 						if (this.paceUpWitCheck()) {
 							this.positionKeepState = PositionKeepState.PaceUp;
 							this.positionKeepActivations.push([this.pos, 0, PositionKeepState.PaceUp]);
-							this.posKeepExitDistance = this.syncRng.random() * (this.posKeepMaxThreshold - this.posKeepMinThreshold) + this.posKeepMinThreshold;
+							this.posKeepExitDistance = this.posKeepRng.random() * (this.posKeepMaxThreshold - this.posKeepMinThreshold) + this.posKeepMinThreshold;
 						}
 					}
 					// Pace Down
@@ -886,7 +886,7 @@ export class RaceSolver {
 						if (this.activeTargetSpeedSkills.length == 0 && this.activeCurrentSpeedSkills.length == 0) {
 							this.positionKeepState = PositionKeepState.PaceDown;
 							this.positionKeepActivations.push([this.pos, 0, PositionKeepState.PaceDown]);
-							this.posKeepExitDistance = this.syncRng.random() * (this.posKeepMaxThreshold - this.posKeepMinThreshold) + this.posKeepMinThreshold;
+							this.posKeepExitDistance = this.posKeepRng.random() * (this.posKeepMaxThreshold - this.posKeepMinThreshold) + this.posKeepMinThreshold;
 						}
 					}
 				}
@@ -1071,13 +1071,31 @@ export class RaceSolver {
 			return;
 		}
 
-		let firstPlaceUma = this.getUmaByDistanceDescending()[0];
+		let sortedUmas = this.getUmaByDistanceDescending();
+		let firstPlaceUma = sortedUmas[0];
 
 		if (firstPlaceUma.pos < this.course.distance * 2/3) {
 			return;
 		}
 
-		firstPlaceUma.firstUmaInLateRace = true;
+		const firstPlacePos = Math.round(firstPlaceUma.pos * 100) / 100;
+		const tiedUmas: RaceSolver[] = [];
+		
+		for (let uma of sortedUmas) {
+			const umaPos = Math.round(uma.pos * 100) / 100;
+			if (umaPos === firstPlacePos) {
+				tiedUmas.push(uma);
+			} else {
+				break;
+			}
+		}
+
+		// This is sooooooo hacky xDD
+		// But when we have synced RNG both umas can reach late-race on the same frame
+		// In which case, to avoid skewed final leg 1st place results...
+		// ........ we do this
+		const selectedUma = tiedUmas[this.syncRng.uniform(tiedUmas.length)];
+		selectedUma.firstUmaInLateRace = true;
 	}
 
 	updateLastSpurtState() {
@@ -1116,8 +1134,7 @@ export class RaceSolver {
 		
 		
 		if (!this.disableDownhill && isOnDownhill) {
-			// Keep rng synced for the virtual pacemaker so that it's the same pacer for both umas
-			const rng = (this.posKeepMode === PosKeepMode.Virtual && !this.pacer) ? this.syncRng.random() : this.downhillRng.random();
+			const rng = this.downhillRng.random();
 
 			if (this.downhillModeStart === null) {
 				// Check for entry: Wisdom * 0.0004 chance each second (matching Kotlin implementation)

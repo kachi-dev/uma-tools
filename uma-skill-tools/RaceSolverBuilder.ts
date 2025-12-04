@@ -526,6 +526,10 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
+	getSamplePolicyKey(skillId: string, perspective: Perspective): string {
+		return `${skillId}:${perspective}`;
+	}
+
 	_isNige() {
 		if (typeof this._horse.strategy == 'string') {
 			return this._horse.strategy.toUpperCase() == 'NIGE' || this._horse.strategy.toUpperCase() == 'OONIGE';
@@ -563,7 +567,8 @@ export class RaceSolverBuilder {
 		
 		if (this._pacerSkillIds.length > 0) {
 			pacerTriggers = this._pacerSkillData.map(sd => {
-				const sp = this._samplePolicyOverride.get(sd.skillId) || sd.samplePolicy;
+				const key = sd.perspective != null ? this.getSamplePolicyKey(sd.skillId, sd.perspective) : sd.skillId;
+				const sp = this._samplePolicyOverride.get(key) || sd.samplePolicy;
 				return sp.sample(sd.regions, this.nsamples, pacerRng);
 			});
 		}
@@ -711,7 +716,7 @@ export class RaceSolverBuilder {
 	addSkill(skillId: string, perspective: Perspective = Perspective.Self, samplePolicy?: ActivationSamplePolicy, originWisdom?: number) {
 		this._skills.push({id: skillId, p: perspective, originWisdom});
 		if (samplePolicy != null) {
-			this._samplePolicyOverride.set(skillId, samplePolicy);
+			this._samplePolicyOverride.set(this.getSamplePolicyKey(skillId, perspective), samplePolicy);
 		}
 		return this;
 	}
@@ -825,7 +830,8 @@ export class RaceSolverBuilder {
 		const skilldata = this._skills.flatMap(({id,p}) => makeSkill(id, p));
 		this._extraSkillHooks.forEach(h => h(skilldata, horse, this._course));
 		const triggers = skilldata.map(sd => {
-			const sp = this._samplePolicyOverride.get(sd.skillId) || sd.samplePolicy;
+			const key = sd.perspective != null ? this.getSamplePolicyKey(sd.skillId, sd.perspective) : sd.skillId;
+			const sp = this._samplePolicyOverride.get(key) || sd.samplePolicy;
 			return sp.sample(sd.regions, this.nsamples, skillRng)
 		});
 
