@@ -14,11 +14,11 @@ import { Language, LanguageSelect, useLanguageSelect } from '../components/Langu
 import { ExpandedSkillDetails, STRINGS_en as SKILL_STRINGS_en } from '../components/SkillList';
 import { RaceTrack, TrackSelect, RegionDisplayType } from '../components/RaceTrack';
 import { HorseState, SkillSet } from '../components/HorseDefTypes';
-import { HorseDef, horseDefTabs } from '../components/HorseDef';
+import { HorseDef, horseDefTabs, isGeneralSkill } from '../components/HorseDef';
 import { TRACKNAMES_ja, TRACKNAMES_en } from '../strings/common';
 import { RaceState } from '../uma-skill-tools/RaceSolver';
 
-import { getActivateableSkills, getNullRow, BasinnChart } from './BasinnChart';
+import { getActivateableSkills, isPurpleSkill, getNullRow, BasinnChart } from './BasinnChart';
 
 import { initTelemetry, postEvent } from './telemetry';
 
@@ -26,14 +26,7 @@ import { IntroText } from './IntroText';
 
 import skilldata from '../uma-skill-tools/data/skill_data.json';
 import skillnames from '../uma-skill-tools/data/skillnames.json';
-import skill_meta from '../skill_meta.json';
-
-
-
-function skillmeta(id: string) {
-	// handle the fake skills (e.g., variations of Sirius unique) inserted by make_skill_data with ids like 100701-1
-	return skill_meta[id.split('-')[0]];
-}
+import skillmeta from '../skill_meta.json';
 
 import './app.css';
 
@@ -54,10 +47,17 @@ class RaceParams extends Record({
 const enum EventType { CM, LOH }
 
 const presets = (CC_GLOBAL ? [
-	{type: EventType.CM, date: '2025-10', courseId: 10602, season: Season.Summer, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
-	{type: EventType.CM, date: '2025-09', courseId: 10811, season: Season.Spring, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
-	{type: EventType.CM, date: '2025-08', courseId: 10606, season: Season.Spring, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday}
+	{id: 7, type: EventType.CM, name: 'Scorpio Cup', date: '2026-01', courseId: 10604, season: Season.Autumn, ground: GroundCondition.Soft, weather: Weather.Rainy, time: Time.Midday},
+	{id: 6, type: EventType.CM, name: 'Libra Cup', date: '2025-12', courseId: 10810, season: Season.Autumn, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
+	{id: 5, type: EventType.CM, name: 'Virgo Cup', date: '2025-11-20', courseId: 10903, season: Season.Autumn, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
+	{id: 4, type: EventType.CM, name: 'Leo Cup', date: '2025-10-30', courseId: 10906, season: Season.Summer, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
+	{id: 3, type: EventType.CM, name: 'Cancer Cup', date: '2025-10-07', courseId: 10602, season: Season.Summer, ground: GroundCondition.Yielding, weather: Weather.Sunny, time: Time.Midday},
+	{id: 2, type: EventType.CM, name: 'Gemini Cup', date: '2025-09', courseId: 10811, season: Season.Spring, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
+	{id: 1, type: EventType.CM, name: 'Taurus Cup', date: '2025-08', courseId: 10606, season: Season.Spring, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday}
 ] : [
+	{type: EventType.LOH, date: '2026-02', courseId: 10602, season: Season.Winter, time: Time.Midday},
+	{type: EventType.CM, date: '2026-01', courseId: 10506, season: Season.Winter, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
+	{type: EventType.CM, date: '2025-12-21', courseId: 10903, season: Season.Winter, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
 	{type: EventType.LOH, date: '2025-11', courseId: 11502, season: Season.Autumn, time: Time.Midday},
 	{type: EventType.CM, date: '2025-10', courseId: 10302, season: Season.Autumn, ground: GroundCondition.Good, weather: Weather.Cloudy, time: Time.Midday},
 	{type: EventType.CM, date: '2025-09-22', courseId: 10807, season: Season.Autumn, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
@@ -66,6 +66,8 @@ const presets = (CC_GLOBAL ? [
 	{type: EventType.CM, date: '2025-06-21', courseId: 10606, ground: GroundCondition.Good, weather: Weather.Sunny, season: Season.Spring, time: Time.Midday}
 ])
 	.map(def => ({
+		id: def.id,
+		name: def.name,
 		type: def.type,
 		date: new Date(def.date),
 		courseId: def.courseId,
@@ -82,6 +84,21 @@ const presets = (CC_GLOBAL ? [
 
 const DEFAULT_PRESET = presets[Math.max(presets.findIndex((now => p => new Date(p.date.getFullYear(), p.date.getUTCMonth() + 1, 0) < now)(new Date())) - 1, 0)];
 const DEFAULT_COURSE_ID = DEFAULT_PRESET.courseId;
+
+const UI_ja = Object.freeze({
+	'stats': Object.freeze(['なし', 'スピード', 'スタミナ', 'パワー', '根性', '賢さ']),
+	'joiner': '、',
+});
+
+const UI_en = Object.freeze({
+	'stats': Object.freeze(['None', 'Speed', 'Stamina', 'Power', 'Guts', 'Wisdom']),
+	'joiner': ', ',
+});
+
+const UI_global = Object.freeze({
+	'stats': Object.freeze(['None', 'Speed', 'Stamina', 'Power', 'Guts', 'Wit']),
+	'joiner': ', ',
+});
 
 function id(x) { return x; }
 
@@ -967,6 +984,35 @@ function VelocityLines(props) {
 	);
 }
 
+function ResultsTable(props) {
+	const {caption, color, chartData, idx, runData} = props;
+
+	return (
+		<table>
+			<caption style={`color:${color}`}>{caption}</caption>
+			<tbody>
+				<tr><th>Time to finish</th><td>{formatTime(chartData.t[idx][chartData.t[idx].length-1] * 1.18)}</td></tr>
+				<tr><th>Start delay</th><td>{chartData.sdly[idx].toFixed(4) + ' s'}</td></tr>
+				<tr><th>Top speed</th><td>{chartData.v[idx].reduce((a,b) => Math.max(a,b), 0).toFixed(2) + ' m/s'}</td></tr>
+				{runData?.allruns?.rushed && (
+					<tr><th>Rushed frequency</th><td>{runData.allruns.rushed[idx].frequency > 0 ? `${runData.allruns.rushed[idx].frequency.toFixed(1)}% (${runData.allruns.rushed[idx].mean.toFixed(1)}m)` : '0%'}</td></tr>
+				)}
+				{runData?.allruns?.leadCompetition && (
+					<tr><th>Spot Struggle frequency</th><td>{runData.allruns.leadCompetition[idx].frequency > 0 ? `${runData.allruns.leadCompetition[idx].frequency.toFixed(1)}%` : '0%'}</td></tr>
+				)}
+			</tbody>
+			{chartData.sk[idx].size > 0 &&
+				<tbody>
+					{Array.from(chartData.sk[idx].entries()).map(([id,ars]) => ars.flatMap(pos =>
+						<tr>
+							<th>{skillnames[id][0]}</th>
+							<td>{pos[1] == -1 ? `${pos[0].toFixed(2)} m` : `${pos[0].toFixed(2)} m – ${pos[1].toFixed(2)} m`}</td>
+						</tr>))}
+				</tbody>}
+		</table>
+	);
+}
+
 const NO_SHOW = Object.freeze([
 	'10011', '10012', '10016', '10021', '10022', '10026', '10031', '10032', '10036',
 	'10041', '10042', '10046', '10051', '10052', '10056', '10061', '10062', '10066',
@@ -993,15 +1039,6 @@ function racedefToParams({mood, ground, weather, season, time, grade}: RaceParam
 }
 
 async function serialize(courseId: number, nsamples: number, seed: number, posKeepMode: PosKeepMode, racedef: RaceParams, uma1: HorseState, uma2: HorseState, pacer: HorseState, showVirtualPacemakerOnGraph: boolean, pacemakerCount: number, selectedPacemakers: boolean[], showLanes: boolean, witVarianceSettings: {
-	allowRushedUma1: boolean,
-	allowRushedUma2: boolean,
-	allowDownhillUma1: boolean,
-	allowDownhillUma2: boolean,
-	allowSectionModifierUma1: boolean,
-	allowSectionModifierUma2: boolean,
-	allowSkillCheckChanceUma1: boolean,
-	allowSkillCheckChanceUma2: boolean,
-	simWitVariance: boolean,
 	syncRng: boolean
 }) {
 	const json = JSON.stringify({
@@ -1010,9 +1047,9 @@ async function serialize(courseId: number, nsamples: number, seed: number, posKe
 		seed,
 		posKeepMode,
 		racedef: racedef.toJS(),
-		uma1: uma1.toJS(),
-		uma2: uma2.toJS(),
-		pacer: pacer.toJS(),
+		uma1: uma1.set('skills', Array.from(uma1.skills.values())).toJS(),
+		uma2: uma2.set('skills', Array.from(uma2.skills.values())).toJS(),
+		pacer: pacer.set('skills', Array.from(pacer.skills.values())).toJS(),
 		witVarianceSettings,
 		showVirtualPacemakerOnGraph,
 		pacemakerCount,
@@ -1073,15 +1110,6 @@ async function deserialize(hash) {
 						.set('skills', SkillSet(o.pacer.skills || []))
 						.set('forcedSkillPositions', ImmMap(o.pacer.forcedSkillPositions || {})) : new HorseState({strategy: 'Nige'}),
 					witVarianceSettings: o.witVarianceSettings || {
-						allowRushedUma1: true,
-						allowRushedUma2: true,
-						allowDownhillUma1: true,
-						allowDownhillUma2: true,
-						allowSectionModifierUma1: true,
-						allowSectionModifierUma2: true,
-						allowSkillCheckChanceUma1: true,
-						allowSkillCheckChanceUma2: true,
-						simWitVariance: true,
 						syncRng: false
 					},
 					showVirtualPacemakerOnGraph: o.showVirtualPacemakerOnGraph != null ? o.showVirtualPacemakerOnGraph : false,
@@ -1100,15 +1128,6 @@ async function deserialize(hash) {
 					uma2: new HorseState(),
 					pacer: new HorseState({strategy: 'Nige'}),
 					witVarianceSettings: {
-						allowRushedUma1: true,
-						allowRushedUma2: true,
-						allowDownhillUma1: true,
-						allowDownhillUma2: true,
-						allowSectionModifierUma1: true,
-						allowSectionModifierUma2: true,
-						allowSkillCheckChanceUma1: true,
-						allowSkillCheckChanceUma2: true,
-						simWitVariance: true,
 						syncRng: false
 					},
 					showVirtualPacemakerOnGraph: false,
@@ -1124,15 +1143,6 @@ async function deserialize(hash) {
 }
 
 async function saveToLocalStorage(courseId: number, nsamples: number, seed: number, posKeepMode: PosKeepMode, racedef: RaceParams, uma1: HorseState, uma2: HorseState, pacer: HorseState, showVirtualPacemakerOnGraph: boolean, pacemakerCount: number, selectedPacemakers: boolean[], showLanes: boolean, witVarianceSettings: {
-	allowRushedUma1: boolean,
-	allowRushedUma2: boolean,
-	allowDownhillUma1: boolean,
-	allowDownhillUma2: boolean,
-	allowSectionModifierUma1: boolean,
-	allowSectionModifierUma2: boolean,
-	allowSkillCheckChanceUma1: boolean,
-	allowSkillCheckChanceUma2: boolean,
-	simWitVariance: boolean,
 	syncRng: boolean
 }) {
 	try {
@@ -1218,8 +1228,8 @@ async function loadFromLocalStorage() {
 	return null;
 }
 
-const EMPTY_RESULTS_STATE = {courseId: DEFAULT_COURSE_ID, results: [], runData: null, chartData: null, displaying: '', rushedStats: null, leadCompetitionStats: null, spurtInfo: null, staminaStats: null, firstUmaStats: null};
-function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | string | {results: any, runData: any, rushedStats?: any, leadCompetitionStats?: any, spurtInfo?: any, staminaStats?: any, firstUmaStats?: any}) {
+const EMPTY_RESULTS_STATE = {courseId: DEFAULT_COURSE_ID, results: [], runData: null, chartData: null, displaying: '', spurtInfo: null, staminaStats: null, firstUmaStats: null};
+function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | string | {results: any, runData: any, spurtInfo?: any, staminaStats?: any, firstUmaStats?: any}) {
 	if (typeof o == 'number') {
 		return {
 			courseId: o,
@@ -1227,8 +1237,6 @@ function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | strin
 			runData: null,
 			chartData: null,
 			displaying: '',
-			rushedStats: null,
-			leadCompetitionStats: null,
 			spurtInfo: null,
 			staminaStats: null,
 			firstUmaStats: null
@@ -1241,8 +1249,6 @@ function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | strin
 			runData: state.runData,
 			chartData: state.runData != null ? state.runData[o] : null,
 			displaying: o,
-			rushedStats: state.rushedStats,
-			leadCompetitionStats: state.leadCompetitionStats,
 			spurtInfo: state.spurtInfo,
 			staminaStats: state.staminaStats,
 			firstUmaStats: state.firstUmaStats
@@ -1254,8 +1260,6 @@ function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | strin
 			runData: o.runData,
 			chartData: o.runData[state.displaying || 'meanrun'],
 			displaying: state.displaying || 'meanrun',
-			rushedStats: o.rushedStats || null,
-			leadCompetitionStats: o.leadCompetitionStats || null,
 			spurtInfo: o.spurtInfo || null,
 			staminaStats: o.staminaStats || null,
 			firstUmaStats: o.firstUmaStats || null
@@ -1265,18 +1269,19 @@ function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | strin
 
 function RacePresets(props) {
 	const id = useId();
+	const selectedIdx = presets.findIndex(p => p.courseId == props.courseId && p.racedef.equals(props.racedef));
 	return (
 		<Fragment>
 			<label for={id}>Preset:</label>
 			<select id={id} onChange={e => { const i = +e.currentTarget.value; i > -1 && props.set(presets[i].courseId, presets[i].racedef); }}>
 				<option value="-1"></option>
-				{presets.map((p,i) => <option value={i}>{p.date.getFullYear() + '-' + (100 + p.date.getUTCMonth() + 1).toString().slice(-2) + (p.type == EventType.CM ? ' CM' : ' LOH')}</option>)}
+				{presets.map((p,i) => <option value={i} selected={i == selectedIdx}>{'CM ' + p.id + ' - ' + p.name}</option>)}
 			</select>
 		</Fragment>
 	);
 }
 
-const baseSkillsToTest = Object.keys(skilldata).filter(id => skilldata[id].rarity < 3);
+const baseSkillsToTest = Object.keys(skilldata).filter(id => isGeneralSkill(id));
 
 const enum Mode { Compare, Chart, UniquesChart }
 const enum UiStateMsg { SetModeCompare, SetModeChart, SetModeUniquesChart, SetCurrentIdx0, SetCurrentIdx1, SetCurrentIdx2, ToggleExpand }
@@ -1300,94 +1305,6 @@ function nextUiState(state: typeof DEFAULT_UI_STATE, msg: UiStateMsg) {
 		case UiStateMsg.ToggleExpand:
 			return {...state, expanded: !state.expanded};
 	}
-}
-
-function WitVarianceSettingsPopup({ 
-	show, 
-	onClose, 
-	allowRushedUma1, 
-	allowRushedUma2, 
-	allowDownhillUma1, 
-	allowDownhillUma2, 
-	allowSectionModifierUma1,
-	allowSectionModifierUma2,
-	allowSkillCheckChanceUma1,
-	allowSkillCheckChanceUma2,
-	toggleRushedUma1,
-	toggleRushedUma2,
-	toggleDownhillUma1,
-	toggleDownhillUma2,
-	toggleSectionModifierUma1,
-	toggleSectionModifierUma2,
-	toggleSkillCheckChanceUma1,
-	toggleSkillCheckChanceUma2
-}) {
-	if (!show) return null;
-	
-	return (
-		<div className="wit-variance-popup-overlay" onClick={onClose}>
-			<div className="wit-variance-popup" onClick={(e) => e.stopPropagation()}>
-				<div className="wit-variance-popup-header">
-					<h3>Wit Variance Settings</h3>
-					<button className="wit-variance-popup-close" onClick={onClose}>×</button>
-				</div>
-				<div className="wit-variance-popup-content">
-					<div className="wit-variance-setting">
-						<label>Rushed State</label>
-						<div className="wit-variance-checkboxes">
-							<div className="wit-variance-checkbox-group">
-								<label style={{color: 'rgb(42, 119, 197)'}}>Uma 1</label>
-								<input type="checkbox" checked={allowRushedUma1} onChange={toggleRushedUma1} />
-							</div>
-							<div className="wit-variance-checkbox-group">
-								<label style={{color: 'rgb(197, 42, 42)'}}>Uma 2</label>
-								<input type="checkbox" checked={allowRushedUma2} onChange={toggleRushedUma2} />
-							</div>
-						</div>
-					</div>
-					<div className="wit-variance-setting">
-						<label>Downhill Mode</label>
-						<div className="wit-variance-checkboxes">
-							<div className="wit-variance-checkbox-group">
-								<label style={{color: 'rgb(42, 119, 197)'}}>Uma 1</label>
-								<input type="checkbox" checked={allowDownhillUma1} onChange={toggleDownhillUma1} />
-							</div>
-							<div className="wit-variance-checkbox-group">
-								<label style={{color: 'rgb(197, 42, 42)'}}>Uma 2</label>
-								<input type="checkbox" checked={allowDownhillUma2} onChange={toggleDownhillUma2} />
-							</div>
-						</div>
-					</div>
-					<div className="wit-variance-setting">
-						<label>Section Modifier</label>
-						<div className="wit-variance-checkboxes">
-							<div className="wit-variance-checkbox-group">
-								<label style={{color: 'rgb(42, 119, 197)'}}>Uma 1</label>
-								<input type="checkbox" checked={allowSectionModifierUma1} onChange={toggleSectionModifierUma1} />
-							</div>
-							<div className="wit-variance-checkbox-group">
-								<label style={{color: 'rgb(197, 42, 42)'}}>Uma 2</label>
-								<input type="checkbox" checked={allowSectionModifierUma2} onChange={toggleSectionModifierUma2} />
-							</div>
-						</div>
-					</div>
-					<div className="wit-variance-setting">
-						<label>Skill Check Chance</label>
-						<div className="wit-variance-checkboxes">
-							<div className="wit-variance-checkbox-group">
-								<label style={{color: 'rgb(42, 119, 197)'}}>Uma 1</label>
-								<input type="checkbox" checked={allowSkillCheckChanceUma1} onChange={toggleSkillCheckChanceUma1} />
-							</div>
-							<div className="wit-variance-checkbox-group">
-								<label style={{color: 'rgb(197, 42, 42)'}}>Uma 2</label>
-								<input type="checkbox" checked={allowSkillCheckChanceUma2} onChange={toggleSkillCheckChanceUma2} />
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	);
 }
 
 function StatsTable({ caption, captionColor, rows }) {
@@ -1465,18 +1382,8 @@ function App(props) {
 		}
 	}
 
-	const [allowRushedUma1, toggleRushedUma1] = useReducer((b,_) => !b, true);
-	const [allowRushedUma2, toggleRushedUma2] = useReducer((b,_) => !b, true);
-	const [allowDownhillUma1, toggleDownhillUma1] = useReducer((b,_) => !b, true);
-	const [allowDownhillUma2, toggleDownhillUma2] = useReducer((b,_) => !b, true);
-	const [allowSectionModifierUma1, toggleSectionModifierUma1] = useReducer((b,_) => !b, true);
-	const [allowSectionModifierUma2, toggleSectionModifierUma2] = useReducer((b,_) => !b, true);
-	const [allowSkillCheckChanceUma1, toggleSkillCheckChanceUma1] = useReducer((b,_) => !b, true);
-	const [allowSkillCheckChanceUma2, toggleSkillCheckChanceUma2] = useReducer((b,_) => !b, true);
-	const [simWitVariance, toggleSimWitVariance] = useReducer((b,_) => !b, true);
 	const [syncRng, toggleSyncRng] = useReducer((b,_) => !b, false);
 	const [hpDeathPositionTab, setHpDeathPositionTab] = useState(0);
-	const [showWitVarianceSettings, setShowWitVarianceSettings] = useState(false);
 	const [showVirtualPacemakerOnGraph, toggleShowVirtualPacemakerOnGraph] = useReducer((b,_) => !b, false);
 	const [pacemakerCount, setPacemakerCount] = useState(1);
 	const [selectedPacemakerIndices, setSelectedPacemakerIndices] = useState([]); // Array of selected pacemaker indices (0, 1, 2), empty means none selected
@@ -1516,25 +1423,12 @@ function App(props) {
 		return result;
 	}
 	
-	function handleSimWitVarianceToggle() {
-		toggleSimWitVariance(null);
-	}
-	
 	function handleSyncRngToggle() {
 		toggleSyncRng(null);
 	}
 	
 	function autoSaveSettings() {
 		saveToLocalStorage(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, getSelectedPacemakers(), showLanes, {
-			allowRushedUma1,
-			allowRushedUma2,
-			allowDownhillUma1,
-			allowDownhillUma2,
-			allowSectionModifierUma1,
-			allowSectionModifierUma2,
-			allowSkillCheckChanceUma1,
-			allowSkillCheckChanceUma2,
-			simWitVariance,
 			syncRng
 		});
 	}
@@ -1553,7 +1447,7 @@ function App(props) {
 		setPacer(new HorseState({strategy: 'Nige'}));
 	}
 	
-	const [{courseId, results, runData, chartData, displaying, rushedStats, leadCompetitionStats, spurtInfo, staminaStats, firstUmaStats}, setSimState] = useReducer(updateResultsState, EMPTY_RESULTS_STATE);
+	const [{courseId, results, runData, chartData, displaying, spurtInfo, staminaStats, firstUmaStats}, setSimState] = useReducer(updateResultsState, EMPTY_RESULTS_STATE);
 	const setCourseId = setSimState;
 	const setResults = setSimState;
 	const setChartData = setSimState;
@@ -1584,6 +1478,8 @@ function App(props) {
 	const [uma1, setUma1] = useState(() => new HorseState());
 	const [uma2, setUma2] = useState(() => new HorseState());
 	const [pacer, setPacer] = useState(() => new HorseState({strategy: 'Nige'}));
+
+	const [lastRunChartUma, setLastRunChartUma] = useState(uma1);
 
 	const [{mode, currentIdx, expanded}, updateUiState] = useReducer(nextUiState, DEFAULT_UI_STATE);
 	function toggleExpand(e: Event) {
@@ -1671,15 +1567,6 @@ function App(props) {
 
 				if (o.witVarianceSettings) {
 					const settings = o.witVarianceSettings;
-					if (settings.allowRushedUma1 !== allowRushedUma1) toggleRushedUma1(null);
-					if (settings.allowRushedUma2 !== allowRushedUma2) toggleRushedUma2(null);
-					if (settings.allowDownhillUma1 !== allowDownhillUma1) toggleDownhillUma1(null);
-					if (settings.allowDownhillUma2 !== allowDownhillUma2) toggleDownhillUma2(null);
-					if (settings.allowSectionModifierUma1 !== allowSectionModifierUma1) toggleSectionModifierUma1(null);
-					if (settings.allowSectionModifierUma2 !== allowSectionModifierUma2) toggleSectionModifierUma2(null);
-					if (settings.allowSkillCheckChanceUma1 !== allowSkillCheckChanceUma1) toggleSkillCheckChanceUma1(null);
-					if (settings.allowSkillCheckChanceUma2 !== allowSkillCheckChanceUma2) toggleSkillCheckChanceUma2(null);
-					if (settings.simWitVariance !== simWitVariance) toggleSimWitVariance(null);
 					if (settings.syncRng !== undefined && settings.syncRng !== syncRng) toggleSyncRng(null);
 				}
 			});
@@ -1709,15 +1596,6 @@ function App(props) {
 
 					if (o.witVarianceSettings) {
 						const settings = o.witVarianceSettings;
-						if (settings.allowRushedUma1 !== allowRushedUma1) toggleRushedUma1(null);
-						if (settings.allowRushedUma2 !== allowRushedUma2) toggleRushedUma2(null);
-						if (settings.allowDownhillUma1 !== allowDownhillUma1) toggleDownhillUma1(null);
-						if (settings.allowDownhillUma2 !== allowDownhillUma2) toggleDownhillUma2(null);
-						if (settings.allowSectionModifierUma1 !== allowSectionModifierUma1) toggleSectionModifierUma1(null);
-						if (settings.allowSectionModifierUma2 !== allowSectionModifierUma2) toggleSectionModifierUma2(null);
-						if (settings.allowSkillCheckChanceUma1 !== allowSkillCheckChanceUma1) toggleSkillCheckChanceUma1(null);
-						if (settings.allowSkillCheckChanceUma2 !== allowSkillCheckChanceUma2) toggleSkillCheckChanceUma2(null);
-						if (settings.simWitVariance !== simWitVariance) toggleSimWitVariance(null);
 						if (settings.syncRng !== undefined && settings.syncRng !== syncRng) toggleSyncRng(null);
 					}
 				}
@@ -1733,7 +1611,7 @@ function App(props) {
 	// Auto-save settings whenever they change
 	useEffect(() => {
 		autoSaveSettings();
-	}, [courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, allowRushedUma1, allowRushedUma2, allowDownhillUma1, allowDownhillUma2, allowSectionModifierUma1, allowSectionModifierUma2, allowSkillCheckChanceUma1, allowSkillCheckChanceUma2, simWitVariance, syncRng, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakerIndices]);
+	}, [courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, syncRng, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakerIndices]);
 	
 	useEffect(() => {
 		const shouldShow = posKeepMode === PosKeepMode.Virtual && selectedPacemakerIndices.length > 0;
@@ -1749,15 +1627,6 @@ function App(props) {
 	function copyStateUrl(e) {
 		e.preventDefault();
 		serialize(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, getSelectedPacemakers(), showLanes, {
-			allowRushedUma1,
-			allowRushedUma2,
-			allowDownhillUma1,
-			allowDownhillUma2,
-			allowSectionModifierUma1,
-			allowSectionModifierUma2,
-			allowSkillCheckChanceUma1,
-			allowSkillCheckChanceUma2,
-			simWitVariance,
 			syncRng
 		}).then(hash => {
 			const url = window.location.protocol + '//' + window.location.host + window.location.pathname;
@@ -1781,7 +1650,7 @@ function App(props) {
 		setUma2(uma1);
 	}
 
-	const strings = {skillnames: {}, tracknames: TRACKNAMES_en};
+	const strings = {skillnames: {}, tracknames: TRACKNAMES_en, ui: CC_GLOBAL ? UI_global : UI_en};
 	const langid = +(props.lang == 'en');
 	Object.keys(skillnames).forEach(id => strings.skillnames[id] = skillnames[id][langid]);
 
@@ -1801,16 +1670,9 @@ function App(props) {
 				options: {
 					seed, 
 					posKeepMode, 
-					allowRushedUma1: simWitVariance ? allowRushedUma1 : false,
-					allowRushedUma2: simWitVariance ? allowRushedUma2 : false,
-					allowDownhillUma1: simWitVariance ? allowDownhillUma1 : false,
-					allowDownhillUma2: simWitVariance ? allowDownhillUma2 : false,
-					allowSectionModifierUma1: simWitVariance ? allowSectionModifierUma1 : false,
-					allowSectionModifierUma2: simWitVariance ? allowSectionModifierUma2 : false,
-					skillCheckChanceUma1: simWitVariance ? allowSkillCheckChanceUma1 : false,
-					skillCheckChanceUma2: simWitVariance ? allowSkillCheckChanceUma2 : false,
 					pacemakerCount: posKeepMode === PosKeepMode.Virtual ? pacemakerCount : 1,
 					syncRng: syncRng,
+					skillWisdomCheck: true
 				}
 			}
 		});
@@ -1833,16 +1695,9 @@ function App(props) {
 				options: {
 					seed: effectiveSeed, 
 					posKeepMode, 
-					allowRushedUma1: simWitVariance ? allowRushedUma1 : false,
-					allowRushedUma2: simWitVariance ? allowRushedUma2 : false,
-					allowDownhillUma1: simWitVariance ? allowDownhillUma1 : false,
-					allowDownhillUma2: simWitVariance ? allowDownhillUma2 : false,
-					allowSectionModifierUma1: simWitVariance ? allowSectionModifierUma1 : false,
-					allowSectionModifierUma2: simWitVariance ? allowSectionModifierUma2 : false,
-					skillCheckChanceUma1: simWitVariance ? allowSkillCheckChanceUma1 : false,
-					skillCheckChanceUma2: simWitVariance ? allowSkillCheckChanceUma2 : false,
 					pacemakerCount: posKeepMode === PosKeepMode.Virtual ? pacemakerCount : 1,
 					syncRng: syncRng,
+					skillWisdomCheck: true
 				}
 			}
 		});
@@ -1863,6 +1718,7 @@ function App(props) {
 
 	function doBasinnChart() {
 		postEvent('doBasinnChart', {});
+		setLastRunChartUma(uma1);
 		chartWorkersCompletedRef.current = 0;
 		setIsSimulationRunning(true);
 		setSimulationProgress(null);
@@ -1875,7 +1731,12 @@ function App(props) {
 			const umaWithoutUniques = removeUniqueSkills(uma1);
 			uma = umaWithoutUniques.toJS();
 		} else {
-			skills = getActivateableSkills(baseSkillsToTest.filter(s => !uma1.skills.has(s) && (s[0] != '9' || !uma1.skills.has('1' + s.slice(1)))), uma1, course, params);
+			skills = getActivateableSkills(baseSkillsToTest.filter(id => {
+				return !(id[0] == '9' && uma1.skills.includes('1' + id.slice(1))  // reject inherited uniques if we already have the regular version
+					|| id == '92111091' && uma1.skills.includes('111091')  // reject rhein kraft pink inherited unique on her (not covered by the above check since the ID is different)
+				);
+			}), uma1, course, params);
+
 			uma = uma1.toJS();
 		}
 		
@@ -1892,15 +1753,8 @@ function App(props) {
 		const chartOptions = {
 			seed, 
 			posKeepMode: PosKeepMode.Approximate, 
-			allowRushedUma1: false,
-			allowRushedUma2: false,
-			allowDownhillUma1: false,
-			allowDownhillUma2: false,
-			allowSectionModifierUma1: false,
-			allowSectionModifierUma2: false,
-			skillCheckChanceUma1: false,
-			skillCheckChanceUma2: false,
-			pacemakerCount: 1
+			pacemakerCount: 1,
+			skillWisdomCheck: false
 		};
 		worker1.postMessage({
 			msg: 'chart', 
@@ -1977,15 +1831,8 @@ function App(props) {
 				options: {
 					seed: effectiveSeed,
 					posKeepMode: PosKeepMode.Approximate,
-					allowRushedUma1: false,
-					allowRushedUma2: false,
-					allowDownhillUma1: false,
-					allowDownhillUma2: false,
-					allowSectionModifierUma1: false,
-					allowSectionModifierUma2: false,
-					skillCheckChanceUma1: false,
-					skillCheckChanceUma2: false,
-					pacemakerCount: 1
+					pacemakerCount: 1,
+					skillWisdomCheck: false
 				}
 			}
 		});
@@ -1993,7 +1840,7 @@ function App(props) {
 
 	function addSkillFromTable(skillId) {
 		postEvent('addSkillFromTable', {skillId});
-		setUma1(uma1.set('skills', uma1.skills.add(skillId)));
+		setUma1(uma1.set('skills', uma1.skills.set(skillmeta[skillId].groupId, skillId)));
 	}
 
 	function showPopover(skillId) {
@@ -2049,9 +1896,7 @@ function App(props) {
 		document.getElementById('rtMouseOverBox').style.display = 'none';
 	}
 
-	function handleSkillDrag(skillId, umaIndex, newStart, newEnd){
-		console.log('handleSkillDrag called:', {skillId, umaIndex, newStart, newEnd});
-		
+	function handleSkillDrag(skillId, umaIndex, newStart, newEnd){		
 		// Update the forced skill position for the appropriate horse
 		if (umaIndex === 0) {
 			setUma1(uma1.set('forcedSkillPositions', uma1.forcedSkillPositions.set(skillId, newStart)));
@@ -2072,14 +1917,14 @@ function App(props) {
 	];
 	const skillActivations = chartData == null ? [] : chartData.sk.flatMap((a,i) => {
 		return Array.from(a.keys()).flatMap(id => {
-			if (NO_SHOW.indexOf(skillmeta(id).iconId) > -1) return [];
+			if (NO_SHOW.indexOf(skillmeta[id].iconId) > -1) return [];
 			else return a.get(id).map(ar => ({
 				type: RegionDisplayType.Textbox,
 				color: colors[i],
 				text: skillnames[id][0],
 				skillId: id,
 				umaIndex: i,
-				regions: [{start: ar[0], end: ar[1]}]
+				regions: [{start: ar[0], end: ar[1] != -1 ? ar[1] : ar[0] + 100}]
 			}));
 		});
 	});
@@ -2201,9 +2046,20 @@ function App(props) {
 			return pacemakerLeadCompetitionData;
 		})() : [];
 	
+	const downhillData = chartData == null ? [] : (chartData.downhillActivations || [[], []]).flatMap((downhillArray,i) => {
+		return downhillArray.map(ar => ({
+			umaIndex: i,
+			text: 'DH',
+			color: posKeepColors[i],
+			start: ar[0],
+			end: ar[1],
+			duration: ar[1] - ar[0]
+		}));
+	});
+	
 	const posKeepLabels = [];
 	
-	const tempLabels = [...posKeepData, ...virtualPacemakerPosKeepData, ...competeFightData, ...leadCompetitionData, ...virtualPacemakerLeadCompetitionData].map(posKeep => ({
+	const tempLabels = [...posKeepData, ...virtualPacemakerPosKeepData, ...competeFightData, ...leadCompetitionData, ...virtualPacemakerLeadCompetitionData, ...downhillData].map(posKeep => ({
 		...posKeep,
 		x: posKeep.start / course.distance * 960,
 		width: posKeep.duration / course.distance * 960,
@@ -2242,6 +2098,83 @@ function App(props) {
 			{posKeepMode == PosKeepMode.Virtual && mode == Mode.Compare && <div class={`umaTab ${currentIdx == 2 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx2)}>Virtual Pacemaker<div id="expandBtn" title="Expand panel" onClick={toggleExpand} /></div>}
 		</Fragment>
 	);
+
+	const createExpandedContent = useCallback((skillId: string, runData: any, courseDistance: number) => {
+		const currentDisplaying = displaying || 'meanrun';
+		let effectivenessRate = 0;
+		const totalCount = runData.allruns?.totalRuns || 0;
+		let skillProcs = 0;
+		if (runData.allruns && runData.allruns.skBasinn && Array.isArray(runData.allruns.skBasinn)) {
+			const allBasinnActivations: Array<[number, number]> = [];
+			runData.allruns.skBasinn.forEach((skBasinnMap: any) => {
+				if (!skBasinnMap) return;
+				let activations = null;
+				if (skBasinnMap instanceof Map || (typeof skBasinnMap.has === 'function' && typeof skBasinnMap.get === 'function')) {
+					if (skBasinnMap.has(skillId)) {
+						activations = skBasinnMap.get(skillId);
+					}
+				} else if (typeof skBasinnMap === 'object' && skillId in skBasinnMap) {
+					activations = skBasinnMap[skillId];
+				}
+				if (activations && Array.isArray(activations)) {
+					activations.forEach((activation: any) => {
+						if (Array.isArray(activation) && activation.length === 2 && 
+						    typeof activation[0] === 'number' && typeof activation[1] === 'number') {
+							allBasinnActivations.push([activation[0], activation[1]]);
+						}
+					});
+				}
+			});
+			skillProcs = allBasinnActivations.length;
+			const positiveCount = allBasinnActivations.filter(([_, basinn]) => basinn > 0).length;
+			effectivenessRate = totalCount > 0 ? (positiveCount / totalCount) * 100 : 0;
+		}
+		
+		return (
+			<div style="position: relative;">
+				<div style={`margin-bottom: 8px; width: 300px;`}>
+					<div style={`font-size: 9px; margin-bottom: 2px; display: flex; align-items: center; gap: 8px;`}>
+						<span>Total samples: {totalCount} ({skillProcs} skill procs)</span>
+						<button 
+							class="runAdditionalSamples"
+							onClick={(e) => { e.stopPropagation(); runAdditionalSamplesForSkill(skillId); }}
+							disabled={loadingAdditionalSamples.has(skillId) || isSimulationRunning}
+						>
+							{loadingAdditionalSamples.has(skillId) ? 'Running...' : isSimulationRunning ? 'Simulation Running...' : 'Run Additional Samples'}
+						</button>
+					</div>
+					<div style={`font-size: 9px; margin-bottom: 2px;`}>Effectiveness rate: {effectivenessRate.toFixed(1)}%</div>
+					<div style={`display: flex; width: 100%; height: 8px; border: 1px solid #ccc; overflow: hidden;`}>
+						<div style={`width: ${effectivenessRate}%; background-color: #4caf50; height: 100%;`}></div>
+						<div style={`width: ${100 - effectivenessRate}%; background-color: #f44336; height: 100%;`}></div>
+					</div>
+				</div>
+				<div style={`display: flex; gap: 20px; align-items: flex-start;`}>
+					<div>
+						<LengthDifferenceChart 
+							skillId={skillId} 
+							runData={runData} 
+							courseDistance={courseDistance}
+						/>
+						<ActivationFrequencyChart 
+							skillId={skillId} 
+							runData={runData} 
+							courseDistance={courseDistance}
+						/>
+					</div>
+					<VelocityChart 
+						skillId={skillId} 
+						runData={runData}
+						courseDistance={courseDistance}
+						displaying={currentDisplaying}
+					/>
+				</div>
+				<div style="position: absolute; bottom: 0; right: 0; font-size: 9px; font-style: italic; padding: 4px;">
+					(yes these graphs are copied from utools &gt;-&lt;)
+				</div>
+			</div>
+		);
+	}, [displaying, loadingAdditionalSamples, isSimulationRunning, runAdditionalSamplesForSkill]);
 
 	let resultsPane;
 	if (mode == Mode.Compare && results.length > 0) {
@@ -2287,41 +2220,29 @@ function App(props) {
 							)}
 							{staminaStats && (
 								<>
-									{simWitVariance && (
-										<div style={{marginBottom: '2px', display: 'flex', justifyContent: 'center', gap: '40px'}}>
-											<div style={{textAlign: 'right', minWidth: '250px'}}>
-												<strong>Uma 1:</strong> Spurt Rate: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{staminaStats.uma1.fullSpurtRate.toFixed(1)}%</span>
-											</div>
-											<div style={{textAlign: 'left', minWidth: '250px'}}>
-												<strong>Uma 2:</strong> Spurt Rate: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{staminaStats.uma2.fullSpurtRate.toFixed(1)}%</span>
-											</div>
+									<div style={{marginBottom: '2px', display: 'flex', justifyContent: 'center', gap: '40px'}}>
+										<div style={{textAlign: 'right', minWidth: '250px'}}>
+											<strong>Uma 1:</strong> Spurt Rate: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{staminaStats.uma1.fullSpurtRate.toFixed(1)}%</span>
 										</div>
-									)}
-									{simWitVariance && (
-										<div style={{marginBottom: '2px', display: 'flex', justifyContent: 'center', gap: '40px'}}>
-											<div style={{textAlign: 'right', minWidth: '250px'}}>
-												<strong>Uma 1:</strong> Survival Rate: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{staminaStats.uma1.staminaSurvivalRate.toFixed(1)}%</span>
-											</div>
-											<div style={{textAlign: 'left', minWidth: '250px'}}>
-												<strong>Uma 2:</strong> Survival Rate: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{staminaStats.uma2.staminaSurvivalRate.toFixed(1)}%</span>
-											</div>
+										<div style={{textAlign: 'left', minWidth: '250px'}}>
+											<strong>Uma 2:</strong> Spurt Rate: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{staminaStats.uma2.fullSpurtRate.toFixed(1)}%</span>
 										</div>
-									)}
-									{!simWitVariance && (
-										<div style={{marginBottom: '2px', display: 'flex', justifyContent: 'center', gap: '40px', color: '#c52a2a'}}>
-											<div style={{textAlign: 'right', minWidth: '250px'}}>
-												<strong>Please turn on wit variance to see the spurt stats</strong>
-											</div>
+									</div>
+									<div style={{marginBottom: '2px', display: 'flex', justifyContent: 'center', gap: '40px'}}>
+										<div style={{textAlign: 'right', minWidth: '250px'}}>
+											<strong>Uma 1:</strong> Survival Rate: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{staminaStats.uma1.staminaSurvivalRate.toFixed(1)}%</span>
 										</div>
-									)}
-					
+										<div style={{textAlign: 'left', minWidth: '250px'}}>
+											<strong>Uma 2:</strong> Survival Rate: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{staminaStats.uma2.staminaSurvivalRate.toFixed(1)}%</span>
+										</div>
+									</div>
 								</>
 							)}
 						</div>
 					)}
 					
 					<Histogram width={500} height={333} data={results} />
-					{simWitVariance && staminaStats && (
+					{staminaStats && (
 						<div style={{marginTop: '20px', width: '500px', paddingBottom: '20px'}}>
 							<div style={{display: 'flex', marginBottom: '0'}}>
 								<div 
@@ -2387,229 +2308,32 @@ function App(props) {
 					)}
 				</div>
 				<div id="infoTables">
-					<table>
-						<caption style="color:#2a77c5">Umamusume 1</caption>
-						<tbody>
-							<tr><th>Time to finish</th><td>{formatTime(chartData.t[0][chartData.t[0].length-1] * 1.18)}</td></tr>
-							<tr><th>Start delay</th><td>{chartData.sdly[0].toFixed(4) + ' s'}</td></tr>
-							<tr><th>Top speed</th><td>{chartData.v[0].reduce((a,b) => Math.max(a,b), 0).toFixed(2) + ' m/s'}</td></tr>
-							{rushedStats && allowRushedUma2 && (
-								<tr><th>Rushed frequency</th><td>{rushedStats.uma1.frequency > 0 ? `${rushedStats.uma1.frequency.toFixed(1)}% (${rushedStats.uma1.mean.toFixed(1)}m)` : '0%'}</td></tr>
-							)}
-							{leadCompetitionStats && (
-								<tr><th>Spot Struggle frequency</th><td>{leadCompetitionStats.uma1.frequency > 0 ? `${leadCompetitionStats.uma1.frequency.toFixed(1)}%` : '0%'}</td></tr>
-							)}
-						</tbody>
-						{chartData.sk[0].size > 0 &&
-							<tbody>
-								{Array.from(chartData.sk[0].entries()).map(([id,ars]) => ars.flatMap(pos =>
-									<tr>
-										<th>{skillnames[id][0]}</th>
-										<td>{`${pos[0].toFixed(2)} m – ${pos[1].toFixed(2)} m`}</td>
-									</tr>))}
-							</tbody>}
-					</table>
-					<table>
-						<caption style="color:#c52a2a">Umamusume 2</caption>
-						<tbody>
-							<tr><th>Time to finish</th><td>{formatTime(chartData.t[1][chartData.t[1].length-1] * 1.18)}</td></tr>
-							<tr><th>Start delay</th><td>{chartData.sdly[1].toFixed(4) + ' s'}</td></tr>
-							<tr><th>Top speed</th><td>{chartData.v[1].reduce((a,b) => Math.max(a,b), 0).toFixed(2) + ' m/s'}</td></tr>
-							{rushedStats && allowRushedUma2 && (
-								<tr><th>Rushed frequency</th><td>{rushedStats.uma2.frequency > 0 ? `${rushedStats.uma2.frequency.toFixed(1)}% (${rushedStats.uma2.mean.toFixed(1)}m)` : '0%'}</td></tr>
-							)}
-							{leadCompetitionStats && (
-								<tr><th>Spot Struggle frequency</th><td>{leadCompetitionStats.uma2.frequency > 0 ? `${leadCompetitionStats.uma2.frequency.toFixed(1)}%` : '0%'}</td></tr>
-							)}
-						</tbody>
-						{chartData.sk[1].size > 0 &&
-							<tbody>
-								{Array.from(chartData.sk[1].entries()).map(([id,ars]) => ars.flatMap(pos =>
-									<tr>
-										<th>{skillnames[id][0]}</th>
-										<td>{`${pos[0].toFixed(2)} m – ${pos[1].toFixed(2)} m`}</td>
-									</tr>))}
-							</tbody>}
-					</table>
+					<ResultsTable caption="Umamusume 1" color="#2a77c5" chartData={chartData} idx={0} runData={runData} />
+					<ResultsTable caption="Umamusume 2" color="#c52a2a" chartData={chartData} idx={1} runData={runData} />
 				</div>
 			</div>
 		);
-	} else if (mode == Mode.Chart && tableData.size > 0) {
+	} else if ((mode == Mode.Chart || mode == Mode.UniquesChart) && tableData.size > 0) {
+		const dirty = !uma1.equals(lastRunChartUma);
 		resultsPane = (
 			<div id="resultsPaneWrapper">
 				<div id="resultsPane" class="mode-chart">
-					<BasinnChart data={Array.from(tableData.values())} hidden={uma1.skills}
-						onSelectionChange={basinnChartSelection}
-						onRunTypeChange={setChartData}
-						onDblClickRow={addSkillFromTable}
-						onInfoClick={showPopover}
-						courseDistance={course.distance}
-						expandedContent={(skillId, runData, courseDistance) => {
-							const currentDisplaying = displaying || 'meanrun';
-							let effectivenessRate = 0;
-							const totalCount = runData.allruns?.totalRuns || 0;
-							let skillProcs = 0;
-							if (runData.allruns && runData.allruns.skBasinn && Array.isArray(runData.allruns.skBasinn)) {
-								const allBasinnActivations: Array<[number, number]> = [];
-								runData.allruns.skBasinn.forEach((skBasinnMap: any) => {
-									if (!skBasinnMap) return;
-									let activations = null;
-									if (skBasinnMap instanceof Map || (typeof skBasinnMap.has === 'function' && typeof skBasinnMap.get === 'function')) {
-										if (skBasinnMap.has(skillId)) {
-											activations = skBasinnMap.get(skillId);
-										}
-									} else if (typeof skBasinnMap === 'object' && skillId in skBasinnMap) {
-										activations = skBasinnMap[skillId];
-									}
-									if (activations && Array.isArray(activations)) {
-										activations.forEach((activation: any) => {
-											if (Array.isArray(activation) && activation.length === 2 && 
-											    typeof activation[0] === 'number' && typeof activation[1] === 'number') {
-												allBasinnActivations.push([activation[0], activation[1]]);
-											}
-										});
-									}
-								});
-								skillProcs = allBasinnActivations.length;
-								const positiveCount = allBasinnActivations.filter(([_, basinn]) => basinn > 0).length;
-								effectivenessRate = totalCount > 0 ? (positiveCount / totalCount) * 100 : 0;
-							}
-							
-							return (
-								<div style="position: relative;">
-									<div style={`margin-bottom: 8px; width: 300px;`}>
-										<div style={`font-size: 9px; margin-bottom: 2px; display: flex; align-items: center; gap: 8px;`}>
-											<span>Total samples: {totalCount} ({skillProcs} skill procs)</span>
-											<button 
-												class="runAdditionalSamples"
-												onClick={(e) => { e.stopPropagation(); runAdditionalSamplesForSkill(skillId); }}
-												disabled={loadingAdditionalSamples.has(skillId) || isSimulationRunning}
-											>
-												{loadingAdditionalSamples.has(skillId) ? 'Running...' : isSimulationRunning ? 'Simulation Running...' : 'Run Additional Samples'}
-											</button>
-										</div>
-										<div style={`font-size: 9px; margin-bottom: 2px;`}>Effectiveness rate: {effectivenessRate.toFixed(1)}%</div>
-										<div style={`display: flex; width: 100%; height: 8px; border: 1px solid #ccc; overflow: hidden;`}>
-											<div style={`width: ${effectivenessRate}%; background-color: #4caf50; height: 100%;`}></div>
-											<div style={`width: ${100 - effectivenessRate}%; background-color: #f44336; height: 100%;`}></div>
-										</div>
-									</div>
-									<div style={`display: flex; gap: 20px; align-items: flex-start;`}>
-										<div>
-											<LengthDifferenceChart 
-												skillId={skillId} 
-												runData={runData} 
-												courseDistance={courseDistance}
-											/>
-											<ActivationFrequencyChart 
-												skillId={skillId} 
-												runData={runData} 
-												courseDistance={courseDistance}
-											/>
-										</div>
-										<VelocityChart 
-											skillId={skillId} 
-											runData={runData}
-											courseDistance={courseDistance}
-											displaying={currentDisplaying}
-										/>
-									</div>
-									<div style="position: absolute; bottom: 0; right: 0; font-size: 9px; font-style: italic; padding: 4px;">
-										(yes these graphs are copied from utools &gt;-&lt;)
-									</div>
-								</div>
-							);
-						}} />
-				</div>
-			</div>
-		);
-	} else if (mode == Mode.UniquesChart && tableData.size > 0) {
-		resultsPane = (
-			<div id="resultsPaneWrapper">
-				<div id="resultsPane" class="mode-chart">
-					<BasinnChart data={Array.from(tableData.values())} hidden={new Set()}
-						onSelectionChange={basinnChartSelection}
-						onRunTypeChange={setChartData}
-						onDblClickRow={addSkillFromTable}
-						onInfoClick={showPopover}
-						showUmaIcons={true}
-						courseDistance={course.distance}
-						expandedContent={(skillId, runData, courseDistance) => {
-							const currentDisplaying = displaying || 'meanrun';
-							let effectivenessRate = 0;
-							const totalCount = runData.allruns?.totalRuns || 0;
-							let skillProcs = 0;
-							if (runData.allruns && runData.allruns.skBasinn && Array.isArray(runData.allruns.skBasinn)) {
-								const allBasinnActivations: Array<[number, number]> = [];
-								runData.allruns.skBasinn.forEach((skBasinnMap: any) => {
-									if (!skBasinnMap) return;
-									let activations = null;
-									if (skBasinnMap instanceof Map || (typeof skBasinnMap.has === 'function' && typeof skBasinnMap.get === 'function')) {
-										if (skBasinnMap.has(skillId)) {
-											activations = skBasinnMap.get(skillId);
-										}
-									} else if (typeof skBasinnMap === 'object' && skillId in skBasinnMap) {
-										activations = skBasinnMap[skillId];
-									}
-									if (activations && Array.isArray(activations)) {
-										activations.forEach((activation: any) => {
-											if (Array.isArray(activation) && activation.length === 2 && 
-											    typeof activation[0] === 'number' && typeof activation[1] === 'number') {
-												allBasinnActivations.push([activation[0], activation[1]]);
-											}
-										});
-									}
-								});
-								skillProcs = allBasinnActivations.length;
-								const positiveCount = allBasinnActivations.filter(([_, basinn]) => basinn > 0).length;
-								effectivenessRate = totalCount > 0 ? (positiveCount / totalCount) * 100 : 0;
-							}
-							
-							return (
-								<div style="position: relative;">
-									<div style={`margin-bottom: 8px; width: 300px;`}>
-										<div style={`font-size: 9px; margin-bottom: 2px; display: flex; align-items: center; gap: 8px;`}>
-											<span>Total samples: {totalCount} ({skillProcs} skill procs)</span>
-											<button 
-												class="runAdditionalSamples"
-												onClick={(e) => { e.stopPropagation(); runAdditionalSamplesForSkill(skillId); }}
-												disabled={loadingAdditionalSamples.has(skillId) || isSimulationRunning}
-											>
-												{loadingAdditionalSamples.has(skillId) ? 'Running...' : isSimulationRunning ? 'Simulation Running...' : 'Run Additional Samples'}
-											</button>
-										</div>
-										<div style={`font-size: 9px; margin-bottom: 2px;`}>Effectiveness rate: {effectivenessRate.toFixed(1)}%</div>
-										<div style={`display: flex; width: 100%; height: 8px; border: 1px solid #ccc; overflow: hidden;`}>
-											<div style={`width: ${effectivenessRate}%; background-color: #4caf50; height: 100%;`}></div>
-											<div style={`width: ${100 - effectivenessRate}%; background-color: #f44336; height: 100%;`}></div>
-										</div>
-									</div>
-									<div style={`display: flex; gap: 20px; align-items: flex-start;`}>
-										<div>
-											<LengthDifferenceChart 
-												skillId={skillId} 
-												runData={runData} 
-												courseDistance={courseDistance}
-											/>
-											<ActivationFrequencyChart 
-												skillId={skillId} 
-												runData={runData} 
-												courseDistance={courseDistance}
-											/>
-										</div>
-										<VelocityChart 
-											skillId={skillId} 
-											runData={runData}
-											courseDistance={courseDistance}
-											displaying={currentDisplaying}
-										/>
-									</div>
-									<div style="position: absolute; bottom: 0; right: 0; font-size: 9px; font-style: italic; padding: 4px;">
-										(yes these graphs are copied from utools &gt;-&lt;)
-									</div>
-								</div>
-							);
-						}} />
+					<div class="basinnChartWrapperWrapper">
+						<BasinnChart 
+							data={Array.from(tableData.values())} 
+							dirty={dirty}
+							hidden={mode == Mode.Chart ? uma1.skills : new Set()}
+							onSelectionChange={basinnChartSelection}
+							onRunTypeChange={setChartData}
+							onDblClickRow={addSkillFromTable}
+							onInfoClick={showPopover}
+							showUmaIcons={mode == Mode.UniquesChart}
+							courseDistance={course.distance}
+							expandedContent={createExpandedContent}
+						/>
+						<button class={`basinnChartRefresh${dirty ? '' : ' hidden'}`} onClick={doBasinnChart} disabled={isSimulationRunning || loadingAdditionalSamples.size > 0}>⟲</button>
+						<div class={`basinnChartRefreshText${dirty ? '' : ' hidden'}`}>Uma skills have changed, refresh is required</div>
+					</div>
 				</div>
 			</div>
 		);
@@ -2753,28 +2477,13 @@ function App(props) {
 						)} **/}
 						{mode == Mode.Compare && (
 							<div>
-								<label for="simWitVariance">Wit Variance</label>
-								<input type="checkbox" id="simWitVariance" checked={simWitVariance} onClick={handleSimWitVarianceToggle} />
-								<button 
-									className="wit-variance-settings-btn" 
-									onClick={() => setShowWitVarianceSettings(true)}
-									title="Configure Wit Variance settings"
-									disabled={!simWitVariance}
-								>
-									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<circle cx="12" cy="12" r="3"></circle>
-										<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-									</svg>
-								</button>
-								<div>
-									<label for="syncRng">Sync RNG</label>
-									<input type="checkbox" id="syncRng" checked={syncRng} onClick={handleSyncRngToggle} />
-								</div>
+								<label for="syncRng">Sync RNG</label>
+								<input type="checkbox" id="syncRng" checked={syncRng} onClick={handleSyncRngToggle} />
 							</div>
 						)}
 
 						<a href="#" onClick={copyStateUrl}>Copy link</a>
-						<RacePresets set={(courseId, racedef) => { setCourseId(courseId); setRaceDef(racedef); }} />
+						<RacePresets courseId={courseId} racedef={racedef} set={(courseId, racedef) => { setCourseId(courseId); setRaceDef(racedef); }} />
 					</div>
 					<div id="buttonsRow">
 						<TrackSelect key={courseId} courseid={courseId} setCourseid={setCourseId} tabindex={2} />
@@ -2814,26 +2523,6 @@ function App(props) {
 					{expanded && <div id="closeUmaOverlay" title="Close panel" onClick={toggleExpand}>✕</div>}
 				</div>
 				{popoverSkill && <BasinnChartPopover skillid={popoverSkill} results={tableData.get(popoverSkill).results} courseDistance={course.distance} />}
-				<WitVarianceSettingsPopup 
-					show={showWitVarianceSettings}
-					onClose={() => setShowWitVarianceSettings(false)}
-					allowRushedUma1={allowRushedUma1}
-					allowRushedUma2={allowRushedUma2}
-					allowDownhillUma1={allowDownhillUma1}
-					allowDownhillUma2={allowDownhillUma2}
-					allowSectionModifierUma1={allowSectionModifierUma1}
-					allowSectionModifierUma2={allowSectionModifierUma2}
-					allowSkillCheckChanceUma1={allowSkillCheckChanceUma1}
-					allowSkillCheckChanceUma2={allowSkillCheckChanceUma2}
-					toggleRushedUma1={toggleRushedUma1}
-					toggleRushedUma2={toggleRushedUma2}
-					toggleDownhillUma1={toggleDownhillUma1}
-					toggleDownhillUma2={toggleDownhillUma2}
-					toggleSectionModifierUma1={toggleSectionModifierUma1}
-					toggleSectionModifierUma2={toggleSectionModifierUma2}
-					toggleSkillCheckChanceUma1={toggleSkillCheckChanceUma1}
-					toggleSkillCheckChanceUma2={toggleSkillCheckChanceUma2}
-				/>
 			</IntlProvider>
 		</Language.Provider>
 	);

@@ -9,6 +9,7 @@ import { HorseParameters } from '../uma-skill-tools/HorseTypes';
 import { HorseState } from '../components/HorseDefTypes';
 
 import skilldata from '../uma-skill-tools/data/skill_data.json';
+import skillmeta from '../skill_meta.json';
 import { Rule30CARng } from '../uma-skill-tools/Random';
 
 export function runComparison(nsamples: number, course: CourseData, racedef: RaceParameters, uma1: HorseState, uma2: HorseState, pacer: HorseState, options) {
@@ -33,43 +34,21 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		standard.desync();
 	}
 	
-	standard.horse(uma1.toJS());
-	compare.horse(uma2.toJS());
+	const uma1_ = uma1.update('skills', sk => Array.from(sk.values())).toJS();
+	const uma2_ = uma2.update('skills', sk => Array.from(sk.values())).toJS();
+	standard.horse(uma1_);
+	compare.horse(uma2_);
 	
-	// Apply rushed toggles
-	if (options.allowRushedUma1 === false) {
-		standard.disableRushed();
-	}
-	if (options.allowRushedUma2 === false) {
-		compare.disableRushed();
-	}
-	
-	// Apply downhill toggles
-	if (options.allowDownhillUma1 === false) {
-		standard.disableDownhill();
-	}
-	if (options.allowDownhillUma2 === false) {
-		compare.disableDownhill();
+	if (options.skillWisdomCheck === false) {
+		standard.skillWisdomCheck(false);
+		compare.skillWisdomCheck(false);
 	}
 	
-	if (options.allowSectionModifierUma1 === false) {
-		standard.disableSectionModifier();
-	}
-	if (options.allowSectionModifierUma2 === false) {
-		compare.disableSectionModifier();
-	}
-	
-	// Apply skill check chance toggle
-	if (options.skillCheckChanceUma1 === false) {
-		standard.skillCheckChance(false);
-	}
-	if (options.skillCheckChanceUma2 === false) {
-		compare.skillCheckChance(false);
-	}
 	// ensure skills common to the two umas are added in the same order regardless of what additional skills they have
 	// this is important to make sure the rng for their activations is synced
-	const common = uma1.skills.intersect(uma2.skills).toArray().sort((a,b) => +a - +b);
-	const commonIdx = (id) => { let i = common.indexOf(id); return i > -1 ? i : common.length; };
+	// sort first by groupId so that white and gold versions of a skill get added in the same order
+	const common = uma1.skills.keySeq().toSet().intersect(uma2.skills.keySeq().toSet()).toArray().sort((a,b) => +a - +b);
+	const commonIdx = (id) => { let i = common.indexOf(skillmeta[id].groupId); return i > -1 ? i : common.length; };
 	const sort = (a,b) => commonIdx(a) - commonIdx(b) || +a - +b;
 	
 	const uma1Horse = uma1.toJS();
@@ -85,26 +64,24 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 	// Note for future self as to why we only add perspective other in non-chart mode:
 	// 1) this sucks
 	// 2) this is to fix a trigger region desync bug caused by skills that affect other umas (i.e. HRice unique)
-	uma1.skills.toArray().sort(sort).forEach(id => {
-		const skillId = id.split('-')[0];
+	uma1_.skills.sort(sort).forEach(id => {
 		const forcedPos = uma1.forcedSkillPositions.get(id);
 		if (forcedPos != null) {
-			standard.addSkillAtPosition(skillId, forcedPos, Perspective.Self);
-			if (options.mode === 'compare') { compare.addSkillAtPosition(skillId, forcedPos, Perspective.Other, uma1Wisdom); }
+			standard.addSkillAtPosition(id, forcedPos, Perspective.Self);
+			if (options.mode === 'compare') { compare.addSkillAtPosition(id, forcedPos, Perspective.Other, uma1Wisdom); }
 		} else {
-			standard.addSkill(skillId, Perspective.Self);
-			if (options.mode === 'compare') { compare.addSkill(skillId, Perspective.Other, undefined, uma1Wisdom); }
+			standard.addSkill(id, Perspective.Self);
+			if (options.mode === 'compare') { compare.addSkill(id, Perspective.Other, undefined, uma1Wisdom); }
 		}
 	});
-	uma2.skills.toArray().sort(sort).forEach(id => {
-		const skillId = id.split('-')[0];
+	uma2_.skills.sort(sort).forEach(id => {
 		const forcedPos = uma2.forcedSkillPositions.get(id);
 		if (forcedPos != null) {
-			compare.addSkillAtPosition(skillId, forcedPos, Perspective.Self);
-			if (options.mode === 'compare') { standard.addSkillAtPosition(skillId, forcedPos, Perspective.Other, uma2Wisdom); }
+			compare.addSkillAtPosition(id, forcedPos, Perspective.Self);
+			if (options.mode === 'compare') { standard.addSkillAtPosition(id, forcedPos, Perspective.Other, uma2Wisdom); }
 		} else {
-			compare.addSkill(skillId, Perspective.Self);
-			if (options.mode === 'compare') { standard.addSkill(skillId, Perspective.Other, undefined, uma2Wisdom); }
+			compare.addSkill(id, Perspective.Self);
+			if (options.mode === 'compare') { standard.addSkill(id, Perspective.Other, undefined, uma2Wisdom); }
 		}
 	});
 	if (!CC_GLOBAL) {
@@ -135,34 +112,34 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 	}
 	
 	const skillPos1 = new Map(), skillPos2 = new Map();
-	function getActivator(selfSet, otherSet) {
+	function getActivator(skillSet) {
 		return function (s, id, persp) {
-			const skillSet = persp == Perspective.Self ? selfSet : otherSet;
-			if (id != 'asitame' && id != 'staminasyoubu') {
+			if (persp == Perspective.Self && id != 'asitame' && id != 'staminasyoubu') {
 				if (!skillSet.has(id)) skillSet.set(id, []);
-				skillSet.get(id).push([s.pos, s.pos]);  // Initialize with same position for instant skills
+				skillSet.get(id).push([s.pos, -1]);
 			}
 		};
 	}
-	function getDeactivator(selfSet, otherSet) {
+	function getDeactivator(skillSet) {
 		return function (s, id, persp) {
-			const skillSet = persp == Perspective.Self ? selfSet : otherSet;
-			if (id != 'asitame' && id != 'staminasyoubu') {
+			if (persp == Perspective.Self && id != 'asitame' && id != 'staminasyoubu') {
 				const ar = skillSet.get(id);  // activation record
-				if (ar && ar.length > 0) {
-					// Only update if this is a duration skill (position has moved)
-					const activationPos = ar[ar.length-1][0];
-					if (s.pos > activationPos) {
-						ar[ar.length-1][1] = Math.min(s.pos, course.distance);
-					}
-				}
+				// in the case of adding multiple copies of speed debuffs a skill can activate again before the first
+				// activation has finished (as each copy has the same ID), so we can't just access a specific index
+				// (-1).
+				// assume that multiple activations of a skill always deactivate in the same order (probably true?) so
+				// just seach for the first record that hasn't had its deactivation location filled out yet.
+				const r = ar.find(x => x[1] == -1);
+				// onSkillDeactivate gets called twice for skills that have both speed and accel components, so the end
+				// position could already have been filled out and r will be undefined
+				if (r != null) r[1] = Math.min(s.pos, course.distance);
 			}
 		};
 	}
-	standard.onSkillActivate(getActivator(skillPos1, skillPos2));
-	standard.onSkillDeactivate(getDeactivator(skillPos1, skillPos2));
-	compare.onSkillActivate(getActivator(skillPos2, skillPos1));
-	compare.onSkillDeactivate(getDeactivator(skillPos2, skillPos1));
+	standard.onSkillActivate(getActivator(skillPos1));
+	standard.onSkillDeactivate(getDeactivator(skillPos1));
+	compare.onSkillActivate(getActivator(skillPos2));
+	compare.onSkillDeactivate(getDeactivator(skillPos2));
 	let a = standard.build(), b = compare.build();
 	let ai = 1, bi = 0;
 	let sign = 1;
@@ -218,9 +195,6 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		uma1: { firstPlaceCount: 0, total: 0 },
 		uma2: { firstPlaceCount: 0, total: 0 }
 	};
-	
-	// Track which generator corresponds to which uma (flips when we swap generators)
-	let aIsUma1 = true; // 'a' starts as standard builder (uma1)
 
 	let basePacerRng = new Rule30CARng(options.seed + 1);
 	
@@ -237,7 +211,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 
 		const s1 = a.next(retry).value as RaceSolver;
 		const s2 = b.next(retry).value as RaceSolver;
-		const data = {t: [[], []], p: [[], []], v: [[], []], hp: [[], []], currentLane: [[], []], pacerGap: [[], []], sk: [null,null], sdly: [0,0], rushed: [[], []], posKeep: [[], []], competeFight: [[], []], leadCompetition: [[], []], pacerV: [[], [], []], pacerP: [[], [], []], pacerT: [[], [], []], pacerPosKeep: [[], [], []], pacerLeadCompetition: [[], [], []]};
+		const data = {t: [[], []], p: [[], []], v: [[], []], hp: [[], []], currentLane: [[], []], pacerGap: [[], []], sk: [null,null], sdly: [0,0], rushed: [[], []], posKeep: [[], []], competeFight: [[], []], leadCompetition: [[], []], downhillActivations: [[], []], pacerV: [[], [], []], pacerP: [[], [], []], pacerT: [[], [], []], pacerPosKeep: [[], [], []], pacerLeadCompetition: [[], [], []]};
 
 		s1.initUmas([s2, ...pacers]);
 		s2.initUmas([s1, ...pacers]);
@@ -292,6 +266,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 				data.sdly[ai] = s2.startDelay;
 				data.rushed[ai] = s2.rushedActivations.slice();
 				data.posKeep[ai] = s2.positionKeepActivations.slice();
+				data.downhillActivations[ai] = s2.downhillActivations.slice();
 				if (s2.competeFightStart != null) {
 					data.competeFight[ai] = [s2.competeFightStart, s2.competeFightEnd != null ? s2.competeFightEnd : course.distance];
 				}
@@ -315,6 +290,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 				data.sdly[bi] = s1.startDelay;
 				data.rushed[bi] = s1.rushedActivations.slice();
 				data.posKeep[bi] = s1.positionKeepActivations.slice();
+				data.downhillActivations[bi] = s1.downhillActivations.slice();
 				if (s1.competeFightStart != null) {
 					data.competeFight[bi] = [s1.competeFightStart, s1.competeFightEnd != null ? s1.competeFightEnd : course.distance];
 				}
@@ -325,6 +301,9 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 
 			s2.updatefirstUmaInLateRace();
 		}
+
+		s2.cleanup();
+		s1.cleanup();
 
 		// ai took less time to finish (less frames to finish)
 		if (data.p[ai].length <= data.p[bi].length) {
@@ -359,31 +338,6 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 				data.pacerLeadCompetition[j] = [];
 			}
 		}
-
-		// Clean up skills that are still active when the race ends
-		// This ensures skills that activate near the finish line get proper end positions
-		// Also handles skills with very short durations that might deactivate in the same frame
-		const cleanupActiveSkills = (solver, selfSkillSet, otherSkillSet) => {
-			const allActiveSkills = [
-				...solver.activeTargetSpeedSkills,
-				...solver.activeCurrentSpeedSkills,
-				...solver.activeAccelSkills
-			];
-			
-			allActiveSkills.forEach(skill => {
-				// Call the deactivator to set the end position to course.distance
-				// This handles both race-end cleanup and very short duration skills
-				// Use the correct skill position maps for this solver
-				getDeactivator(selfSkillSet, otherSkillSet)(solver, skill.skillId, skill.perspective);
-			});
-		};
-
-		// Clean up active skills for both horses
-		// s1 comes from generator 'a' (standard), s2 comes from generator 'b' (compare)
-		// standard uses skillPos1 for self, skillPos2 for other
-		// compare uses skillPos2 for self, skillPos1 for other
-		cleanupActiveSkills(s1, skillPos1, skillPos2);
-		cleanupActiveSkills(s2, skillPos2, skillPos1);
 
 		data.sk[1] = new Map(skillPos2);  // NOT ai (NB. why not?)
 		data.sk[0] = new Map(skillPos1);  // NOT bi (NB. why not?)
@@ -420,28 +374,6 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		skillPos1.clear();
 
 		retry = false;
-		
-		// ONLY track stats for valid iterations (after swap check, but BEFORE cleanup)
-		// Key insight: After swaps, s1 and s2 variable names don't tell us which uma they are!
-		// We need to track which BUILDER (a or b) they came from:
-		// - s1 always comes from generator 'a'
-		// - s2 always comes from generator 'b'
-		// - 'a' started as standard builder (uma1), 'b' started as compare builder (uma2)
-		// - After swaps, 'a' might generate uma2 and 'b' might generate uma1
-		// BUT: we swapped both the generators AND the indices, so:
-		//   - If aIsUma1, then s1=uma1, s2=uma2
-		//   - After swap: generators swap AND indices swap, so relationship stays same!
-		
-		// Actually wait, that's not right either. Let me think...
-		// After [b,a]=[a,b], the generator that WAS producing uma1 is now in variable 'b'
-		// And the generator that WAS producing uma2 is now in variable 'a'
-		// So after swaps, aIsUma1 flips!
-		
-		// Determine which uma each solver represents based on current generator state
-		// s1 came from generator 'a': if aIsUma1, then s1 is uma1, else s1 is uma2  
-		// s2 came from generator 'b': if aIsUma1, then s2 is uma2, else s2 is uma1
-		const s1IsUma1 = aIsUma1;
-		const s2IsUma1 = !aIsUma1;
 		
 		const trackSolverStats = (solver: RaceSolver, isUma1: boolean) => {
 			const staminaStat = isUma1 ? staminaStats.uma1 : staminaStats.uma2;
@@ -493,12 +425,8 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 			}
 		};
 		
-		trackSolverStats(s1, s1IsUma1);
-		trackSolverStats(s2, s2IsUma1);
-
-		// Cleanup AFTER stat tracking
-		s2.cleanup();
-		s1.cleanup();
+		trackSolverStats(s1, true);
+		trackSolverStats(s2, false);
 		
 		const basinn = sign * posDifference / 2.5;
 		diff.push(basinn);
@@ -617,14 +545,26 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 			allSkillActivationBasinn[0],
 			allSkillActivationBasinn[1]
 		],
-		totalRuns: nsamples
+		totalRuns: nsamples,
+		rushed: [
+			rushedStatsSummary.uma1,
+			rushedStatsSummary.uma2
+		],
+		leadCompetition: [
+			leadCompetitionStatsSummary.uma1,
+			leadCompetitionStatsSummary.uma2
+		]
 	};
 	
 	return {
 		results: diff, 
-		runData: {minrun, maxrun, meanrun, medianrun, allruns: allRunsData},
-		rushedStats: rushedStatsSummary,
-		leadCompetitionStats: leadCompetitionStatsSummary,
+		runData: {
+			minrun, 
+			maxrun, 
+			meanrun, 
+			medianrun, 
+			allruns: allRunsData
+		},
 		staminaStats: staminaStatsSummary,
 		firstUmaStats: firstUmaStatsSummary
 	};
