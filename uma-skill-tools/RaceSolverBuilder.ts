@@ -408,6 +408,7 @@ export class RaceSolverBuilder {
 	_posKeepMode: PosKeepMode
 	_mode: string | undefined
 	_skillWisdomCheck: boolean | undefined
+	_rushedKakari: boolean | undefined
 
 	constructor(readonly nsamples: number) {
 		this._course = null;
@@ -437,6 +438,7 @@ export class RaceSolverBuilder {
 		this._posKeepMode = PosKeepMode.None;
 		this._mode = undefined;
 		this._skillWisdomCheck = undefined;
+		this._rushedKakari = undefined;
 	}
 
 	seed(seed: number) {
@@ -739,6 +741,11 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
+	rushedKakari(enabled: boolean) {
+		this._rushedKakari = enabled;
+		return this;
+	}
+
 	onSkillActivate(cb: (state: RaceSolver, skillId: string) => void) {
 		this._onSkillActivate = cb;
 		return this;
@@ -826,7 +833,8 @@ export class RaceSolverBuilder {
 				onSkillDeactivate: this._onSkillDeactivate,
 				posKeepMode: this._posKeepMode,
 				mode: this._mode,
-				skillWisdomCheck: this._skillWisdomCheck
+				skillWisdomCheck: this._skillWisdomCheck,
+				rushedKakari: this._rushedKakari
 			});
 
 			if (redo) {

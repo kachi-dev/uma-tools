@@ -69,6 +69,12 @@ export function IntroText(props) {
 			<details open={true}>
 				<summary>Changelog</summary>
 				<section>
+					<h2>2025-12-11</h2>
+					<ul>
+						<li>Added back simplified wit toggles just in-case people want to experiment with them.</li>
+					</ul>
+				</section>
+				<section>
 					<h2>2025-12-06</h2>
 					<ul>
 						<li>

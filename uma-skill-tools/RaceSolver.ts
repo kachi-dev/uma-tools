@@ -286,6 +286,7 @@ export class RaceSolver {
 	mode: string | undefined
 	pacer: RaceSolver | null
 	skillWisdomCheck: boolean
+	rushedKakari: boolean
 
 	// Rushed state
 	isRushed: boolean
@@ -356,6 +357,7 @@ export class RaceSolver {
 		mode?: string,
 		isPacer?: boolean,
 		skillWisdomCheck?: boolean,
+		rushedKakari?: boolean,
 	}) {
 		// clone since green skills may modify the stat values
 		this.horse = Object.assign({}, params.horse);
@@ -405,6 +407,7 @@ export class RaceSolver {
 		this.posKeepStrategy = this.horse.strategy;
 		this.mode = params.mode;
 		this.skillWisdomCheck = params.skillWisdomCheck !== false;
+		this.rushedKakari = params.rushedKakari !== false;
 		// For skill chart we want to minimize poskeep skewing results
 		// (i.e. in rare situations, an uma can proc a velocity skill, and gain initial positioning
 		// but then lose that positioning because they are too far forward to proc Pace Up)
@@ -441,7 +444,9 @@ export class RaceSolver {
 		this.nonFullSpurtVelocityDiff = null;
 		this.nonFullSpurtDelayDistance = null;
 		// Calculate rushed chance and determine if/when it activates
-		this.initRushedState();
+		if (this.rushedKakari) {
+			this.initRushedState();
+		}
 
 		this.competeFight = false;
 		this.competeFightStart = null;

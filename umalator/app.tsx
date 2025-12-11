@@ -1039,7 +1039,9 @@ function racedefToParams({mood, ground, weather, season, time, grade}: RaceParam
 }
 
 async function serialize(courseId: number, nsamples: number, seed: number, posKeepMode: PosKeepMode, racedef: RaceParams, uma1: HorseState, uma2: HorseState, pacer: HorseState, showVirtualPacemakerOnGraph: boolean, pacemakerCount: number, selectedPacemakers: boolean[], showLanes: boolean, witVarianceSettings: {
-	syncRng: boolean
+	syncRng: boolean,
+	skillWisdomCheck: boolean,
+	rushedKakari: boolean
 }) {
 	const json = JSON.stringify({
 		courseId,
@@ -1110,7 +1112,9 @@ async function deserialize(hash) {
 						.set('skills', SkillSet(o.pacer.skills || []))
 						.set('forcedSkillPositions', ImmMap(o.pacer.forcedSkillPositions || {})) : new HorseState({strategy: 'Nige'}),
 					witVarianceSettings: o.witVarianceSettings || {
-						syncRng: false
+						syncRng: false,
+						skillWisdomCheck: true,
+						rushedKakari: true
 					},
 					showVirtualPacemakerOnGraph: o.showVirtualPacemakerOnGraph != null ? o.showVirtualPacemakerOnGraph : false,
 					pacemakerCount: o.pacemakerCount != null ? o.pacemakerCount : 1,
@@ -1128,7 +1132,9 @@ async function deserialize(hash) {
 					uma2: new HorseState(),
 					pacer: new HorseState({strategy: 'Nige'}),
 					witVarianceSettings: {
-						syncRng: false
+						syncRng: false,
+						skillWisdomCheck: true,
+						rushedKakari: true
 					},
 					showVirtualPacemakerOnGraph: false,
 					pacemakerCount: 1,
@@ -1143,7 +1149,9 @@ async function deserialize(hash) {
 }
 
 async function saveToLocalStorage(courseId: number, nsamples: number, seed: number, posKeepMode: PosKeepMode, racedef: RaceParams, uma1: HorseState, uma2: HorseState, pacer: HorseState, showVirtualPacemakerOnGraph: boolean, pacemakerCount: number, selectedPacemakers: boolean[], showLanes: boolean, witVarianceSettings: {
-	syncRng: boolean
+	syncRng: boolean,
+	skillWisdomCheck: boolean,
+	rushedKakari: boolean
 }) {
 	try {
 		const hash = await serialize(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakers, showLanes, witVarianceSettings);
@@ -1383,6 +1391,8 @@ function App(props) {
 	}
 
 	const [syncRng, toggleSyncRng] = useReducer((b,_) => !b, false);
+	const [skillWisdomCheck, toggleSkillWisdomCheck] = useReducer((b,_) => !b, true);
+	const [rushedKakari, toggleRushedKakari] = useReducer((b,_) => !b, true);
 	const [hpDeathPositionTab, setHpDeathPositionTab] = useState(0);
 	const [showVirtualPacemakerOnGraph, toggleShowVirtualPacemakerOnGraph] = useReducer((b,_) => !b, false);
 	const [pacemakerCount, setPacemakerCount] = useState(1);
@@ -1427,9 +1437,19 @@ function App(props) {
 		toggleSyncRng(null);
 	}
 	
+	function handleSkillWisdomCheckToggle() {
+		toggleSkillWisdomCheck(null);
+	}
+	
+	function handleRushedKakariToggle() {
+		toggleRushedKakari(null);
+	}
+	
 	function autoSaveSettings() {
 		saveToLocalStorage(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, getSelectedPacemakers(), showLanes, {
-			syncRng
+			syncRng,
+			skillWisdomCheck,
+			rushedKakari
 		});
 	}
 
@@ -1568,6 +1588,8 @@ function App(props) {
 				if (o.witVarianceSettings) {
 					const settings = o.witVarianceSettings;
 					if (settings.syncRng !== undefined && settings.syncRng !== syncRng) toggleSyncRng(null);
+					if (settings.skillWisdomCheck !== undefined && settings.skillWisdomCheck !== skillWisdomCheck) toggleSkillWisdomCheck(null);
+					if (settings.rushedKakari !== undefined && settings.rushedKakari !== rushedKakari) toggleRushedKakari(null);
 				}
 			});
 		} else {
@@ -1597,6 +1619,8 @@ function App(props) {
 					if (o.witVarianceSettings) {
 						const settings = o.witVarianceSettings;
 						if (settings.syncRng !== undefined && settings.syncRng !== syncRng) toggleSyncRng(null);
+						if (settings.skillWisdomCheck !== undefined && settings.skillWisdomCheck !== skillWisdomCheck) toggleSkillWisdomCheck(null);
+						if (settings.rushedKakari !== undefined && settings.rushedKakari !== rushedKakari) toggleRushedKakari(null);
 					}
 				}
 			});
@@ -1611,7 +1635,7 @@ function App(props) {
 	// Auto-save settings whenever they change
 	useEffect(() => {
 		autoSaveSettings();
-	}, [courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, syncRng, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakerIndices]);
+	}, [courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, syncRng, skillWisdomCheck, rushedKakari, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakerIndices]);
 	
 	useEffect(() => {
 		const shouldShow = posKeepMode === PosKeepMode.Virtual && selectedPacemakerIndices.length > 0;
@@ -1627,7 +1651,9 @@ function App(props) {
 	function copyStateUrl(e) {
 		e.preventDefault();
 		serialize(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, getSelectedPacemakers(), showLanes, {
-			syncRng
+			syncRng,
+			skillWisdomCheck,
+			rushedKakari
 		}).then(hash => {
 			const url = window.location.protocol + '//' + window.location.host + window.location.pathname;
 			window.navigator.clipboard.writeText(url + '#' + hash);
@@ -1672,7 +1698,8 @@ function App(props) {
 					posKeepMode, 
 					pacemakerCount: posKeepMode === PosKeepMode.Virtual ? pacemakerCount : 1,
 					syncRng: syncRng,
-					skillWisdomCheck: true
+					skillWisdomCheck: skillWisdomCheck,
+					rushedKakari: rushedKakari
 				}
 			}
 		});
@@ -1697,7 +1724,8 @@ function App(props) {
 					posKeepMode, 
 					pacemakerCount: posKeepMode === PosKeepMode.Virtual ? pacemakerCount : 1,
 					syncRng: syncRng,
-					skillWisdomCheck: true
+					skillWisdomCheck: skillWisdomCheck,
+					rushedKakari: rushedKakari
 				}
 			}
 		});
@@ -1754,7 +1782,8 @@ function App(props) {
 			seed, 
 			posKeepMode: PosKeepMode.Approximate, 
 			pacemakerCount: 1,
-			skillWisdomCheck: false
+			skillWisdomCheck: false,
+			rushedKakari: false
 		};
 		worker1.postMessage({
 			msg: 'chart', 
@@ -1832,7 +1861,8 @@ function App(props) {
 					seed: effectiveSeed,
 					posKeepMode: PosKeepMode.Approximate,
 					pacemakerCount: 1,
-					skillWisdomCheck: false
+					skillWisdomCheck: false,
+					rushedKakari: false
 				}
 			}
 		});
@@ -2464,10 +2494,6 @@ function App(props) {
 								)}
 							</fieldset>
 						)}
-						<div>
-							<label for="showhp">Show HP</label>
-							<input type="checkbox" id="showhp" checked={showHp} onClick={toggleShowHp} />
-						</div>
 						{/**
 						{mode == Mode.Compare && (
 							<div>
@@ -2481,6 +2507,22 @@ function App(props) {
 								<input type="checkbox" id="syncRng" checked={syncRng} onClick={handleSyncRngToggle} />
 							</div>
 						)}
+						{mode == Mode.Compare && (
+							<div>
+								<label for="skillWisdomCheck">Skill Wit Check</label>
+								<input type="checkbox" id="skillWisdomCheck" checked={skillWisdomCheck} onClick={handleSkillWisdomCheckToggle} />
+							</div>
+						)}
+						{mode == Mode.Compare && (
+							<div>
+								<label for="rushedKakari">Rushed / Kakari</label>
+								<input type="checkbox" id="rushedKakari" checked={rushedKakari} onClick={handleRushedKakariToggle} />
+							</div>
+						)}
+						<div>
+							<label for="showhp">Show HP</label>
+							<input type="checkbox" id="showhp" checked={showHp} onClick={toggleShowHp} />
+						</div>
 
 						<a href="#" onClick={copyStateUrl}>Copy link</a>
 						<RacePresets courseId={courseId} racedef={racedef} set={(courseId, racedef) => { setCourseId(courseId); setRaceDef(racedef); }} />
