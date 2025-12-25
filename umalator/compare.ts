@@ -101,15 +101,8 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 	} 
 	else if (options.posKeepMode === PosKeepMode.Virtual) {
 		if (pacer) {
-			const pacerConfig = pacer.toJS ? pacer.toJS() : pacer;
-			pacerHorse = standard.pacer(pacerConfig);
-
-			if (pacerConfig.skills && Array.isArray(pacerConfig.skills) && pacerConfig.skills.length > 0) {
-				pacerConfig.skills.forEach((skillId: string) => {
-					const cleanSkillId = skillId.split('-')[0];
-					standard.addPacerSkill(cleanSkillId);
-				});
-			}
+			const pacer_ = pacer.update('skills', sk => Array.from(sk.values()));
+			pacerHorse = standard.pacer(pacer_);
 		}
 		else {
 			pacerHorse = standard.useDefaultPacer();

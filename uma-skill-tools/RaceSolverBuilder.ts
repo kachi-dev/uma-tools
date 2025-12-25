@@ -511,17 +511,6 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
-	/**
-	 * Add skills to the pacer/virtual pacemaker.
-	 * Must be called after pacer() or useDefaultPacer().
-	 * @param skillId The skill ID to add to the pacer
-	 * @returns this builder for chaining
-	 */
-	addPacerSkill(skillId: string) {
-		this._pacerSkillIds.push(skillId);
-		return this;
-	}
-
 	getSamplePolicyKey(skillId: string, perspective: Perspective): string {
 		return `${skillId}:${perspective}`;
 	}
@@ -545,7 +534,8 @@ export class RaceSolverBuilder {
 
 		let pacerSkillData: SkillData[] = [];
 		
-		if (pacerBaseHorse ) {
+		if (pacerBaseHorse) {
+			this._pacerSkillIds = horse.skills;
 			const makePacerSkill = buildSkillData.bind(null, pacerBaseHorse, this._raceParams, this._course, wholeCourse, this._parser);
 			pacerSkillData = this._pacerSkillIds.flatMap(id => makePacerSkill(id, Perspective.Self));
 			this._pacerSkillData = pacerSkillData;
