@@ -23,24 +23,6 @@ export function INTRO(props){
 export function IntroText(props) {
 	return (
 		<div id="introtext">
-			<h1>WELCOME TO VFalator!!!</h1>
-			<p className="warning-text">11/11 update: Duels have not yet been implemented - everything else should work as expected.</p>
-			<h2 className="warning-text">Warning: the enhancements made to this umalator fork enables usage of the tool as a more comprehensive race simulator, to simulate raw skill length differences without RNG factors <strong>set 'Position Keep' to 'Approximate'</strong> and <strong>turn off 'Wit Variance'</strong></h2>
-			<p className="warning-text">Raw skill length comparisons, as per the original umalator, have been battle-tested on JP and remain largely accurate. New additions such as Wit Variance and Virtual Pacemaker are experimental and results with these features should be taken with a grain of salt.</p>
-			<details>
-				<summary>Credits</summary>
-					<h1>Transparent Dino</h1>
-					<p>Enhanced Spurt calculator (taken from mee1080), Virtual Pacemaker, Downhills, Rushed</p>
-					<h1>jechtoff2dudes</h1>
-					<p>Frontrunner Overtake/Speedup mode, Dragging Skill Markers, Downhills, Skill Activation check</p>
-					<h1>Kachi</h1>
-					<p>Fixing all the bugs and UI issues, mood, UI improvements, rewriting poskeep, reworking RNG, uniques chart (utools at home), spot struggle/dueling, lane movement</p>
-			</details>
-
-
-
-
-
 			<details>
 				<summary>Caveats</summary>
 				The simulator is fairly complete and implements nearly all relevant game mechanics, with the following exceptions:
@@ -82,10 +64,28 @@ export function IntroText(props) {
 						</details>
 					</li>
 				</ul>
-				By and large it should be highly accurate. It has been battle-tested on the JP server for several years. Please use this if you KNOW what the hell you are doing.
+				By and large it should be highly accurate. It has been battle-tested on the JP server for several years.
 			</details>
-			<details>
+			<details open={true}>
 				<summary>Changelog</summary>
+				<section>
+					<h2>2025-12-11</h2>
+					<ul>
+						<li>Added back simplified wit toggles just in-case people want to experiment with them.</li>
+					</ul>
+				</section>
+				<section>
+					<h2>2025-12-06</h2>
+					<ul>
+						<li>
+							<details>
+								<summary>Removed Wit Variance toggle as it is no longer relevant - wit-related mechanics are now always enabled.</summary>
+								If you still want to observe race variance where skills proc in different locations, or 1 uma procs a recovery skill and the other doesn't, you can turn off 'Sync RNG' - though this means you will need to run more samples to achieve accurate mean/median length results.
+							</details>
+						</li>
+						<li>Synced fork with alpha123 latest changes.</li>
+					</ul>
+				</section>
 				<section>
 					<h2>2025-11-30</h2>
 					<ul>
@@ -204,6 +204,15 @@ export function IntroText(props) {
 						<li>Bug fixes</li>
 					</ul>
 				</section>
+			</details>
+			<details>
+				<summary>Credits</summary>
+					<h1>Transparent Dino</h1>
+					<p>Enhanced Spurt calculator (taken from mee1080), Virtual Pacemaker, Downhills, Rushed</p>
+					<h1>jechtoff2dudes</h1>
+					<p>Frontrunner Overtake/Speedup mode, Dragging Skill Markers, Downhills, Skill Activation check</p>
+					<h1>Kachi</h1>
+					<p>Fixing all the bugs and UI issues, mood, UI improvements, rewriting poskeep, reworking RNG, uniques chart (utools at home), spot struggle/dueling, lane movement</p>
 			</details>
 			<footer id="sourcelinks">
 				Original Umalator Source code: <a href="https://github.com/alpha123/uma-skill-tools">simulator</a>, <a href="https://github.com/alpha123/uma-tools">UI</a>

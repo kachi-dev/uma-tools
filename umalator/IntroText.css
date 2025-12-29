@@ -1,7 +1,8 @@
 #introtext {
 	font-size: 14px;
 	height: 500px;
-	margin-left: 40px;
+	margin-left: 20px;
+	margin-top: -140px;
 	overflow: auto;
 	padding-right: 20px;
 	width: 950px;

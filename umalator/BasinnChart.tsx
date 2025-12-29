@@ -18,14 +18,15 @@ import { runComparison } from './compare';
 
 import './BasinnChart.css';
 
+import skilldata from '../uma-skill-tools/data/skill_data.json';
 import skillnames from '../uma-skill-tools/data/skillnames.json';
-import skill_meta from '../skill_meta.json';
+import skillmeta from '../skill_meta.json';
 import umas from '../umas.json';
 import icons from '../icons.json';
 
-function skillmeta(id: string) {
-	// handle the fake skills (e.g., variations of Sirius unique) inserted by make_skill_data with ids like 100701-1
-	return skill_meta[id.split('-')[0]];
+export function isPurpleSkill(id) {
+	const iconId = skillmeta[id].iconId;
+	return iconId[iconId.length-1] == '4';
 }
 
 function umaForUniqueSkill(skillId: string): string | null {
@@ -90,7 +91,7 @@ function SkillNameCell(props) {
 	
 	return (
 		<div class="chartSkillName">
-			<img src={`/uma-tools/icons/${skillmeta(id).iconId}.png`} />
+			<img src={`/uma-tools/icons/${skillmeta[id].iconId}.png`} />
 			<span><Text id={`skillnames.${id}`} /></span>
 		</div>
 	);
@@ -221,7 +222,7 @@ export function BasinnChart(props) {
 	}
 
 	return (
-		<div class="basinnChartWrapper">
+		<div class={`basinnChartWrapper${props.dirty ? ' dirty' : ''}`}>
 			<table class="basinnChart">
 				<thead>
 					{table.getHeaderGroups().map(headerGroup => (

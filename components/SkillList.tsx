@@ -1,5 +1,5 @@
 import { h, Fragment, cloneElement } from 'preact';
-import { useState, useContext, useEffect, useRef } from 'preact/hooks';
+import { useState, useContext, useMemo, useEffect, useRef } from 'preact/hooks';
 import { IntlProvider, Text, Localizer } from 'preact-i18n';
 
 import { getParser } from '../uma-skill-tools/ConditionParser';
@@ -8,21 +8,13 @@ import { SkillRarity } from '../uma-skill-tools/RaceSolver.ts';
 
 import { useLanguage } from './Language';
 import { Tooltip } from './Tooltip';
+import { isDebuffSkill } from './HorseDefTypes';
 
 import './SkillList.css';
 
-import skills from '../uma-skill-tools/data/skill_data.json';
+import skilldata from '../uma-skill-tools/data/skill_data.json';
 import skillnames from '../uma-skill-tools/data/skillnames.json';
-import skill_meta from '../skill_meta.json';
-
-function skilldata(id: string) {
-	return skills[id.split('-')[0]];
-}
-
-function skillmeta(id: string) {
-	// handle the fake skills (e.g., variations of Sirius unique) inserted by make_skill_data with ids like 100701-1
-	return skill_meta[id.split('-')[0]];
-}
+import skillmeta from '../skill_meta.json';
 
 const Parser = getParser(Matcher.mockConditions);
 
@@ -186,12 +178,12 @@ const filterOps = Object.freeze({
 });
 
 const parsedConditions = {};
-Object.keys(skills).forEach(id => {
-	parsedConditions[id] = skilldata(id).alternatives.map(ef => Parser.parse(Parser.tokenize(ef.condition)));
+Object.keys(skilldata).forEach(id => {
+	parsedConditions[id] = skilldata[id].alternatives.map(ef => Parser.parse(Parser.tokenize(ef.condition)));
 });
 
 function matchRarity(id, testRarity) {
-	const r = skilldata(id).rarity;
+	const r = skilldata[id].rarity;
 	switch (testRarity) {
 	case 'white':
 		return r == SkillRarity.White && id[0] != '9';
@@ -212,9 +204,9 @@ const classnames = Object.freeze(['', 'skill-white', 'skill-gold', 'skill-unique
 
 export function Skill(props) {
 	return (
-		<div class={`skill ${classnames[skilldata(props.id).rarity]} ${props.selected ? 'selected' : ''}`} data-skillid={props.id}>
-			<img class="skillIcon" src={`/uma-tools/icons/${skillmeta(props.id).iconId}.png`} /> 
-			<span class="skillName"><Text id={`skillnames.${props.id.split('-')[0]}`} /></span>
+		<div class={`skill ${classnames[skilldata[props.id].rarity]} ${props.selected ? 'selected' : ''}`} data-skillid={props.id}>
+			<img class="skillIcon" src={`/uma-tools/icons/${skillmeta[props.id].iconId}.png`} /> 
+			<span class="skillName"><Text id={`skillnames.${props.id}`} /></span>
 			{props.dismissable && <span class="skillDismiss">✕</span>}
 		</div>
 	);
@@ -385,14 +377,14 @@ const formatEffect = Object.freeze({
 });
 
 export function ExpandedSkillDetails(props) {
-	const skill = skilldata(props.id);
+	const skill = skilldata[props.id];
 	const lang = useLanguage();
 	return (
 		<IntlProvider definition={lang == 'ja' ? STRINGS_ja : STRINGS_en}>
 			<div class={`expandedSkill ${classnames[skill.rarity]}`} data-skillid={props.id}>
 				<div class="expandedSkillHeader">
-					<img class="skillIcon" src={`/uma-tools/icons/${skillmeta(props.id).iconId}.png`} />
-					<span class="skillName"><Text id={`skillnames.${props.id.split('-')[0]}`} /></span>
+					<img class="skillIcon" src={`/uma-tools/icons/${skillmeta[props.id].iconId}.png`} />
+					<span class="skillName"><Text id={`skillnames.${props.id}`} /></span>
 					{props.dismissable && <span class="skillDismiss">✕</span>}
 				</div>
 				<div class="skillDetails">
@@ -400,7 +392,7 @@ export function ExpandedSkillDetails(props) {
 						<Text id="skilldetails.id" />
 						{props.id}
 					</div>
-					{skilldata(props.id).alternatives.map(alt =>
+					{skill.alternatives.map(alt =>
 						<div class="skillDetailsSection">
 							{alt.precondition.length > 0 && <Fragment>
 								<Text id="skilldetails.preconditions" />
@@ -449,6 +441,7 @@ export function ExpandedSkillDetails(props) {
 	);
 }
 
+// they really just gave up with the ids for scenario pinks
 const iconIdPrefixes = Object.freeze({
 	'1001': ['1001'],
 	'1002': ['1002', '2018'],
@@ -456,9 +449,9 @@ const iconIdPrefixes = Object.freeze({
 	'1004': ['1004'],
 	'1005': ['1005'],
 	'1006': ['1006'],
-	'2002': ['2002', '2011'],
-	'2001': ['2001', '2010', '2014', '2015', '2016', '2019', '2021'],
-	'2004': ['2004', '2012', '2017', '2020'],
+	'2002': ['2002', '2011', '2028'],
+	'2001': ['2001', '2010', '2014', '2015', '2016', '2019', '2021', '2022', '2024', '2026', '2029', '2031', '2032', '2033'],
+	'2004': ['2004', '2012', '2017', '2020', '2025', '2027', '2030'],
 	'2005': ['2005', '2013'],
 	'2006': ['2006'],
 	'2009': ['2009'],
@@ -481,7 +474,7 @@ const groups_filters = Object.freeze({
 
 function textSearch(id: string, searchText: string, searchConditions: boolean) {
 	const needle = searchText.toUpperCase();
-	if ((skillnames[id.split('-')[0]] || []).some(s => s.toUpperCase().indexOf(needle) > -1)) {
+	if ((skillnames[id] || []).some(s => s.toUpperCase().indexOf(needle) > -1)) {
 		return 1;
 	} else if (searchConditions) {
 		let op = null;
@@ -519,41 +512,24 @@ export function SkillList(props) {
 		}
 	}, [props.isOpen]);
 
-	// allow selecting debuffs multiple times to simulate multiple debuffers
-	// TODO would like a slightly nicer/more general solution for this
-	// (iconId 3xxxx is the debuff icons)
-	const selectedMap = new Map(
-		Array.from(props.selected)
-			.filter(id => skillmeta(id).iconId[0] != '3')
-			.map(id => [skillmeta(id).groupId, id])
-	);
-
 	function toggleSelected(e) {
 		const se = e.target.closest('div.skill');
 		if (se == null) return;
 		e.stopPropagation();
 		let id = se.dataset.skillid;
-		const groupId = skillmeta(id).groupId;
-		const newSelected = new Set(selectedMap.values());
-		// TODO nasty: increment a fake counter for every debuff skill added with the same id
-		const counts = new Map();
-		Array.from(props.selected).forEach(id => {
-			id = id.split('-')[0];
-			if (counts.has(id)) {
-				const n = counts.get(id);
-				newSelected.add(id + '-' + n)
-				counts.set(id, n + 1)
-			} else {
-				newSelected.add(id);
-				counts.set(id, 1);
-			}
-		});
-		if (selectedMap.has(groupId)) {
-			newSelected.delete(selectedMap.get(groupId));
-		} else if (skillmeta(id).iconId[0] == '3') {
-			id += counts.has(id) ? '-' + counts.get(id) : '';
+		const groupId = skillmeta[id].groupId;
+		// fake the group ids for debuff skills to allow adding multiple of them. this is because skills are unique per
+		// groupId (the keys of the map) and not by skill id, so it's fine to add the same value to multiple keys. groupIds
+		// aren't used as keys into anything else (like skill data) so it doesn't really matter what they are, only that
+		// they're the same for skills that should be mutually exclusive (which we want for white/gold/pink sets, but not for
+		// debuffs)
+		let newSelected;
+		if (isDebuffSkill(id)) {
+			const ndebuffs = props.selected.count(isDebuffSkill);
+			newSelected = props.selected.set(groupId + '-' + ndebuffs, id);
+		} else {
+			newSelected = props.selected.set(groupId, id);
 		}
-		newSelected.add(id);
 		props.setSelected(newSelected);
 	}
 
@@ -591,7 +567,7 @@ export function SkillList(props) {
 				const check = groups_filters[group].filter(f => active[group][f]);
 				if (check.length == 0) return true;
 				if (group == 'rarity') return check.some(f => matchRarity(id, f));
-				else if (group == 'icontype') return check.some(f => iconIdPrefixes[f].some(p => skillmeta(id).iconId.startsWith(p)));
+				else if (group == 'icontype') return check.some(f => iconIdPrefixes[f].some(p => skillmeta[id].iconId.startsWith(p)));
 				return check.some(f => filterOps[f].some(op => parsedConditions[id].some(alt => Matcher.treeMatch(op, alt))));
 			});
 			if (pass) {
@@ -613,8 +589,14 @@ export function SkillList(props) {
 		return <button data-filter={props.type} class={`iconFilterButton ${active[props.group][props.type] ? 'active': ''}`} style={`background-image:url(/uma-tools/icons/${props.type}1.png)`}></button>
 	}
 
-	const items = props.ids.map(id => <li key={id} class={visible.has(id) ? '' : 'hidden'}><Skill id={id} selected={selectedMap.get(skillmeta(id).groupId) == id} /></li>);
-
+	const items = useMemo(() => {
+		return props.ids.map(id => (
+			<li key={id} class={visible.has(id) ? '' : 'hidden'}>
+				<Skill id={id} selected={props.selected.get(skillmeta[id].groupId) == id} />
+			</li>
+		));
+	}, [props.ids, props.selected, visible]);
+	
 	return (
 		<IntlProvider definition={lang == 'ja' ? STRINGS_ja : STRINGS_en}>
 			<div class="filterGroups" onClick={updateFilters}>
