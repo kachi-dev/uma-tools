@@ -297,9 +297,16 @@ export function HorseDef(props) {
 			newSkills = newSkills.set(skillmeta[uid].groupId, uid);
 		}
 
+		const removedSkillIds = state.skills.keySeq().toSet().subtract(newSkills.keySeq().toSet());
+		let newForcedPositions = state.forcedSkillPositions;
+		removedSkillIds.forEach(skillId => {
+			newForcedPositions = newForcedPositions.delete(skillId);
+		});
+
 		setState(
 			state.set('outfitId', id)
 				.set('skills', newSkills)
+				.set('forcedSkillPositions', newForcedPositions)
 		);
 	}
 
@@ -327,7 +334,11 @@ export function HorseDef(props) {
 		if (se == null) return;
 		if (e.target.classList.contains('skillDismiss')) {
 			// can't just remove skillmeta[skillid].groupId because debuffs will have a fake groupId
-			setSkills(state.skills.delete(state.skills.findKey(id => id == se.dataset.skillid)));
+			const skillId = se.dataset.skillid;
+			setState(
+				state.set('skills', state.skills.delete(state.skills.findKey(id => id == skillId)))
+					.set('forcedSkillPositions', state.forcedSkillPositions.delete(skillId))
+			);
 		} else if (se.classList.contains('expandedSkill')) {
 			setExpanded(expanded.delete(se.dataset.skillid));
 		} else {
@@ -353,6 +364,19 @@ export function HorseDef(props) {
 			})
 		);
 	}, [expanded]);
+
+	useEffect(function () {
+		const currentSkillIds = state.skills.keySeq().toSet();
+		const forcedPositionSkillIds = state.forcedSkillPositions.keySeq().toSet();
+		const orphanedSkillIds = forcedPositionSkillIds.subtract(currentSkillIds);
+		if (orphanedSkillIds.size > 0) {
+			let newForcedPositions = state.forcedSkillPositions;
+			orphanedSkillIds.forEach(skillId => {
+				newForcedPositions = newForcedPositions.delete(skillId);
+			});
+			setState(state.set('forcedSkillPositions', newForcedPositions));
+		}
+	}, [state.skills]);
 
 	const hasRunawaySkill = state.skills.has('202051');
 	useEffect(function () {
