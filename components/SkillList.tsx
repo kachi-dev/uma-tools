@@ -435,6 +435,17 @@ export function ExpandedSkillDetails(props) {
 							step="10"
 						/>
 					</div>
+					{props.runData != null && props.umaIndex != null && props.onViewProcData && (
+						<div class="skillDetailsSection">
+							<button 
+								class="runAdditionalSamples"
+								onClick={(e) => { e.stopPropagation(); props.onViewProcData(); }}
+								title="View Proc Data"
+							>
+								View Proc Data
+							</button>
+						</div>
+					)}
 				</div>
 			</div>
 		</IntlProvider>

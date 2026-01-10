@@ -407,6 +407,15 @@ export class RaceSolverBuilder {
 	_mode: string | undefined
 	_skillWisdomCheck: boolean | undefined
 	_rushedKakari: boolean | undefined
+	_competeFight: boolean | undefined
+	_leadCompetition: boolean | undefined
+	_duelingRates: {
+		runaway: number,
+		frontRunner: number,
+		paceChaser: number,
+		lateSurger: number,
+		endCloser: number
+	} | undefined
 
 	constructor(readonly nsamples: number) {
 		this._course = null;
@@ -437,6 +446,9 @@ export class RaceSolverBuilder {
 		this._mode = undefined;
 		this._skillWisdomCheck = undefined;
 		this._rushedKakari = undefined;
+		this._competeFight = undefined;
+		this._leadCompetition = undefined;
+		this._duelingRates = undefined;
 	}
 
 	seed(seed: number) {
@@ -583,7 +595,10 @@ export class RaceSolverBuilder {
 			speedUpProbability: this._pacerSpeedUpRate,
 			posKeepMode: this._posKeepMode,
 			mode: this._mode,
-			isPacer: true
+			isPacer: true,
+			competeFight: this._competeFight,
+			leadCompetition: this._leadCompetition,
+			duelingRates: this._duelingRates
 		}) : null;
 	}
 
@@ -734,6 +749,27 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
+	competeFight(enabled: boolean) {
+		this._competeFight = enabled;
+		return this;
+	}
+
+	leadCompetition(enabled: boolean) {
+		this._leadCompetition = enabled;
+		return this;
+	}
+
+	duelingRates(rates: {
+		runaway: number,
+		frontRunner: number,
+		paceChaser: number,
+		lateSurger: number,
+		endCloser: number
+	}) {
+		this._duelingRates = rates;
+		return this;
+	}
+
 	onSkillActivate(cb: (state: RaceSolver, skillId: string) => void) {
 		this._onSkillActivate = cb;
 		return this;
@@ -766,6 +802,10 @@ export class RaceSolverBuilder {
 		clone._posKeepMode = this._posKeepMode;
 		clone._mode = this._mode;
 		clone._skillWisdomCheck = this._skillWisdomCheck;
+		clone._rushedKakari = this._rushedKakari;
+		clone._competeFight = this._competeFight;
+		clone._leadCompetition = this._leadCompetition;
+		clone._duelingRates = this._duelingRates;
 
 		// NB. GOTCHA: if asitame is enabled, it closes over *our* horse and mood data, and not the clone's
 		// this is assumed to be fine, since fork() is intended to be used after everything is added except skills,
@@ -822,7 +862,10 @@ export class RaceSolverBuilder {
 				posKeepMode: this._posKeepMode,
 				mode: this._mode,
 				skillWisdomCheck: this._skillWisdomCheck,
-				rushedKakari: this._rushedKakari
+				rushedKakari: this._rushedKakari,
+				competeFight: this._competeFight,
+				leadCompetition: this._leadCompetition,
+				duelingRates: this._duelingRates
 			});
 
 			if (redo) {

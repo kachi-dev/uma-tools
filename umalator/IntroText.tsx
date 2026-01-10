@@ -69,6 +69,19 @@ export function IntroText(props) {
 			<details open={true}>
 				<summary>Changelog</summary>
 				<section>
+					<h2>2025-01-10</h2>
+					<ul>
+						<li>
+							<details>
+								<summary>Added dueling.</summary>
+								Dueling is an extremely non-trivial (and arguably pointless) mechanic to simulate as it is entirely based on lobby compositions which are not predictable.
+								Using in-game data, we've approximated the dueling frequency of each strategy which is the best we can do for now.
+							</details>
+						</li>
+						<li>Added the skill proc graphs from the skill chart to compare mode (expand the skill on the left side and click 'View Proc Data')</li>
+					</ul>
+				</section>
+				<section>
 					<h2>2025-12-11</h2>
 					<ul>
 						<li>Added back simplified wit toggles just in-case people want to experiment with them.</li>

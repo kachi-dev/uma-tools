@@ -1,6 +1,7 @@
 import { h, Fragment, render } from 'preact';
 import { useState, useReducer, useMemo, useEffect, useRef, useId, useCallback } from 'preact/hooks';
 import { Text, IntlProvider } from 'preact-i18n';
+import { Settings } from 'lucide-preact';
 import { Record, Set as ImmSet, Map as ImmMap } from 'immutable';
 import * as d3 from 'd3';
 import { computePosition, flip } from '@floating-ui/dom';
@@ -321,7 +322,7 @@ function BarChart(props) {
 	);
 }
 
-function LengthDifferenceChart(props) {
+export function LengthDifferenceChart(props) {
 	const {skillId, runData, courseDistance} = props;
 	const width = 300;
 	const height = 150;
@@ -517,7 +518,7 @@ function calculatePhaseBackgrounds(
 	return backgrounds;
 }
 
-function VelocityChart(props) {
+export function VelocityChart(props) {
 	const {skillId, runData, courseDistance, displaying} = props;
 	const width = 400;
 	const height = 200;
@@ -781,7 +782,7 @@ function VelocityChart(props) {
 	);
 }
 
-function ActivationFrequencyChart(props) {
+export function ActivationFrequencyChart(props) {
 	const {skillId, runData, courseDistance} = props;
 	const width = 300;
 	const height = 50;
@@ -1000,6 +1001,9 @@ function ResultsTable(props) {
 				{runData?.allruns?.leadCompetition && (
 					<tr><th>Spot Struggle frequency</th><td>{runData.allruns.leadCompetition[idx].frequency > 0 ? `${runData.allruns.leadCompetition[idx].frequency.toFixed(1)}%` : '0%'}</td></tr>
 				)}
+				{runData?.allruns?.competeFight && (
+					<tr><th>Dueling frequency</th><td>{runData.allruns.competeFight[idx].frequency > 0 ? `${runData.allruns.competeFight[idx].frequency.toFixed(1)}%` : '0%'}</td></tr>
+				)}
 			</tbody>
 			{chartData.sk[idx].size > 0 &&
 				<tbody>
@@ -1042,6 +1046,12 @@ async function serialize(courseId: number, nsamples: number, seed: number, posKe
 	syncRng: boolean,
 	skillWisdomCheck: boolean,
 	rushedKakari: boolean
+}, competeFight: boolean, leadCompetition: boolean, duelingRates: {
+	runaway: number,
+	frontRunner: number,
+	paceChaser: number,
+	lateSurger: number,
+	endCloser: number
 }) {
 	const json = JSON.stringify({
 		courseId,
@@ -1056,7 +1066,10 @@ async function serialize(courseId: number, nsamples: number, seed: number, posKe
 		showVirtualPacemakerOnGraph,
 		pacemakerCount,
 		selectedPacemakers,
-		showLanes
+		showLanes,
+		competeFight,
+		leadCompetition,
+		duelingRates
 	});
 	const enc = new TextEncoder();
 	const stringStream = new ReadableStream({
@@ -1119,7 +1132,16 @@ async function deserialize(hash) {
 					showVirtualPacemakerOnGraph: o.showVirtualPacemakerOnGraph != null ? o.showVirtualPacemakerOnGraph : false,
 					pacemakerCount: o.pacemakerCount != null ? o.pacemakerCount : 1,
 					selectedPacemakers: o.selectedPacemakers != null ? o.selectedPacemakers : [false, false, false],
-					showLanes: o.showLanes != null ? o.showLanes : false
+					showLanes: o.showLanes != null ? o.showLanes : false,
+					competeFight: o.competeFight != null ? o.competeFight : true,
+					leadCompetition: o.leadCompetition != null ? o.leadCompetition : true,
+					duelingRates: o.duelingRates || {
+						runaway: 10,
+						frontRunner: 20,
+						paceChaser: 30,
+						lateSurger: 35,
+						endCloser: 35
+					}
 				};
 			} catch (_) {
 				return {
@@ -1139,7 +1161,16 @@ async function deserialize(hash) {
 					showVirtualPacemakerOnGraph: false,
 					pacemakerCount: 1,
 					selectedPacemakers: [false, false, false],
-					showLanes: false
+					showLanes: false,
+					competeFight: true,
+					leadCompetition: true,
+					duelingRates: {
+						runaway: 10,
+						frontRunner: 20,
+						paceChaser: 30,
+						lateSurger: 35,
+						endCloser: 35
+					}
 				};
 			}
 		} else {
@@ -1152,9 +1183,15 @@ async function saveToLocalStorage(courseId: number, nsamples: number, seed: numb
 	syncRng: boolean,
 	skillWisdomCheck: boolean,
 	rushedKakari: boolean
+}, competeFight: boolean, leadCompetition: boolean, duelingRates: {
+	runaway: number,
+	frontRunner: number,
+	paceChaser: number,
+	lateSurger: number,
+	endCloser: number
 }) {
 	try {
-		const hash = await serialize(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakers, showLanes, witVarianceSettings);
+		const hash = await serialize(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakers, showLanes, witVarianceSettings, competeFight, leadCompetition, duelingRates);
 		localStorage.setItem('umalator-settings', hash);
 	} catch (error) {
 		console.warn('Failed to save settings to localStorage:', error);
@@ -1393,6 +1430,16 @@ function App(props) {
 	const [syncRng, toggleSyncRng] = useReducer((b,_) => !b, false);
 	const [skillWisdomCheck, toggleSkillWisdomCheck] = useReducer((b,_) => !b, true);
 	const [rushedKakari, toggleRushedKakari] = useReducer((b,_) => !b, true);
+	const [competeFight, setCompeteFight] = useState(true);
+	const [leadCompetition, setLeadCompetition] = useState(true);
+	const [duelingConfigOpen, setDuelingConfigOpen] = useState(false);
+	const [duelingRates, setDuelingRates] = useState({
+		runaway: 10,
+		frontRunner: 20,
+		paceChaser: 30,
+		lateSurger: 35,
+		endCloser: 35
+	});
 	const [hpDeathPositionTab, setHpDeathPositionTab] = useState(0);
 	const [showVirtualPacemakerOnGraph, toggleShowVirtualPacemakerOnGraph] = useReducer((b,_) => !b, false);
 	const [pacemakerCount, setPacemakerCount] = useState(1);
@@ -1450,7 +1497,7 @@ function App(props) {
 			syncRng,
 			skillWisdomCheck,
 			rushedKakari
-		});
+		}, competeFight, leadCompetition, duelingRates);
 	}
 
 	function resetUmas() {
@@ -1591,6 +1638,16 @@ function App(props) {
 					if (settings.skillWisdomCheck !== undefined && settings.skillWisdomCheck !== skillWisdomCheck) toggleSkillWisdomCheck(null);
 					if (settings.rushedKakari !== undefined && settings.rushedKakari !== rushedKakari) toggleRushedKakari(null);
 				}
+				
+				if (o.competeFight !== undefined) {
+					setCompeteFight(o.competeFight);
+				}
+				if (o.leadCompetition !== undefined) {
+					setLeadCompetition(o.leadCompetition);
+				}
+				if (o.duelingRates) {
+					setDuelingRates(o.duelingRates);
+				}
 			});
 		} else {
 			loadFromLocalStorage().then(o => {
@@ -1622,6 +1679,16 @@ function App(props) {
 						if (settings.skillWisdomCheck !== undefined && settings.skillWisdomCheck !== skillWisdomCheck) toggleSkillWisdomCheck(null);
 						if (settings.rushedKakari !== undefined && settings.rushedKakari !== rushedKakari) toggleRushedKakari(null);
 					}
+					
+					if (o.competeFight !== undefined) {
+						setCompeteFight(o.competeFight);
+					}
+					if (o.leadCompetition !== undefined) {
+						setLeadCompetition(o.leadCompetition);
+					}
+					if (o.duelingRates) {
+						setDuelingRates(o.duelingRates);
+					}
 				}
 			});
 		}
@@ -1635,7 +1702,7 @@ function App(props) {
 	// Auto-save settings whenever they change
 	useEffect(() => {
 		autoSaveSettings();
-	}, [courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, syncRng, skillWisdomCheck, rushedKakari, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakerIndices]);
+	}, [courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, syncRng, skillWisdomCheck, rushedKakari, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakerIndices, competeFight, leadCompetition, duelingRates]);
 	
 	useEffect(() => {
 		const shouldShow = posKeepMode === PosKeepMode.Virtual && selectedPacemakerIndices.length > 0;
@@ -1654,7 +1721,7 @@ function App(props) {
 			syncRng,
 			skillWisdomCheck,
 			rushedKakari
-		}).then(hash => {
+		}, competeFight, leadCompetition, duelingRates).then(hash => {
 			const url = window.location.protocol + '//' + window.location.host + window.location.pathname;
 			window.navigator.clipboard.writeText(url + '#' + hash);
 		});
@@ -1699,7 +1766,10 @@ function App(props) {
 					pacemakerCount: posKeepMode === PosKeepMode.Virtual ? pacemakerCount : 1,
 					syncRng: syncRng,
 					skillWisdomCheck: skillWisdomCheck,
-					rushedKakari: rushedKakari
+					rushedKakari: rushedKakari,
+					competeFight: competeFight,
+					leadCompetition: leadCompetition,
+					duelingRates: duelingRates
 				}
 			}
 		});
@@ -1725,7 +1795,10 @@ function App(props) {
 					pacemakerCount: posKeepMode === PosKeepMode.Virtual ? pacemakerCount : 1,
 					syncRng: syncRng,
 					skillWisdomCheck: skillWisdomCheck,
-					rushedKakari: rushedKakari
+					rushedKakari: rushedKakari,
+					competeFight: competeFight,
+					leadCompetition: leadCompetition,
+					duelingRates: duelingRates
 				}
 			}
 		});
@@ -2502,21 +2575,43 @@ function App(props) {
 							</div>
 						)} **/}
 						{mode == Mode.Compare && (
-							<div>
-								<label for="syncRng">Sync RNG</label>
-								<input type="checkbox" id="syncRng" checked={syncRng} onClick={handleSyncRngToggle} />
-							</div>
-						)}
-						{mode == Mode.Compare && (
-							<div>
-								<label for="skillWisdomCheck">Skill Wit Check</label>
-								<input type="checkbox" id="skillWisdomCheck" checked={skillWisdomCheck} onClick={handleSkillWisdomCheckToggle} />
-							</div>
-						)}
-						{mode == Mode.Compare && (
-							<div>
-								<label for="rushedKakari">Rushed / Kakari</label>
-								<input type="checkbox" id="rushedKakari" checked={rushedKakari} onClick={handleRushedKakariToggle} />
+							<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0;">
+								<div style="display: flex; flex-direction: column; gap: 0;">
+									<div>
+										<label for="syncRng">Sync RNG</label>
+										<input type="checkbox" id="syncRng" checked={syncRng} onClick={handleSyncRngToggle} />
+									</div>
+									<div>
+										<label for="skillWisdomCheck">Skill Wit Check</label>
+										<input type="checkbox" id="skillWisdomCheck" checked={skillWisdomCheck} onClick={handleSkillWisdomCheckToggle} />
+									</div>
+									<div>
+										<label for="rushedKakari">Rushed / Kakari</label>
+										<input type="checkbox" id="rushedKakari" checked={rushedKakari} onClick={handleRushedKakariToggle} />
+									</div>
+								</div>
+								<div style="display: flex; flex-direction: column; gap: 0;">
+									<div>
+										<label for="leadCompetition">Spot Struggle</label>
+										<input type="checkbox" id="leadCompetition" checked={leadCompetition} onClick={() => setLeadCompetition(!leadCompetition)} />
+									</div>
+									<div style="display: flex; align-items: center; gap: 8px;">
+										<label for="competeFight">Dueling</label>
+										<input type="checkbox" id="competeFight" checked={competeFight} onClick={() => setCompeteFight(!competeFight)} />
+										<button 
+											type="button"
+											onClick={() => setDuelingConfigOpen(true)}
+											style="background: rgb(248, 248, 248); border: 1px solid rgb(148, 150, 189); border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px; line-height: 1; height: auto; color: rgb(51, 51, 51); font-weight: 500; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; min-width: 28px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);"
+											onMouseOver={(e) => { e.currentTarget.style.background = 'rgb(240, 240, 240)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)'; }}
+											onMouseOut={(e) => { e.currentTarget.style.background = 'rgb(248, 248, 248)'; e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)'; }}
+											onMouseDown={(e) => e.currentTarget.style.background = 'rgb(232, 232, 232)'}
+											onMouseUp={(e) => e.currentTarget.style.background = 'rgb(240, 240, 240)'}
+											title="Configure dueling rates"
+										>
+											<Settings size={14} />
+										</button>
+									</div>
+								</div>
 							</div>
 						)}
 						<div>
@@ -2542,7 +2637,7 @@ function App(props) {
 				{expanded && <div id="umaPane" />}
 				<div id={expanded ? 'umaOverlay' : 'umaPane'}>
 					<div class={!expanded && currentIdx == 0 ? 'selected' : ''}>
-						<HorseDef key={uma1.outfitId} state={uma1} setState={setUma1} courseDistance={course.distance} tabstart={() => 4} onResetAll={resetAllUmas}>
+						<HorseDef key={uma1.outfitId} state={uma1} setState={setUma1} courseDistance={course.distance} tabstart={() => 4} onResetAll={resetAllUmas} runData={mode == Mode.Compare ? runData : null} umaIndex={mode == Mode.Compare ? 0 : null}>
 							{expanded ? 'Umamusume 1' : umaTabs}
 						</HorseDef>
 					</div>
@@ -2553,7 +2648,7 @@ function App(props) {
 							<div id="swapUmas" title="Swap umas" onClick={swapUmas}>⮂</div>
 						</div>}
 					{mode == Mode.Compare && <div class={!expanded && currentIdx == 1 ? 'selected' : ''}>
-						<HorseDef key={uma2.outfitId} state={uma2} setState={setUma2} courseDistance={course.distance} tabstart={() => 4 + horseDefTabs()} onResetAll={resetAllUmas}>
+						<HorseDef key={uma2.outfitId} state={uma2} setState={setUma2} courseDistance={course.distance} tabstart={() => 4 + horseDefTabs()} onResetAll={resetAllUmas} runData={runData} umaIndex={1}>
 							{expanded ? 'Umamusume 2' : umaTabs}
 						</HorseDef>
 					</div>}
@@ -2565,6 +2660,86 @@ function App(props) {
 					{expanded && <div id="closeUmaOverlay" title="Close panel" onClick={toggleExpand}>✕</div>}
 				</div>
 				{popoverSkill && <BasinnChartPopover skillid={popoverSkill} results={tableData.get(popoverSkill).results} courseDistance={course.distance} />}
+				{duelingConfigOpen && (
+					<div 
+						style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;"
+						onClick={(e) => { if (e.target === e.currentTarget) setDuelingConfigOpen(false); }}
+					>
+						<div style="background: white; border-radius: 8px; padding: 24px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+							<h2 style="margin-top: 0; margin-bottom: 20px;">Dueling Configuration</h2>
+							<div style="display: flex; flex-direction: column; gap: 16px;">
+								<div>
+									<label style="display: block; margin-bottom: 8px; font-weight: 500;">Runaway: {duelingRates.runaway}%</label>
+									<input 
+										type="range" 
+										min="0" 
+										max="100" 
+										value={duelingRates.runaway} 
+										onInput={(e) => setDuelingRates({...duelingRates, runaway: parseInt(e.target.value)})}
+										style="width: 100%;"
+									/>
+								</div>
+								<div>
+									<label style="display: block; margin-bottom: 8px; font-weight: 500;">Front Runner: {duelingRates.frontRunner}%</label>
+									<input 
+										type="range" 
+										min="0" 
+										max="100" 
+										value={duelingRates.frontRunner} 
+										onInput={(e) => setDuelingRates({...duelingRates, frontRunner: parseInt(e.target.value)})}
+										style="width: 100%;"
+									/>
+								</div>
+								<div>
+									<label style="display: block; margin-bottom: 8px; font-weight: 500;">Pace Chaser: {duelingRates.paceChaser}%</label>
+									<input 
+										type="range" 
+										min="0" 
+										max="100" 
+										value={duelingRates.paceChaser} 
+										onInput={(e) => setDuelingRates({...duelingRates, paceChaser: parseInt(e.target.value)})}
+										style="width: 100%;"
+									/>
+								</div>
+								<div>
+									<label style="display: block; margin-bottom: 8px; font-weight: 500;">Late Surger: {duelingRates.lateSurger}%</label>
+									<input 
+										type="range" 
+										min="0" 
+										max="100" 
+										value={duelingRates.lateSurger} 
+										onInput={(e) => setDuelingRates({...duelingRates, lateSurger: parseInt(e.target.value)})}
+										style="width: 100%;"
+									/>
+								</div>
+								<div>
+									<label style="display: block; margin-bottom: 8px; font-weight: 500;">End Closer: {duelingRates.endCloser}%</label>
+									<input 
+										type="range" 
+										min="0" 
+										max="100" 
+										value={duelingRates.endCloser} 
+										onInput={(e) => setDuelingRates({...duelingRates, endCloser: parseInt(e.target.value)})}
+										style="width: 100%;"
+									/>
+								</div>
+								<div style="background: #fee; border: 1px solid #fcc; border-radius: 4px; padding: 12px; margin-top: 8px;">
+									<p style="margin: 0; color: #c00; font-size: 0.9em;">
+										These are estimate %'s extracted from in-game race data, your actual dueling rate will vary based CM-by-CM based on overall lobby compositions.
+									</p>
+								</div>
+							</div>
+							<div style="display: flex; justify-content: flex-end; margin-top: 24px;">
+								<button 
+									onClick={() => setDuelingConfigOpen(false)}
+									style="background: rgb(148, 150, 189); color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; font-weight: 500;"
+								>
+									Close
+								</button>
+							</div>
+						</div>
+					</div>
+				)}
 			</IntlProvider>
 		</Language.Provider>
 	);
