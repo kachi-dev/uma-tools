@@ -1430,7 +1430,7 @@ function App(props) {
 	const [syncRng, toggleSyncRng] = useReducer((b,_) => !b, false);
 	const [skillWisdomCheck, toggleSkillWisdomCheck] = useReducer((b,_) => !b, true);
 	const [rushedKakari, toggleRushedKakari] = useReducer((b,_) => !b, true);
-	const [competeFight, setCompeteFight] = useState(true);
+	const [competeFight, setCompeteFight] = useState(false);
 	const [leadCompetition, setLeadCompetition] = useState(true);
 	const [duelingConfigOpen, setDuelingConfigOpen] = useState(false);
 	const [duelingRates, setDuelingRates] = useState({
@@ -1856,7 +1856,8 @@ function App(props) {
 			posKeepMode: PosKeepMode.Approximate, 
 			pacemakerCount: 1,
 			skillWisdomCheck: false,
-			rushedKakari: false
+			rushedKakari: false,
+			competeFight: false
 		};
 		worker1.postMessage({
 			msg: 'chart', 
