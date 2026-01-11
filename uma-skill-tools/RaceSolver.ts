@@ -1153,9 +1153,9 @@ export class RaceSolver {
 		selectedUma.firstUmaInLateRace = true;
 	}
 
-	updateLastSpurtState() {
+	updateLastSpurtState(force: boolean = false) {
 		if (this.isLastSpurt || this.phase < 2) return;
-		if (this.lastSpurtTransition == -1) {
+		if (this.lastSpurtTransition == -1 || force) {
 			const initialLastSpurtSpeed = this.lastSpurtSpeed;
 			const v = this.hp.getLastSpurtPair(this, this.lastSpurtSpeed, this.baseTargetSpeed[2]);
 			this.lastSpurtTransition = v[0];
@@ -1413,7 +1413,7 @@ export class RaceSolver {
 				if (s.perspective == Perspective.Self) ++this.activateCountHeal;
 				this.hp.recover(ef.modifier);
 				if (this.phase >= 2 && !this.isLastSpurt) {
-					this.updateLastSpurtState();
+					this.updateLastSpurtState(true);
 				}
 				break;
 			case SkillType.ActivateRandomGold:
