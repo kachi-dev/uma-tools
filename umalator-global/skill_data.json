@@ -371,6 +371,26 @@
         ],
         "rarity": 5
     },
+    "100211": {
+        "alternatives": [
+            {
+                "baseDuration": 50000,
+                "condition": "distance_rate>=50&corner==0&order_rate>=70&order_rate<=75&is_overtake==1@distance_rate>=50&corner==0&order_rate<=30&order_rate>=20",
+                "effects": [
+                    {
+                        "modifier": 3500,
+                        "target": 1,
+                        "type": 25
+                    },
+                    {
+                        "modifier": 1000,
+                        "target": 1,
+                        "type": 31
+                    }
+                ]
+            }
+        ]
+    },
     "100231": {
         "alternatives": [
             {
