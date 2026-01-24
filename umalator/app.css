@@ -418,7 +418,7 @@ body {
 
 .activationFrequencyChart svg text {
 	font-size: 10px;
-	fill: rgb(121, 64, 22);
+	fill: black;
 }
 
 .activationFrequencyChart svg .domain,

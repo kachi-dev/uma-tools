@@ -778,7 +778,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			// obviously hard coding the skills we want to fudge this for is not really ideal, but it's not clear that it's
 			// safe to do in all cases. technically to fix this `phase` should probably be a dynamic condition that actually
 			// checks the phase to match in-game mechanics
-			const fudge = ['100591', '900591', '110261', '910261', '110191', '910191', '120451', '920451', '101502121'].indexOf(extra.skillId) > -1 ? 10 : 0;
+			const fudge = ['100591', '900591', '110261', '910261', '110191', '910191', '120451', '920451', '101502121', '100461'].indexOf(extra.skillId) > -1 ? 10 : 0;
 			const bounds = new Region(CourseHelpers.phaseStart(course.distance, phase), CourseHelpers.phaseEnd(course.distance, phase) + fudge);
 			return regions.rmap(r => r.intersect(bounds));
 		},
