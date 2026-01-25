@@ -94,12 +94,18 @@ const coursesByTrack = (function () {
 export function TrackSelect(props) {
 	const lang = useLanguage();
 	let [trackid, setTrackid] = useState(courses[props.courseid].raceTrackId);
-	const changeCourse = useCallback((e) => props.setCourseid(+e.target.value), [props.setCourseid]);
+	const changeCourse = useCallback((e) => {
+		const newCourseId = +e.target.value;
+		console.log('Course ID changed:', newCourseId);
+		props.setCourseid(newCourseId);
+	}, [props.setCourseid]);
 	
 	function changeTrack(e) {
 		const newTrackId = +e.target.value;
 		setTrackid(newTrackId);
-		props.setCourseid(coursesByTrack[newTrackId][0]);
+		const newCourseId = coursesByTrack[newTrackId][0];
+		console.log('Course ID changed:', newCourseId);
+		props.setCourseid(newCourseId);
 	}
 
 	return (
