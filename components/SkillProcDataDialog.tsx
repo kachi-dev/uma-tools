@@ -92,8 +92,14 @@ export function SkillProcDataDialog(props: SkillProcDataDialogProps) {
 			}
 		});
 		skillProcs = allBasinnActivations.length;
-		const positiveCount = allBasinnActivations.filter(([_, basinn]) => basinn > 0).length;
-		effectivenessRate = totalCount > 0 ? (positiveCount / totalCount) * 100 : 0;
+		const beneficialCount = allBasinnActivations.filter(([_, basinn]) => {
+			if (umaIndex === 0) {
+				return basinn < 0;
+			} else {
+				return basinn > 0;
+			}
+		}).length;
+		effectivenessRate = totalCount > 0 ? (beneficialCount / totalCount) * 100 : 0;
 	}
 
 	return (
@@ -121,6 +127,7 @@ export function SkillProcDataDialog(props: SkillProcDataDialogProps) {
 								skillId={skillId} 
 								runData={runData} 
 								courseDistance={courseDistance}
+								umaIndex={umaIndex}
 							/>
 							<ActivationFrequencyChart 
 								skillId={skillId} 
@@ -133,6 +140,7 @@ export function SkillProcDataDialog(props: SkillProcDataDialogProps) {
 							runData={runData}
 							courseDistance={courseDistance}
 							displaying={displaying}
+							umaIndex={umaIndex}
 						/>
 					</div>
 					<div style="position: absolute; bottom: 0; right: 0; font-size: 9px; font-style: italic; padding: 4px;">

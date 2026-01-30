@@ -339,7 +339,11 @@ export function LengthDifferenceChart(props) {
 
 	const allActivations: Array<[number, number]> = [];
 	
-	runData.allruns.skBasinn.forEach((skBasinnMap: any) => {
+	const skBasinnToProcess = runData.allruns.skBasinn.length > umaIndex 
+		? [runData.allruns.skBasinn[umaIndex]] 
+		: runData.allruns.skBasinn;
+	
+	skBasinnToProcess.forEach((skBasinnMap: any) => {
 		if (!skBasinnMap) return;
 		let activations = null;
 		if (skBasinnMap instanceof Map || (typeof skBasinnMap.has === 'function' && typeof skBasinnMap.get === 'function')) {
@@ -430,6 +434,10 @@ export function LengthDifferenceChart(props) {
 			yAxisTicks={5}
 			yTickValues={yTickValues}
 			yAxisFormat={(d, i, ticks) => {
+				const isMaxTick = ticks && i === ticks.length - 1;
+				if (isMaxTick || Math.abs(d - maxValue) < 0.001) {
+					return `${maxValue.toFixed(2)}L`;
+				}
 				return `${d.toFixed(1)}L`;
 			}}
 			barColor="#2a77c5"
@@ -803,7 +811,7 @@ export function VelocityChart(props) {
 }
 
 export function ActivationFrequencyChart(props) {
-	const {skillId, runData, courseDistance} = props;
+	const {skillId, runData, courseDistance, umaIndex = 1} = props;
 	const width = 300;
 	const height = 50;
 	const yW = 40;
@@ -819,7 +827,11 @@ export function ActivationFrequencyChart(props) {
 		return null;
 	}
 	
-	runData.allruns.sk.forEach((skMap: any) => {
+	const skToProcess = runData.allruns.sk.length > umaIndex 
+		? [runData.allruns.sk[umaIndex]] 
+		: runData.allruns.sk;
+	
+	skToProcess.forEach((skMap: any) => {
 		if (!skMap) return;
 		let positions = null;
 		if (skMap instanceof Map || (typeof skMap.has === 'function' && typeof skMap.get === 'function')) {
@@ -2225,13 +2237,16 @@ function App(props) {
 
 	const createExpandedContent = useCallback((skillId: string, runData: any, courseDistance: number) => {
 		const currentDisplaying = displaying || 'meanrun';
-		const umaIndexForChart = currentIdx < 2 ? currentIdx : 1;
+		const umaIndexForChart = (mode == Mode.Chart || mode == Mode.UniquesChart) ? 1 : (currentIdx < 2 ? currentIdx : 1);
 		let effectivenessRate = 0;
 		const totalCount = runData.allruns?.totalRuns || 0;
 		let skillProcs = 0;
 		if (runData.allruns && runData.allruns.skBasinn && Array.isArray(runData.allruns.skBasinn)) {
 			const allBasinnActivations: Array<[number, number]> = [];
-			runData.allruns.skBasinn.forEach((skBasinnMap: any) => {
+			const skBasinnToProcess = (mode == Mode.Chart || mode == Mode.UniquesChart) 
+				? [runData.allruns.skBasinn[umaIndexForChart]] 
+				: runData.allruns.skBasinn;
+			skBasinnToProcess.forEach((skBasinnMap: any) => {
 				if (!skBasinnMap) return;
 				let activations = null;
 				if (skBasinnMap instanceof Map || (typeof skBasinnMap.has === 'function' && typeof skBasinnMap.get === 'function')) {
@@ -2292,6 +2307,7 @@ function App(props) {
 							skillId={skillId} 
 							runData={runData} 
 							courseDistance={courseDistance}
+							umaIndex={umaIndexForChart}
 						/>
 					</div>
 					<VelocityChart 
@@ -2307,7 +2323,7 @@ function App(props) {
 				</div>
 			</div>
 		);
-	}, [displaying, loadingAdditionalSamples, isSimulationRunning, runAdditionalSamplesForSkill, currentIdx]);
+	}, [displaying, loadingAdditionalSamples, isSimulationRunning, runAdditionalSamplesForSkill, currentIdx, mode]);
 
 	let resultsPane;
 	if (mode == Mode.Compare && results.length > 0) {
