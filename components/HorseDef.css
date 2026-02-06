@@ -1,7 +1,7 @@
 .horseDef {
 	background: rgb(248, 248, 248);
-	border: 2px solid rgb(170, 221, 154);
-	border-radius: 12px;
+	border: 1px solid hsl(210 10% 85%);
+	border-radius: 0;
 	box-sizing: border-box;
 	display: flex;
 	flex-direction: column;
@@ -10,10 +10,10 @@
 }
 
 .horseDefHeader {
-	background: linear-gradient(rgb(153, 219, 68), rgb(112, 190, 18));
-	border-bottom: 2px solid rgb(170, 221, 154);
-	border-radius: 10px 10px 0 0;
-	color: white;
+	background: none;
+	border-bottom: 1px solid hsl(210 10% 85%);
+	border-radius: 0;
+	color: hsl(215 20% 15%);
 	font-size: 2em;
 	font-weight: bold;
 	padding: 6px 0;

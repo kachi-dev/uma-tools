@@ -10,14 +10,119 @@
 
 body {
 	font-family: Inter, "Noto Sans JP", sans-serif;
+	margin: 0;
 }
 
 #app {
 	display: grid;
-	gap: 20px;
-	grid-template-columns: auto 1fr;
+	grid-template-columns: auto auto 1fr;
 	grid-template-rows: auto 1fr;
-	height: 98vh;
+	height: 100vh;
+	gap: 0;
+}
+
+#iconSidebar {
+	grid-column: 1;
+	grid-row: 2 / -1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 12px 0;
+	gap: 4px;
+	width: 48px;
+	background: var(--bg, #fff);
+	border-right: 1px solid hsl(210 10% 85%);
+}
+
+.sidebarIcon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	border-radius: 8px;
+	border: none;
+	background: transparent;
+	color: hsl(215 16% 50%);
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.sidebarIcon:hover {
+	background: hsl(210 6% 93%);
+	color: hsl(215 20% 30%);
+}
+
+.sidebarIcon.active {
+	background: hsl(215 95% 95%);
+	color: hsl(215 70% 50%);
+}
+
+#navBar {
+	grid-column: 1 / -1;
+	display: flex;
+	align-items: stretch;
+	justify-content: space-between;
+	border-bottom: 1px solid hsl(210 10% 85%);
+	background: var(--bg, #fff);
+	padding: 0 16px;
+	height: 44px;
+	z-index: 10;
+}
+
+#navTabs {
+	display: flex;
+	align-items: stretch;
+	gap: 0;
+}
+
+.navTab {
+	display: flex;
+	align-items: center;
+	padding: 0 16px;
+	font-size: 14px;
+	font-weight: 600;
+	color: hsl(215 16% 50%);
+	border-bottom: 2px solid transparent;
+	margin-bottom: -1px;
+	cursor: pointer;
+	user-select: none;
+	transition: all 0.15s ease;
+}
+
+.navTab:hover:not(.selected):not(.disabled) {
+	color: hsl(215 20% 30%);
+	border-bottom-color: hsl(210 10% 80%);
+}
+
+.navTab.selected {
+	color: hsl(215 70% 50%);
+	border-bottom-color: hsl(215 70% 50%);
+}
+
+.navTab.disabled {
+	color: hsl(215 10% 70%);
+	cursor: default;
+}
+
+#themeToggle {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	align-self: center;
+	background: transparent;
+	border: 1px solid hsl(210 10% 85%);
+	border-radius: 8px;
+	cursor: pointer;
+	color: hsl(215 16% 47%);
+	transition: all 0.15s ease;
+}
+
+#themeToggle:hover {
+	background: hsl(210 6% 93%);
+	color: hsl(215 20% 30%);
 }
 
 #posKeepFieldset {
@@ -183,44 +288,301 @@ body {
 	cursor: pointer;
 }
 
+#modeTabs {
+	display: inline-flex;
+	align-self: center;
+	background: hsl(210 6% 93%);
+	border-radius: 8px;
+	padding: 3px;
+	gap: 2px;
+	margin-bottom: 8px;
+}
+
+.modeTab {
+	padding: 6px 20px;
+	cursor: pointer;
+	font-size: 13px;
+	font-weight: 500;
+	color: hsl(215 16% 47%);
+	background: transparent;
+	border: none;
+	border-radius: 6px;
+	user-select: none;
+	transition: all 0.15s ease;
+	white-space: nowrap;
+}
+
+.modeTab:hover:not(.selected) {
+	color: hsl(215 20% 30%);
+	background: hsl(210 6% 88%);
+}
+
+.modeTab.selected {
+	background: #fff;
+	color: hsl(215 20% 15%);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+#mainContent {
+	grid-column: 3;
+	grid-row: 2;
+	overflow-y: auto;
+	min-height: 0;
+}
+
 #topPane {
-	display: grid;
-	grid-template-columns: 2fr 1fr;
-	grid-template-rows: 3fr 1fr;
-	gap: 10px 10px;
-	width: fit-content;
-	/* FUCK OVERLAPPING */
+	display: flex;
+	flex-direction: column;
 	height: auto;
 	min-height: 300px;
 	position: relative;
-	padding-bottom: 60px;
+	padding: 20px 20px 0px 20px;
 }
 
-#runPane {
-	grid-column-start: 2;
-	grid-row-start: span 2;
+.controlPanel {
+	background: rgb(242, 242, 242);
+	border-radius: 8px;
+	padding: 12px 16px;
 	display: flex;
 	flex-direction: column;
-	font-size: 14px;
+	gap: 0;
+	margin-bottom: 8px;
+}
+
+.controlPanelRow {
+	display: flex;
+	align-items: stretch;
+	gap: 0;
+	padding: 8px 0;
+}
+
+.controlPanelSep {
+	width: 1px;
+	background: hsl(210 10% 82%);
+	margin: 0 14px;
+	align-self: stretch;
+}
+
+.controlPanelField {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
 	justify-content: flex-start;
-	align-self: start;
-	margin-left: 0px;
-	margin-right: 0px;
-	/* no ui bugs here */
-	max-width: 360px;
+}
+
+.controlPanelLabel {
+	font-family: Inter, "Noto Sans JP", sans-serif;
+	font-size: 11px;
+	font-weight: 600;
+	color: hsl(215 10% 50%);
+	text-transform: uppercase;
+	letter-spacing: 0.4px;
+}
+
+.controlPanel select,
+.controlPanel input {
+	font-family: Inter, "Noto Sans JP", sans-serif;
+	font-size: 13px;
+	padding: 6px 10px;
+	border: 1px solid hsl(210 14% 83%);
+	border-radius: 6px;
+	background: white;
+	color: hsl(215 20% 20%);
+	outline: none;
+	transition: border-color 0.15s, box-shadow 0.15s;
+	appearance: none;
+	-webkit-appearance: none;
+	cursor: pointer;
+}
+
+.controlPanel select {
+	padding-right: 28px;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 8px center;
+	background-size: 12px;
+}
+
+.controlPanel select:hover,
+.controlPanel input:hover {
+	border-color: hsl(215 50% 70%);
+}
+
+.controlPanel select:focus,
+.controlPanel input:focus {
+	border-color: hsl(215 70% 55%);
+	box-shadow: 0 0 0 3px hsla(215 70% 55% / 0.12);
+}
+
+#runBar {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 8px 0;
+	font-family: Inter, "Noto Sans JP", sans-serif;
+	font-size: 13px;
+	flex-wrap: wrap;
+}
+
+#runBar #run {
+	font-family: inherit;
+	font-size: 13px;
+	font-weight: 600;
+	padding: 6px 16px;
+	margin: 0;
+	width: auto;
+	border-radius: 6px;
+	box-shadow: 0 1px 3px rgba(59, 130, 246, 0.3);
+}
+
+#runBar #run:hover {
+	transform: none;
+	box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+}
+
+#runBar #runOnce {
+	font-family: inherit;
+	font-size: 13px;
+	padding: 6px 12px;
+	margin: 0;
+	width: auto;
+	border-radius: 6px;
+}
+
+.runBarGroup {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.runBarGroup label {
+	font-family: Inter, "Noto Sans JP", sans-serif;
+	font-size: 11px;
+	font-weight: 600;
+	color: hsl(215 10% 50%);
+	text-transform: uppercase;
+	letter-spacing: 0.4px;
+	white-space: nowrap;
+}
+
+.runBarGroup input[type="number"] {
+	font-family: Inter, "Noto Sans JP", sans-serif;
+	width: 70px;
+	padding: 6px 10px;
+	border: 1px solid hsl(210 14% 83%);
+	border-radius: 6px;
+	font-size: 13px;
+	background: white;
+	color: hsl(215 20% 20%);
+	outline: none;
+	transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.runBarGroup input[type="number"]:hover {
+	border-color: hsl(215 50% 70%);
+}
+
+.runBarGroup input[type="number"]:focus {
+	border-color: hsl(215 70% 55%);
+	box-shadow: 0 0 0 3px hsla(215 70% 55% / 0.12);
+}
+
+.runBarCheckbox {
+	gap: 4px;
+}
+
+.runBarCheckbox input[type="checkbox"] {
+	margin: 0;
+}
+
+#settingsPane {
+	grid-row: 2 / -1;
+	grid-column: 2;
+	width: 700px;
+	overflow-y: auto;
+	border-right: 1px solid hsl(210 10% 85%);
+	background: rgb(248, 248, 248);
+	padding: 20px 24px;
+	box-sizing: border-box;
+	min-height: 0;
+	align-self: stretch;
+}
+
+#settingsPane h3 {
+	margin: 0 0 16px 0;
+	font-size: 16px;
+	font-weight: 600;
+	color: hsl(215 20% 15%);
+}
+
+.settingsSection {
+	padding: 12px 0;
+	border-top: 1px solid hsl(210 10% 88%);
+}
+
+.settingsGrid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 8px 16px;
+}
+
+.settingsGrid > div {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.settingsGrid label {
+	font-size: 13px;
+}
+
+.settingsSmallBtn {
+	background: rgb(248, 248, 248);
+	border: 1px solid hsl(210 10% 85%);
+	border-radius: 4px;
+	padding: 4px 8px;
+	cursor: pointer;
+	font-size: 12px;
+	line-height: 1;
+	color: hsl(215 20% 30%);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	transition: background 0.15s ease;
+}
+
+.settingsSmallBtn:hover {
+	background: hsl(210 6% 93%);
 }
 
 #seedWrapper {
 	display: flex;
-	width: 177px;
+}
+
+#seedWrapper button {
+	font-family: Inter, "Noto Sans JP", sans-serif;
+	padding: 4px 8px;
+	border: 1px solid hsl(210 14% 83%);
+	border-left: none;
+	border-radius: 0 6px 6px 0;
+	background: hsl(210 10% 97%);
+	cursor: pointer;
+	font-size: 14px;
+	transition: background 0.15s;
+}
+
+#seedWrapper button:hover {
+	background: hsl(210 10% 93%);
 }
 
 #seed {
 	flex: 1 1 auto;
-	width: 130px;
+	width: 100px;
+	border-radius: 6px 0 0 6px !important;
 }
 
 #run {
+	font-family: Inter, "Noto Sans JP", sans-serif;
 	background: linear-gradient(135deg, #3b82f6, #1d4ed8);
 	border: 2px solid #1e40af;
 	border-radius: 8px;
@@ -228,11 +590,10 @@ body {
 	cursor: pointer;
 	font-size: 1.2em;
 	font-weight: 600;
-	margin: 10px 0 6px 0;
+	margin: 0;
 	padding: 12px 24px;
 	transition: all 0.2s ease;
 	box-shadow: 0 3px 8px rgba(59, 130, 246, 0.3);
-	width: 100%;
 }
 
 #run:hover {
@@ -267,6 +628,7 @@ body {
 }
 
 #runOnce {
+	font-family: Inter, "Noto Sans JP", sans-serif;
 	background: linear-gradient(135deg, #6b7280, #4b5563);
 	border: 2px solid #374151;
 	border-radius: 6px;
@@ -274,11 +636,10 @@ body {
 	cursor: pointer;
 	font-size: 0.9em;
 	font-weight: 500;
-	margin: 0 0 10px 0;
+	margin: 0;
 	padding: 8px 16px;
 	transition: all 0.2s ease;
 	box-shadow: 0 2px 6px rgba(107, 114, 128, 0.3);
-	width: 100%;
 }
 
 #runOnce:hover {
@@ -318,57 +679,54 @@ body {
 	stroke-width: 3px;
 }
 
-#buttonsRow {
-	align-items: center;
+.trackSelect {
 	display: flex;
-	gap: 40px;
-	margin-bottom: 10px;
-	margin-left: 20px;
-	margin-right: 20px;
-	width: 100%;
+	gap: 0;
 }
 
-.trackSelect > select {
-	background: none;
-	border: 1px solid rgb(148, 150, 189);
-	border-radius: 0 8px 8px 0;
-	padding: 0.7em;
+.controlPanel .trackSelect > select {
+	border-radius: 0 6px 6px 0;
 }
 
-.trackSelect > select:first-child {
-	border-radius: 8px 0 0 8px;
+.controlPanel .trackSelect > select:first-child {
+	border-radius: 6px 0 0 6px;
 	border-right: none;
 }
 
-#buttonsRow > div {
-	display: flex;
-}
 
-#buttonsRowSpace {
-	flex: 0.5;
-}
-
-.groundSelect {
-	background: inherit;
-	border: none;
-	color: rgb(121, 64, 22);
-	font-size: 1.2em;
-	font-weight: bold;
-	padding: 0;
-	text-align: right;
+.controlPanel .groundSelect {
+	font-weight: 400;
+	text-align: left;
 }
 
 .weatherSelect {
 	display: flex;
-	margin-left: 5px;
 }
 
-#buttonsRow img {
+.controlPanel img {
 	height: 2em;
+	cursor: pointer;
+	border-radius: 4px;
+	padding: 2px;
+	transition: filter 0.15s;
 }
 
-#buttonsRow img:not(.selected) {
+.controlPanel img:not(.selected) {
 	filter: grayscale(0.9);
+	opacity: 0.5;
+}
+
+.controlPanel img:hover:not(.selected) {
+	opacity: 0.8;
+}
+
+.controlPanel img.selected {
+	background: hsla(215 60% 50% / 0.1);
+}
+
+.racetrackWrapper {
+	width: auto !important;
+	margin: 0 auto;
 }
 
 .hasResults .racetrackView > svg text:not(.mouseoverText) {
@@ -382,9 +740,8 @@ body {
 
 #resultsPaneWrapper {
 	display: flex;
-	/* might cause a fatass white space*/
 	clear: both;
-	max-width: 980px;
+	padding: 0 20px;
 }
 
 #resultsPane {
@@ -392,13 +749,11 @@ body {
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
-	/* Add spacing so the right pane controls don't collide with tables */
 	margin-top: 8px;
-	margin-right: 24px;
 }
 
 #resultsPane.mode-chart {
-	width: 980px;
+	width: 100%;
 }
 
 .activationFrequencyChart {
@@ -531,9 +886,14 @@ body {
 }
 
 #umaPane {
-	grid-row: 1 / 3;
-	width: 700px;  /* needed for when this is a placeholder to consume grid space when uma pane is expanded */
+	grid-row: 2 / -1;
+	grid-column: 2;
+	width: 700px;
 	position: relative;
+	overflow-y: auto;
+	border-right: 1px solid hsl(210 10% 85%);
+	min-height: 0;
+	align-self: stretch;
 }
 
 #umaPane > div {
@@ -546,7 +906,11 @@ body {
 }
 
 #umaPane .horseDef {
+	border-left: none;
 	border-top: none;
+	border-bottom: none;
+	border-radius: 0;
+	min-height: 100%;
 }
 
 #umaPane .horseDefHeader {
@@ -556,72 +920,109 @@ body {
 	text-align: left;
 }
 
+.umaTabBar {
+	display: flex;
+	align-items: stretch;
+	width: 100%;
+	border-bottom: 1px solid hsl(210 10% 85%);
+	gap: 0;
+}
+
+.umaTabItem {
+	padding: 10px 20px;
+	cursor: pointer;
+	font-size: 14px;
+	font-weight: 500;
+	color: hsl(215 16% 50%);
+	background: none;
+	border: none;
+	border-bottom: 2px solid transparent;
+	margin-bottom: -1px;
+	user-select: none;
+	transition: all 0.15s ease;
+	white-space: nowrap;
+}
+
+.umaTabItem:hover:not(.selected) {
+	color: hsl(215 20% 30%);
+	border-bottom-color: hsl(210 10% 80%);
+}
+
+.umaTabItem.selected {
+	color: hsl(215 70% 50%);
+	font-weight: 600;
+	border-bottom-color: hsl(215 70% 50%);
+}
+
+.umaTabBar #expandBtn {
+	margin-left: auto;
+	align-self: center;
+	margin-right: 8px;
+}
+
+.umaTabsGroup {
+	display: inline-flex;
+	background: hsl(210 6% 93%);
+	border-radius: 8px;
+	padding: 3px;
+	gap: 2px;
+}
+
 .umaTab {
-	background: linear-gradient(white, rgb(228, 227, 234));
-	color: rgb(121,64,22);
-	flex-basis: 0;
-	flex-grow: 1;
-	outline: 2px solid rgb(216, 217, 220);
-	padding: 6px 0 6px 20px;
+	padding: 6px 20px;
+	cursor: pointer;
+	font-size: 13px;
+	font-weight: 500;
+	color: hsl(215 16% 47%);
+	background: transparent;
+	border: none;
+	border-radius: 6px;
+	user-select: none;
+	transition: all 0.15s ease;
+	white-space: nowrap;
 }
 
-.umaTab:first-child {
-	border-top-left-radius: 12px;
-}
-
-.umaTab:last-child {
-	border-top-right-radius: 12px;
-}
-
-.staminaTab:first-child {
-	border-top-left-radius: 0;
-}
-
-.staminaTab:last-child {
-	border-top-right-radius: 0;
+.umaTab:hover:not(.selected) {
+	color: hsl(215 20% 30%);
+	background: hsl(210 6% 88%);
 }
 
 .umaTab.selected {
-	background: linear-gradient(rgb(153, 219, 68), rgb(112, 190, 18));
-	color: white;
-	outline: 2px solid rgb(170, 221, 154);
-	z-index: 1;
+	background: #fff;
+	color: hsl(215 20% 15%);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
+
 #expandBtn {
-	background: linear-gradient(#99db44,#70be12);
-	border: 2px solid rgb(170,221,154);
+	background: hsl(210 6% 93%);
+	border: none;
 	border-radius: 6px;
-	cursor: default;
-	float: right;
-	height: 34px;
-	margin: 8px 10px 0 0;
+	cursor: pointer;
+	height: 30px;
+	width: 30px;
 	position: relative;
-	width: 34px;
+	transition: background 0.15s ease;
+	flex-shrink: 0;
+}
+
+#expandBtn:hover {
+	background: hsl(210 6% 86%);
 }
 
 #expandBtn::after {
-	border-right: 2px solid white;
-	border-top: 2px solid white;
+	border-right: 2px solid hsl(215 16% 47%);
+	border-top: 2px solid hsl(215 16% 47%);
 	content: "";
 	display: block;
-	height: 15px;
-	left: 4px;
+	height: 12px;
+	left: 5px;
 	position: absolute;
-	top: 8px;
+	top: 7px;
 	transform: rotate(45deg);
-	width: 15px;
+	width: 12px;
 }
 
-.selected > #expandBtn {
-	background: linear-gradient(#fff,#e4e3ea);
-	border: 2px solid rgb(216,217,220);
-}
-
-.selected > #expandBtn::after {
-	border-right: 2px solid rgb(121,64,22);
-	border-top: 2px solid rgb(121,64,22);
-}
 
 #umaOverlay {
 	background: white;
@@ -745,6 +1146,40 @@ body {
   --muted: #9ca3af;
   --card: #121a2a;
   --border: #1f2937;
+}
+.dark .controlPanel {
+  background: #1a2236;
+}
+.dark .controlPanelLabel {
+  color: #9ca3af;
+}
+.dark .controlPanelSep {
+  background: hsl(215 20% 25%);
+}
+.dark .controlPanel select,
+.dark .controlPanel input {
+  background: #0f172a;
+  border-color: hsl(215 20% 30%);
+  color: #e5e7eb;
+}
+.dark .controlPanel select:hover,
+.dark .controlPanel input:hover {
+  border-color: hsl(215 40% 50%);
+}
+.dark .runBarGroup input[type="number"] {
+  background: #0f172a;
+  border-color: hsl(215 20% 30%);
+  color: #e5e7eb;
+}
+.dark #seedWrapper button {
+  background: #1a2236;
+  border-color: hsl(215 20% 30%);
+  color: #e5e7eb;
+}
+.dark .controlPanel .groundSelect {
+  background: #0f172a;
+  border-color: hsl(215 20% 30%);
+  color: #e5e7eb;
 }
 
 .runAdditionalSamples {
