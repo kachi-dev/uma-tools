@@ -441,16 +441,16 @@ export function HorseDef(props) {
 					<AptitudeSelect a={state.distanceAptitude} setA={setter('distanceAptitude')} tabindex={tabnext()} />
 				</div>
 				<div>
-					<span>Mood:</span>
-					<MoodSelect m={state.mood} setM={setter('mood')} tabindex={tabnext()} />
+					<span>{CC_GLOBAL ? 'Style aptitude:' : 'Strategy aptitude:'}</span>
+					<AptitudeSelect a={state.strategyAptitude} setA={setter('strategyAptitude')} tabindex={tabnext()} />
 				</div>
 				<div>
 					<span>{CC_GLOBAL ? 'Style:' : 'Strategy:'}</span>
 					<StrategySelect s={state.strategy} setS={setter('strategy')} disabled={hasRunawaySkill} tabindex={tabnext()} />
 				</div>
 				<div>
-					<span>{CC_GLOBAL ? 'Style aptitude:' : 'Strategy aptitude:'}</span>
-					<AptitudeSelect a={state.strategyAptitude} setA={setter('strategyAptitude')} tabindex={tabnext()} />
+					<span>Mood:</span>
+					<MoodSelect m={state.mood} setM={setter('mood')} tabindex={tabnext()} />
 				</div>
 			</div>
 			<div class="horseSkillHeader">Skills</div>

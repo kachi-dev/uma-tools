@@ -125,25 +125,6 @@ body {
 	color: hsl(215 20% 30%);
 }
 
-#posKeepFieldset {
-	border: 1px solid rgb(148, 150, 189);
-	border-radius: 8px;
-	padding: 8px;
-	margin: 5px 0;
-}
-
-#posKeepFieldset legend {
-	padding: 0 5px;
-}
-
-#posKeepFieldset select {
-	background: none;
-	border: 1px solid rgb(148, 150, 189);
-	border-radius: 4px;
-	padding: 4px 8px;
-	width: 100%;
-	margin-bottom: 5px;
-}
 
 #pacemakerIndicator {
 	display: flex;
@@ -498,11 +479,11 @@ body {
 #settingsPane {
 	grid-row: 2 / -1;
 	grid-column: 2;
-	width: 700px;
+	width: 360px;
 	overflow-y: auto;
 	border-right: 1px solid hsl(210 10% 85%);
-	background: rgb(248, 248, 248);
-	padding: 20px 24px;
+	background: hsl(210 10% 96%);
+	padding: 20px;
 	box-sizing: border-box;
 	min-height: 0;
 	align-self: stretch;
@@ -510,41 +491,111 @@ body {
 
 #settingsPane h3 {
 	margin: 0 0 16px 0;
-	font-size: 16px;
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 1px;
+	color: hsl(215 15% 55%);
+}
+
+.settingsCard {
+	background: white;
+	border: 1px solid hsl(210 10% 88%);
+	border-radius: 10px;
+	padding: 16px;
+	margin-bottom: 12px;
+}
+
+.settingsCard h4 {
+	margin: 0 0 12px 0;
+	font-size: 11px;
 	font-weight: 600;
-	color: hsl(215 20% 15%);
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	color: hsl(215 15% 55%);
 }
 
-.settingsSection {
-	padding: 12px 0;
-	border-top: 1px solid hsl(210 10% 88%);
+.settingsCard select {
+	width: 100%;
+	background: hsl(210 10% 97%);
+	border: 1px solid hsl(210 10% 85%);
+	border-radius: 6px;
+	padding: 8px 10px;
+	font-size: 13px;
+	color: hsl(215 20% 25%);
+	font-family: inherit;
 }
 
-.settingsGrid {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 8px 16px;
-}
-
-.settingsGrid > div {
+.settingsToggleRow {
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	justify-content: space-between;
+	padding: 8px 0;
+	font-size: 13px;
+	color: hsl(215 20% 25%);
 }
 
-.settingsGrid label {
-	font-size: 13px;
+.settingsToggleRow + .settingsToggleRow {
+	border-top: 1px solid hsl(210 10% 93%);
+}
+
+.toggleSwitch {
+	position: relative;
+	display: inline-block;
+	width: 36px;
+	height: 20px;
+	flex-shrink: 0;
+	cursor: pointer;
+}
+
+.toggleSwitch input {
+	opacity: 0;
+	width: 0;
+	height: 0;
+	position: absolute;
+}
+
+.toggleTrack {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: hsl(210 10% 82%);
+	border-radius: 10px;
+	transition: background 0.2s;
+}
+
+.toggleTrack::after {
+	content: '';
+	position: absolute;
+	width: 16px;
+	height: 16px;
+	background: white;
+	border-radius: 50%;
+	top: 2px;
+	left: 2px;
+	transition: transform 0.2s;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+.toggleSwitch input:checked + .toggleTrack {
+	background: rgb(148, 150, 189);
+}
+
+.toggleSwitch input:checked + .toggleTrack::after {
+	transform: translateX(16px);
 }
 
 .settingsSmallBtn {
-	background: rgb(248, 248, 248);
+	background: hsl(210 10% 97%);
 	border: 1px solid hsl(210 10% 85%);
-	border-radius: 4px;
+	border-radius: 6px;
 	padding: 4px 8px;
 	cursor: pointer;
 	font-size: 12px;
 	line-height: 1;
-	color: hsl(215 20% 30%);
+	color: hsl(215 20% 40%);
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -552,7 +603,115 @@ body {
 }
 
 .settingsSmallBtn:hover {
-	background: hsl(210 6% 93%);
+	background: hsl(210 6% 91%);
+}
+
+.settingsCopyBtn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	background: white;
+	border: 1px solid hsl(210 10% 85%);
+	border-radius: 10px;
+	padding: 10px;
+	cursor: pointer;
+	font-size: 13px;
+	font-weight: 500;
+	font-family: inherit;
+	color: hsl(215 20% 35%);
+	transition: background 0.15s, border-color 0.15s;
+}
+
+.settingsCopyBtn:hover {
+	background: hsl(210 6% 95%);
+	border-color: hsl(210 10% 78%);
+}
+
+.duelingOverlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+}
+
+.duelingModal {
+	background: white;
+	border-radius: 10px;
+	padding: 24px;
+	max-width: 500px;
+	width: 90%;
+	max-height: 90vh;
+	overflow-y: auto;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.duelingModal h2 {
+	margin: 0 0 20px 0;
+	font-size: 16px;
+	font-weight: 600;
+	color: hsl(215 20% 15%);
+}
+
+.duelingSliders {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.duelingSliders label {
+	display: block;
+	margin-bottom: 8px;
+	font-weight: 500;
+	font-size: 13px;
+	color: hsl(215 20% 25%);
+}
+
+.duelingSliders input[type="range"] {
+	width: 100%;
+}
+
+.duelingWarning {
+	background: #fee;
+	border: 1px solid #fcc;
+	border-radius: 6px;
+	padding: 12px;
+	margin-top: 8px;
+}
+
+.duelingWarning p {
+	margin: 0;
+	color: #c00;
+	font-size: 0.9em;
+}
+
+.duelingActions {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: 24px;
+}
+
+.duelingActions button {
+	background: rgb(148, 150, 189);
+	color: white;
+	border: none;
+	border-radius: 6px;
+	padding: 8px 16px;
+	cursor: pointer;
+	font-weight: 500;
+	font-family: inherit;
+	font-size: 13px;
+	transition: background 0.15s;
+}
+
+.duelingActions button:hover {
+	background: rgb(128, 130, 172);
 }
 
 #seedWrapper {
@@ -888,7 +1047,7 @@ body {
 #umaPane {
 	grid-row: 2 / -1;
 	grid-column: 2;
-	width: 700px;
+	width: 630px;
 	position: relative;
 	overflow-y: auto;
 	border-right: 1px solid hsl(210 10% 85%);
@@ -1321,20 +1480,35 @@ body {
 
 /* --- Dark mode: Settings pane --- */
 .dark #settingsPane {
-  background: #181818;
+  background: #141414;
   border-right-color: var(--border);
 }
 .dark #settingsPane h3 {
+  color: hsl(215 10% 55%);
+}
+.dark .settingsCard {
+  background: #1e1e1e;
+  border-color: var(--border);
+}
+.dark .settingsCard h4 {
+  color: hsl(215 10% 50%);
+}
+.dark .settingsCard select {
+  background: var(--input-bg);
+  border-color: var(--input-border);
   color: var(--fg);
 }
-.dark .settingsSection {
+.dark .settingsToggleRow {
+  color: var(--fg);
+}
+.dark .settingsToggleRow + .settingsToggleRow {
   border-top-color: var(--border);
 }
-.dark .settingsSection a {
-  color: #8ab4f8;
+.dark .toggleTrack {
+  background: #3a3a3a;
 }
-.dark .settingsGrid label {
-  color: var(--fg);
+.dark .toggleSwitch input:checked + .toggleTrack {
+  background: rgb(120, 122, 168);
 }
 .dark .settingsSmallBtn {
   background: var(--surface);
@@ -1344,14 +1518,36 @@ body {
 .dark .settingsSmallBtn:hover {
   background: #2a2a2a;
 }
-.dark #posKeepFieldset {
+.dark .settingsCopyBtn {
+  background: #1e1e1e;
   border-color: var(--border);
   color: var(--fg);
 }
-.dark #posKeepFieldset select {
-  background: var(--input-bg);
-  border-color: var(--input-border);
+.dark .settingsCopyBtn:hover {
+  background: #2a2a2a;
+}
+.dark .duelingModal {
+  background: #1e1e1e;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.dark .duelingModal h2 {
   color: var(--fg);
+}
+.dark .duelingSliders label {
+  color: var(--fg);
+}
+.dark .duelingWarning {
+  background: #2a1a1a;
+  border-color: #4a2020;
+}
+.dark .duelingWarning p {
+  color: #f88;
+}
+.dark .duelingActions button {
+  background: rgb(120, 122, 168);
+}
+.dark .duelingActions button:hover {
+  background: rgb(140, 142, 188);
 }
 .dark #pacemakerIndicator span {
   color: var(--theme-brown);

@@ -2636,8 +2636,8 @@ function App(props) {
 				{leftPanel === 'settings' && <div id="settingsPane">
 					<h3>Settings</h3>
 					{mode == Mode.Compare && (
-						<fieldset id="posKeepFieldset">
-							<legend>Position Keep:</legend>
+						<div class="settingsCard">
+							<h4>Position Keep</h4>
 							<select id="poskeepmode" value={posKeepMode} onInput={(e) => setPosKeepMode(+e.currentTarget.value)}>
 								<option value={PosKeepMode.None}>None</option>
 								<option value={PosKeepMode.Approximate}>Approximate</option>
@@ -2698,126 +2698,87 @@ function App(props) {
 									</div>
 								</div>
 							)}
-						</fieldset>
+						</div>
 					)}
 					{mode == Mode.Compare && (
-						<div class="settingsSection">
-							<div class="settingsGrid">
-								<div>
-									<label for="syncRng">Sync RNG</label>
-									<input type="checkbox" id="syncRng" checked={syncRng} onClick={handleSyncRngToggle} />
-								</div>
-								<div>
-									<label for="skillWisdomCheck">Skill Wit Check</label>
-									<input type="checkbox" id="skillWisdomCheck" checked={skillWisdomCheck} onClick={handleSkillWisdomCheckToggle} />
-								</div>
-								<div>
-									<label for="rushedKakari">Rushed / Kakari</label>
-									<input type="checkbox" id="rushedKakari" checked={rushedKakari} onClick={handleRushedKakariToggle} />
-								</div>
-								<div>
-									<label for="leadCompetition">Spot Struggle</label>
-									<input type="checkbox" id="leadCompetition" checked={leadCompetition} onClick={() => setLeadCompetition(!leadCompetition)} />
-								</div>
-								<div style="display: flex; align-items: center; gap: 8px;">
-									<label for="competeFight">Dueling</label>
-									<input type="checkbox" id="competeFight" checked={competeFight} onClick={() => setCompeteFight(!competeFight)} />
-									<button 
-										type="button"
-										onClick={() => setDuelingConfigOpen(true)}
-										class="settingsSmallBtn"
-										title="Configure dueling rates"
-									>
+						<div class="settingsCard">
+							<h4>Simulation</h4>
+							<div class="settingsToggleRow">
+								<span>Sync RNG</span>
+								<label class="toggleSwitch">
+									<input type="checkbox" checked={syncRng} onClick={handleSyncRngToggle} />
+									<span class="toggleTrack"></span>
+								</label>
+							</div>
+							<div class="settingsToggleRow">
+								<span>Skill Wit Check</span>
+								<label class="toggleSwitch">
+									<input type="checkbox" checked={skillWisdomCheck} onClick={handleSkillWisdomCheckToggle} />
+									<span class="toggleTrack"></span>
+								</label>
+							</div>
+							<div class="settingsToggleRow">
+								<span>Rushed / Kakari</span>
+								<label class="toggleSwitch">
+									<input type="checkbox" checked={rushedKakari} onClick={handleRushedKakariToggle} />
+									<span class="toggleTrack"></span>
+								</label>
+							</div>
+							<div class="settingsToggleRow">
+								<span>Spot Struggle</span>
+								<label class="toggleSwitch">
+									<input type="checkbox" checked={leadCompetition} onClick={() => setLeadCompetition(!leadCompetition)} />
+									<span class="toggleTrack"></span>
+								</label>
+							</div>
+							<div class="settingsToggleRow">
+								<span>Dueling</span>
+								<div style="display:flex;align-items:center;gap:8px;">
+									<label class="toggleSwitch">
+										<input type="checkbox" checked={competeFight} onClick={() => setCompeteFight(!competeFight)} />
+										<span class="toggleTrack"></span>
+									</label>
+									<button type="button" onClick={() => setDuelingConfigOpen(true)} class="settingsSmallBtn" title="Configure dueling rates">
 										<Settings size={14} />
 									</button>
 								</div>
 							</div>
 						</div>
 					)}
-					<div class="settingsSection">
-						<a href="#" onClick={copyStateUrl}>Copy link</a>
-					</div>
-					<div class="settingsSection">
-						<RacePresets courseId={courseId} racedef={racedef} set={(courseId, racedef) => { setCourseId(courseId); setRaceDef(racedef); }} />
-					</div>
+					<button class="settingsCopyBtn" onClick={copyStateUrl}>Copy Link</button>
 				</div>}
 				{popoverSkill && <BasinnChartPopover skillid={popoverSkill} results={tableData.get(popoverSkill).results} courseDistance={course.distance} />}
 				{duelingConfigOpen && (
-					<div 
-						style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;"
-						onClick={(e) => { if (e.target === e.currentTarget) setDuelingConfigOpen(false); }}
-					>
-						<div style="background: white; border-radius: 8px; padding: 24px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-							<h2 style="margin-top: 0; margin-bottom: 20px;">Dueling Configuration</h2>
-							<div style="display: flex; flex-direction: column; gap: 16px;">
+					<div class="duelingOverlay" onClick={(e) => { if (e.target === e.currentTarget) setDuelingConfigOpen(false); }}>
+						<div class="duelingModal">
+							<h2>Dueling Configuration</h2>
+							<div class="duelingSliders">
 								<div>
-									<label style="display: block; margin-bottom: 8px; font-weight: 500;">Runaway: {duelingRates.runaway}%</label>
-									<input 
-										type="range" 
-										min="0" 
-										max="100" 
-										value={duelingRates.runaway} 
-										onInput={(e) => setDuelingRates({...duelingRates, runaway: parseInt(e.target.value)})}
-										style="width: 100%;"
-									/>
+									<label>Runaway: {duelingRates.runaway}%</label>
+									<input type="range" min="0" max="100" value={duelingRates.runaway} onInput={(e) => setDuelingRates({...duelingRates, runaway: parseInt(e.target.value)})} />
 								</div>
 								<div>
-									<label style="display: block; margin-bottom: 8px; font-weight: 500;">Front Runner: {duelingRates.frontRunner}%</label>
-									<input 
-										type="range" 
-										min="0" 
-										max="100" 
-										value={duelingRates.frontRunner} 
-										onInput={(e) => setDuelingRates({...duelingRates, frontRunner: parseInt(e.target.value)})}
-										style="width: 100%;"
-									/>
+									<label>Front Runner: {duelingRates.frontRunner}%</label>
+									<input type="range" min="0" max="100" value={duelingRates.frontRunner} onInput={(e) => setDuelingRates({...duelingRates, frontRunner: parseInt(e.target.value)})} />
 								</div>
 								<div>
-									<label style="display: block; margin-bottom: 8px; font-weight: 500;">Pace Chaser: {duelingRates.paceChaser}%</label>
-									<input 
-										type="range" 
-										min="0" 
-										max="100" 
-										value={duelingRates.paceChaser} 
-										onInput={(e) => setDuelingRates({...duelingRates, paceChaser: parseInt(e.target.value)})}
-										style="width: 100%;"
-									/>
+									<label>Pace Chaser: {duelingRates.paceChaser}%</label>
+									<input type="range" min="0" max="100" value={duelingRates.paceChaser} onInput={(e) => setDuelingRates({...duelingRates, paceChaser: parseInt(e.target.value)})} />
 								</div>
 								<div>
-									<label style="display: block; margin-bottom: 8px; font-weight: 500;">Late Surger: {duelingRates.lateSurger}%</label>
-									<input 
-										type="range" 
-										min="0" 
-										max="100" 
-										value={duelingRates.lateSurger} 
-										onInput={(e) => setDuelingRates({...duelingRates, lateSurger: parseInt(e.target.value)})}
-										style="width: 100%;"
-									/>
+									<label>Late Surger: {duelingRates.lateSurger}%</label>
+									<input type="range" min="0" max="100" value={duelingRates.lateSurger} onInput={(e) => setDuelingRates({...duelingRates, lateSurger: parseInt(e.target.value)})} />
 								</div>
 								<div>
-									<label style="display: block; margin-bottom: 8px; font-weight: 500;">End Closer: {duelingRates.endCloser}%</label>
-									<input 
-										type="range" 
-										min="0" 
-										max="100" 
-										value={duelingRates.endCloser} 
-										onInput={(e) => setDuelingRates({...duelingRates, endCloser: parseInt(e.target.value)})}
-										style="width: 100%;"
-									/>
+									<label>End Closer: {duelingRates.endCloser}%</label>
+									<input type="range" min="0" max="100" value={duelingRates.endCloser} onInput={(e) => setDuelingRates({...duelingRates, endCloser: parseInt(e.target.value)})} />
 								</div>
-								<div style="background: #fee; border: 1px solid #fcc; border-radius: 4px; padding: 12px; margin-top: 8px;">
-									<p style="margin: 0; color: #c00; font-size: 0.9em;">
-										These are estimate %'s extracted from in-game race data, your actual dueling rate will vary based CM-by-CM based on overall lobby compositions.
-									</p>
+								<div class="duelingWarning">
+									<p>These are estimate %'s extracted from in-game race data, your actual dueling rate will vary based CM-by-CM based on overall lobby compositions.</p>
 								</div>
 							</div>
-							<div style="display: flex; justify-content: flex-end; margin-top: 24px;">
-								<button 
-									onClick={() => setDuelingConfigOpen(false)}
-									style="background: rgb(148, 150, 189); color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; font-weight: 500;"
-								>
-									Close
-								</button>
+							<div class="duelingActions">
+								<button onClick={() => setDuelingConfigOpen(false)}>Close</button>
 							</div>
 						</div>
 					</div>
