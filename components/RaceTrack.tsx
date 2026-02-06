@@ -51,7 +51,7 @@ const STRINGS_en = Object.freeze({
 		'inner': ' (inner)',
 		'outer': ' (outer)',
 		'outin': ' (outer→inner)',
-		'orientation': Object.freeze(['', '(clockwise)', '(counterclockwise)', '', '(straight)']),
+		'orientation': Object.freeze(['', '(right)', '(left)', '', '(straight)']),
 		'turf': 'Turf',
 		'dirt': 'Dirt',
 		'straight': 'Straight →',

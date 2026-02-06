@@ -1139,47 +1139,322 @@ body {
   --muted: #374151;
   --card: #f9fafb;
   --border: #e5e7eb;
+  --surface: #f2f2f2;
+  --input-bg: #ffffff;
+  --input-border: hsl(210 14% 83%);
+  --input-border-hover: hsl(215 50% 70%);
+  --theme-brown: rgb(121, 64, 22);
+  --theme-brown-light: rgb(224, 214, 204);
+  --theme-brown-bg: rgb(248, 248, 248);
 }
 .dark {
-  --bg: #0b1020;
-  --fg: #e5e7eb;
-  --muted: #9ca3af;
-  --card: #121a2a;
-  --border: #1f2937;
+  --bg: #141414;
+  --fg: #e4e4e7;
+  --muted: #a1a1aa;
+  --card: #1c1c1c;
+  --border: #2e2e2e;
+  --surface: #1e1e1e;
+  --input-bg: #191919;
+  --input-border: #363636;
+  --input-border-hover: #555;
+  --theme-brown: #d4a574;
+  --theme-brown-light: #3a3a3a;
+  --theme-brown-bg: #1e1e1e;
 }
+
+/* --- Dark mode: Navbar --- */
+.dark #navBar {
+  background: #181818;
+  border-bottom-color: var(--border);
+}
+.dark .navTab {
+  color: var(--muted);
+}
+.dark .navTab:hover:not(.selected):not(.disabled) {
+  color: var(--fg);
+  border-bottom-color: #444;
+}
+.dark .navTab.selected {
+  color: #e4e4e7;
+  border-bottom-color: #e4e4e7;
+}
+.dark .navTab.disabled {
+  color: #555;
+}
+.dark #themeToggle {
+  border-color: var(--border);
+  color: var(--muted);
+}
+.dark #themeToggle:hover {
+  background: #2a2a2a;
+  color: var(--fg);
+}
+
+/* --- Dark mode: Sidebar --- */
+.dark #iconSidebar {
+  background: #181818;
+  border-right-color: var(--border);
+}
+.dark .sidebarIcon {
+  color: var(--muted);
+}
+.dark .sidebarIcon:hover {
+  background: #2a2a2a;
+  color: var(--fg);
+}
+.dark .sidebarIcon.active {
+  background: #2a2a2a;
+  color: #e4e4e7;
+}
+
+/* --- Dark mode: Control Panel --- */
 .dark .controlPanel {
-  background: #1a2236;
+  background: var(--surface);
 }
 .dark .controlPanelLabel {
-  color: #9ca3af;
+  color: var(--muted);
 }
 .dark .controlPanelSep {
-  background: hsl(215 20% 25%);
+  background: var(--border);
 }
 .dark .controlPanel select,
 .dark .controlPanel input {
-  background: #0f172a;
-  border-color: hsl(215 20% 30%);
-  color: #e5e7eb;
+  background-color: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--fg);
 }
 .dark .controlPanel select:hover,
 .dark .controlPanel input:hover {
-  border-color: hsl(215 40% 50%);
+  border-color: var(--input-border-hover);
 }
-.dark .runBarGroup input[type="number"] {
-  background: #0f172a;
-  border-color: hsl(215 20% 30%);
-  color: #e5e7eb;
-}
-.dark #seedWrapper button {
-  background: #1a2236;
-  border-color: hsl(215 20% 30%);
-  color: #e5e7eb;
+.dark .controlPanel select:focus,
+.dark .controlPanel input:focus {
+  border-color: #888;
+  box-shadow: 0 0 0 3px rgba(160, 160, 160, 0.15);
 }
 .dark .controlPanel .groundSelect {
-  background: #0f172a;
-  border-color: hsl(215 20% 30%);
-  color: #e5e7eb;
+  background-color: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--fg);
+}
+
+/* --- Dark mode: Run bar --- */
+.dark .runBarGroup label {
+  color: var(--muted);
+}
+.dark .runBarGroup input[type="number"] {
+  background: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--fg);
+}
+.dark .runBarGroup input[type="number"]:hover {
+  border-color: var(--input-border-hover);
+}
+.dark #seedWrapper button {
+  background: var(--surface);
+  border-color: var(--input-border);
+  color: var(--fg);
+}
+.dark #seedWrapper button:hover {
+  background: #2a2a2a;
+}
+
+/* --- Dark mode: Mode tabs --- */
+.dark #modeTabs {
+  background: #1e1e1e;
+}
+.dark .modeTab {
+  color: var(--muted);
+}
+.dark .modeTab:hover:not(.selected) {
+  color: var(--fg);
+  background: #2a2a2a;
+}
+.dark .modeTab.selected {
+  background: #333;
+  color: var(--fg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* --- Dark mode: Uma tab bar --- */
+.dark .umaTabBar {
+  border-bottom-color: var(--border);
+}
+.dark .umaTabItem {
+  color: var(--muted);
+}
+.dark .umaTabItem:hover:not(.selected) {
+  color: var(--fg);
+  border-bottom-color: #555;
+}
+.dark .umaTabItem.selected {
+  color: var(--fg);
+  border-bottom-color: var(--fg);
+}
+.dark .umaTabsGroup {
+  background: #1e1e1e;
+}
+.dark .umaTab {
+  color: var(--muted);
+}
+.dark .umaTab:hover:not(.selected) {
+  color: var(--fg);
+  background: #2a2a2a;
+}
+.dark .umaTab.selected {
+  background: #333;
+  color: var(--fg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* --- Dark mode: Expand button --- */
+.dark #expandBtn {
+  background: #2a2a2a;
+}
+.dark #expandBtn:hover {
+  background: #363636;
+}
+.dark #expandBtn::after {
+  border-right-color: var(--muted);
+  border-top-color: var(--muted);
+}
+
+/* --- Dark mode: Settings pane --- */
+.dark #settingsPane {
+  background: #181818;
+  border-right-color: var(--border);
+}
+.dark #settingsPane h3 {
+  color: var(--fg);
+}
+.dark .settingsSection {
+  border-top-color: var(--border);
+}
+.dark .settingsSection a {
+  color: #8ab4f8;
+}
+.dark .settingsGrid label {
+  color: var(--fg);
+}
+.dark .settingsSmallBtn {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--fg);
+}
+.dark .settingsSmallBtn:hover {
+  background: #2a2a2a;
+}
+.dark #posKeepFieldset {
+  border-color: var(--border);
+  color: var(--fg);
+}
+.dark #posKeepFieldset select {
+  background: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--fg);
+}
+.dark #pacemakerIndicator span {
+  color: var(--theme-brown);
+}
+.dark #pacemakerIndicator button {
+  border-color: var(--border);
+  color: var(--theme-brown);
+}
+.dark #pacemakerIndicator button:hover {
+  background: #2a2a2a;
+}
+.dark #pacemakerCountControl {
+  border-top-color: var(--border);
+}
+.dark #pacemakerCountControl label {
+  color: var(--theme-brown);
+}
+.dark .pacemaker-combobox-button {
+  background: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--theme-brown);
+}
+.dark .pacemaker-combobox-button:hover {
+  background: #2a2a2a;
+}
+.dark .pacemaker-combobox-dropdown {
+  background: #222;
+  border-color: var(--border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+.dark .pacemaker-combobox-option {
+  border-bottom-color: var(--border);
+}
+.dark .pacemaker-combobox-option:hover {
+  background: #2a2a2a;
+}
+
+/* --- Dark mode: Uma pane --- */
+.dark #umaPane {
+  background: #181818;
+  border-right-color: var(--border);
+}
+
+/* --- Dark mode: Overlay (expanded view) --- */
+.dark #umaOverlay {
+  background: var(--bg);
+  border-color: var(--border);
+}
+.dark #closeUmaOverlay {
+  color: var(--muted);
+}
+.dark #copyUmaButtons > div {
+  background: linear-gradient(#2a2a2a, #222);
+  border-color: var(--border);
+}
+.dark #copyUmaButtons > div::after {
+  border-top-color: var(--theme-brown);
+  border-right-color: var(--theme-brown);
+}
+.dark #swapUmas {
+  color: var(--theme-brown);
+}
+
+/* --- Dark mode: Results pane --- */
+.dark #resultsSummary > tbody td {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--theme-brown);
+}
+.dark #resultsSummary > tfoot th {
+  color: var(--theme-brown);
+}
+.dark #resultsHelp {
+  color: var(--theme-brown);
+}
+.dark #infoTables tbody {
+  border-bottom-color: var(--border);
+}
+.dark #infoTables > table th {
+  color: var(--theme-brown);
+}
+.dark #infoTables caption {
+  color: var(--fg);
+}
+
+/* --- Dark mode: Basinn chart popover --- */
+.dark .basinnChartPopover {
+  background: #222;
+  border-color: var(--border);
+}
+
+/* --- Dark mode: SVG text stroke --- */
+.dark #rtMouseOverBox > text {
+  stroke: var(--bg);
+}
+
+/* --- Dark mode: Activation frequency chart --- */
+.dark .activationFrequencyChart svg text {
+  fill: var(--fg);
+}
+.dark .activationFrequencyChart svg .domain,
+.dark .activationFrequencyChart svg .tick line:not(.grid-line) {
+  stroke: var(--theme-brown);
 }
 
 .runAdditionalSamples {

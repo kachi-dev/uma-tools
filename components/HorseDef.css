@@ -562,3 +562,113 @@
 	padding: 16px;
 	position: relative;
 }
+
+/* --- Dark mode --- */
+.dark .horseDef {
+	background: var(--surface, #1e1e1e);
+	border-color: var(--border, #2e2e2e);
+}
+.dark .horseDefHeader {
+	border-bottom-color: var(--border, #2e2e2e);
+	color: var(--fg, #e4e4e7);
+}
+.dark .umaEpithet > span {
+	color: var(--theme-brown, #d4a574);
+}
+.dark .umaSelectInput {
+	color: var(--theme-brown, #d4a574);
+}
+.dark .umaSuggestions {
+	border-color: var(--border, #2e2e2e);
+}
+.dark .umaSuggestion {
+	background: #222;
+}
+.dark .umaSuggestion:nth-child(even) {
+	background: #1a1a1a;
+}
+.dark .umaSuggestion.selected,
+.dark .umaSuggestion:hover {
+	background: #3a3a3a;
+}
+.dark .horseParams {
+	background: #1a1a1a;
+	border-color: #3d6e1e;
+}
+.dark .horseParamHeader {
+	border-left-color: #3d6e1e;
+}
+.dark .horseParam {
+	border-left-color: #3d6e1e;
+}
+.dark .horseParam > input {
+	color: var(--theme-brown, #d4a574);
+}
+.dark .horseAptitudes > div {
+	background: #222;
+	border-color: var(--border, #2e2e2e);
+	color: var(--theme-brown, #d4a574);
+}
+.dark .horseAptitudeSelect > span::after {
+	border-bottom-color: var(--theme-brown, #d4a574);
+	border-right-color: var(--theme-brown, #d4a574);
+}
+.dark .horseAptitudeSelect > ul {
+	background: #222;
+	border-color: var(--border, #2e2e2e);
+}
+.dark .horseMoodSelect > ul {
+	background: #222;
+	border-color: var(--border, #2e2e2e);
+	box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}
+.dark .horseMoodSelect > ul > li:hover {
+	background: #333;
+}
+.dark .horseSkillListWrapper {
+	background: var(--surface, #1e1e1e);
+}
+.dark .horseSkillPickerWrapper {
+	background: #1a1a1a;
+}
+.dark .addSkillButton {
+	background: #222;
+	border-color: var(--border, #2e2e2e);
+	color: var(--theme-brown, #d4a574);
+}
+.dark .forcedPositionInput {
+	background: rgba(30, 30, 30, 0.5);
+	border-color: var(--theme-brown, #d4a574);
+	color: var(--theme-brown, #d4a574);
+}
+.dark .forcedPositionInput:focus {
+	background: rgba(40, 40, 40, 0.7);
+	border-color: var(--theme-brown, #d4a574);
+	box-shadow: 0 0 0 2px rgba(212, 165, 116, 0.2);
+}
+.dark .forcedPositionLabel {
+	color: var(--theme-brown, #d4a574);
+}
+.dark .forcedPositionLabel.inline {
+	color: var(--theme-brown, #d4a574);
+	background: rgba(212, 165, 116, 0.15);
+}
+.dark .skillProcDataDialog {
+	background: #1a1a1a;
+	border-color: #3d6e1e;
+}
+.dark .skillProcDataHeader {
+	border-bottom-color: #3d6e1e;
+}
+.dark .skillProcDataContent {
+	color: var(--fg, #e4e4e7);
+}
+.dark .resetUmaButton {
+	box-shadow: 0px 2px 0 #444;
+}
+.dark .resetUmaButton:hover {
+	box-shadow: 0px 3px 0 #444;
+}
+.dark .horseSkillHeader {
+	box-shadow: 0px 3px 0 #444;
+}

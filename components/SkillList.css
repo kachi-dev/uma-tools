@@ -225,3 +225,45 @@
 	display: inline-block;
 	margin-top: 0.5em;
 }
+
+/* --- Dark mode --- */
+.dark .skillName {
+	color: var(--theme-brown, #d4a574);
+	text-stroke: 1px var(--theme-brown, #d4a574);
+	-webkit-text-stroke: 1px var(--theme-brown, #d4a574);
+	text-shadow: -1px -1px 0 #1a1a1a, 1px -1px 0 #1a1a1a, -1px 1px 0 #1a1a1a, 1px 1px 0 #1a1a1a;
+}
+.dark .skillDismiss {
+	color: var(--theme-brown, #d4a574);
+}
+.dark .skill {
+	box-shadow: 0 3px 0 #333;
+}
+.dark .skill-white {
+	background: linear-gradient(90deg, rgb(75,70,82), rgb(140,138,158)) padding-box,
+							linear-gradient(90deg, rgb(110,105,125), rgb(108,110,140)) border-box;
+}
+.dark .skill-gold {
+	background: linear-gradient(90deg, rgb(85,75,40), rgb(175,130,25)) padding-box,
+							linear-gradient(90deg, rgb(150,125,50), rgb(170,110,10)) border-box;
+}
+.dark .skill-pink {
+	background: linear-gradient(90deg, rgb(85,55,65), rgb(170,95,140)) padding-box,
+							linear-gradient(90deg, rgb(150,80,115), rgb(170,52,110)) border-box;
+}
+.dark .skill-unique {
+	background: linear-gradient(90deg, rgb(60,80,50), rgb(95,125,165), rgb(100,100,165), rgb(170,115,150)) padding-box,
+							linear-gradient(90deg, rgb(105,165,100), rgb(115,150,165), rgb(120,130,165), rgb(170,80,140)) border-box;
+}
+.dark .skillDetails {
+	color: var(--theme-brown, #d4a574);
+}
+.dark .filterButton {
+	background: #333;
+	color: var(--theme-brown, #d4a574);
+}
+.dark .filterSearch {
+	background: var(--input-bg, #191919);
+	border: 1px solid var(--input-border, #363636);
+	color: var(--fg, #e4e4e7);
+}

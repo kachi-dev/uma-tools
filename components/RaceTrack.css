@@ -68,3 +68,11 @@
 .poskeep-label line {
 	filter: drop-shadow(0.5px 0.5px 1px rgba(0, 0, 0, 0.3)) opacity(1) !important;
 }
+
+/* --- Dark mode --- */
+.dark .racetrackName {
+	color: var(--fg, #e4e4e7);
+	text-stroke: 1px var(--fg, #e4e4e7);
+	-webkit-text-stroke: 1px var(--fg, #e4e4e7);
+	text-shadow: -1px -1px 0 #1a1a1a, 1px -1px 0 #1a1a1a, -1px 1px 0 #1a1a1a, 1px 1px 0 #1a1a1a;
+}

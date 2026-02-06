@@ -1455,9 +1455,6 @@ function App(props) {
 	const [showHp, toggleShowHp] = useReducer((b,_) => !b, false);
 	const [showLanes, toggleShowLanes] = useReducer((b,_) => !b, false);
 	
-	useEffect(() => { document.documentElement.classList.toggle('dark', darkMode);}, [darkMode]);
-	//fuck dark mode
-	
 	// Wrapper to handle mode changes and reset tab if needed
 	function setPosKeepMode(mode: PosKeepMode) {
 		setPosKeepModeRaw(mode);
