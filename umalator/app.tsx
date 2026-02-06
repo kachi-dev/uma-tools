@@ -1584,6 +1584,7 @@ function App(props) {
 	const [pacer, setPacer] = useState(() => new HorseState({strategy: 'Nige'}));
 
 	const [lastRunChartUma, setLastRunChartUma] = useState(uma1);
+	const [lastRunChartCourseId, setLastRunChartCourseId] = useState(courseId);
 
 	const [{mode, currentIdx, expanded}, updateUiState] = useReducer(nextUiState, DEFAULT_UI_STATE);
 	function toggleExpand(e: Event) {
@@ -1857,6 +1858,7 @@ function App(props) {
 	function doBasinnChart() {
 		postEvent('doBasinnChart', {});
 		setLastRunChartUma(uma1);
+		setLastRunChartCourseId(courseId);
 		chartWorkersCompletedRef.current = 0;
 		setIsSimulationRunning(true);
 		setSimulationProgress(null);
@@ -2470,7 +2472,7 @@ function App(props) {
 			</div>
 		);
 	} else if ((mode == Mode.Chart || mode == Mode.UniquesChart) && tableData.size > 0) {
-		const dirty = !uma1.equals(lastRunChartUma);
+		const dirty = !uma1.equals(lastRunChartUma) || courseId !== lastRunChartCourseId;
 		resultsPane = (
 			<div id="resultsPaneWrapper">
 				<div id="resultsPane" class="mode-chart">
@@ -2572,33 +2574,27 @@ function App(props) {
 						</g>
 					</RaceTrack>}
 					<div class="controlPanel">
-						<div class="controlPanelRow">
+						<div class="controlPanelFields">
 							<div class="controlPanelField">
 								<span class="controlPanelLabel">Preset</span>
 								<RacePresets courseId={courseId} racedef={racedef} set={(courseId, racedef) => { setCourseId(courseId); setRaceDef(racedef); }} />
 							</div>
-							<div class="controlPanelSep" />
 							<div class="controlPanelField">
 								<span class="controlPanelLabel">Track</span>
 								<TrackSelect key={courseId} courseid={courseId} setCourseid={setCourseId} tabindex={2} />
 							</div>
-						</div>
-						<div class="controlPanelRow">
 							<div class="controlPanelField">
 								<span class="controlPanelLabel">Time of Day</span>
 								<TimeOfDaySelect value={racedef.time} set={racesetter('time')} />
 							</div>
-							<div class="controlPanelSep" />
 							<div class="controlPanelField">
 								<span class="controlPanelLabel">Ground</span>
 								<GroundSelect value={racedef.ground} set={racesetter('ground')} />
 							</div>
-							<div class="controlPanelSep" />
 							<div class="controlPanelField">
 								<span class="controlPanelLabel">Weather</span>
 								<WeatherSelect value={racedef.weather} set={racesetter('weather')} />
 							</div>
-							<div class="controlPanelSep" />
 							<div class="controlPanelField">
 								<span class="controlPanelLabel">Season</span>
 								<SeasonSelect value={racedef.season} set={racesetter('season')} />
