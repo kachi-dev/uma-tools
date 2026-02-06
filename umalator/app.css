@@ -886,9 +886,40 @@ body {
 	background: hsla(215 60% 50% / 0.1);
 }
 
+.racetrackRow {
+	position: relative;
+	width: fit-content;
+	margin: 0 auto;
+}
+
 .racetrackWrapper {
 	width: auto !important;
-	margin: 0 auto;
+}
+
+.racetrackControls {
+	position: absolute;
+	left: calc(100% + 5px);
+	top: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 8px 0;
+	font-family: Inter, "Noto Sans JP", sans-serif;
+	font-size: 12px;
+	white-space: nowrap;
+}
+
+.racetrackControls label {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	cursor: pointer;
+	color: hsl(215 10% 40%);
+	font-weight: 500;
+}
+
+.racetrackControls input[type="checkbox"] {
+	margin: 0;
 }
 
 .hasResults .racetrackView > svg text:not(.mouseoverText) {
@@ -1088,6 +1119,8 @@ body {
 	background: none;
 	display: flex;
 	padding: 0;
+	padding-bottom: 10px;
+	border-bottom: none;
 	text-align: left;
 }
 
@@ -1428,6 +1461,9 @@ body {
 }
 .dark #seedWrapper button:hover {
   background: #2a2a2a;
+}
+.dark .racetrackControls label {
+  color: var(--muted);
 }
 
 /* --- Dark mode: Mode tabs --- */

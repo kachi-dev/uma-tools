@@ -986,7 +986,7 @@ function VelocityLines(props) {
 					<path fill="none" stroke={laneColors[i]} stroke-width="2.5" d={
 						d3.line().x(j => x(data.p[i][j])).y(j => laneY(lanes[j]))(data.p[i].map((_,j) => j))
 					} />
-				) : []).concat(data.pacerGap && pacemakerY ? data.pacerGap.map((gap,i) => {
+				) : []).concat(props.showPoskeepGap && data.pacerGap && pacemakerY ? data.pacerGap.map((gap,i) => {
 					const validPoints = data.p[i].map((_,j) => ({x: j, gap: gap[j]})).filter(p => p.gap !== undefined && p.gap >= 0);
 					if (validPoints.length === 0) return null;
 					
@@ -1085,7 +1085,7 @@ async function serialize(courseId: number, nsamples: number, seed: number, posKe
 	paceChaser: number,
 	lateSurger: number,
 	endCloser: number
-}) {
+}, graphToggles: { showHp: boolean, showPoskeepGap: boolean, showLabels: boolean }) {
 	const json = JSON.stringify({
 		courseId,
 		nsamples,
@@ -1102,7 +1102,8 @@ async function serialize(courseId: number, nsamples: number, seed: number, posKe
 		showLanes,
 		competeFight,
 		leadCompetition,
-		duelingRates
+		duelingRates,
+		graphToggles
 	});
 	const enc = new TextEncoder();
 	const stringStream = new ReadableStream({
@@ -1174,7 +1175,8 @@ async function deserialize(hash) {
 						paceChaser: 30,
 						lateSurger: 35,
 						endCloser: 35
-					}
+					},
+					graphToggles: o.graphToggles || { showHp: false, showPoskeepGap: true, showLabels: true }
 				};
 			} catch (_) {
 				return {
@@ -1203,7 +1205,8 @@ async function deserialize(hash) {
 						paceChaser: 30,
 						lateSurger: 35,
 						endCloser: 35
-					}
+					},
+					graphToggles: { showHp: false, showPoskeepGap: true, showLabels: true }
 				};
 			}
 		} else {
@@ -1222,9 +1225,9 @@ async function saveToLocalStorage(courseId: number, nsamples: number, seed: numb
 	paceChaser: number,
 	lateSurger: number,
 	endCloser: number
-}) {
+}, graphToggles: { showHp: boolean, showPoskeepGap: boolean, showLabels: boolean }) {
 	try {
-		const hash = await serialize(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakers, showLanes, witVarianceSettings, competeFight, leadCompetition, duelingRates);
+		const hash = await serialize(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakers, showLanes, witVarianceSettings, competeFight, leadCompetition, duelingRates, graphToggles);
 		localStorage.setItem('umalator-settings', hash);
 	} catch (error) {
 		console.warn('Failed to save settings to localStorage:', error);
@@ -1454,6 +1457,8 @@ function App(props) {
 	const [posKeepMode, setPosKeepModeRaw] = useState(PosKeepMode.Approximate);
 	const [showHp, toggleShowHp] = useReducer((b,_) => !b, false);
 	const [showLanes, toggleShowLanes] = useReducer((b,_) => !b, false);
+	const [showPoskeepGap, toggleShowPoskeepGap] = useReducer((b,_) => !b, true);
+	const [showLabels, toggleShowLabels] = useReducer((b,_) => !b, true);
 	
 	// Wrapper to handle mode changes and reset tab if needed
 	function setPosKeepMode(mode: PosKeepMode) {
@@ -1534,7 +1539,7 @@ function App(props) {
 			syncRng,
 			skillWisdomCheck,
 			rushedKakari
-		}, competeFight, leadCompetition, duelingRates);
+		}, competeFight, leadCompetition, duelingRates, { showHp, showPoskeepGap, showLabels });
 	}
 
 	function resetUmas() {
@@ -1686,6 +1691,11 @@ function App(props) {
 				if (o.duelingRates) {
 					setDuelingRates(o.duelingRates);
 				}
+				if (o.graphToggles) {
+					if (o.graphToggles.showHp !== showHp) toggleShowHp(null);
+					if (o.graphToggles.showPoskeepGap !== undefined && o.graphToggles.showPoskeepGap !== showPoskeepGap) toggleShowPoskeepGap(null);
+					if (o.graphToggles.showLabels !== undefined && o.graphToggles.showLabels !== showLabels) toggleShowLabels(null);
+				}
 			});
 		} else {
 			loadFromLocalStorage().then(o => {
@@ -1727,6 +1737,11 @@ function App(props) {
 					if (o.duelingRates) {
 						setDuelingRates(o.duelingRates);
 					}
+					if (o.graphToggles) {
+						if (o.graphToggles.showHp !== showHp) toggleShowHp(null);
+						if (o.graphToggles.showPoskeepGap !== undefined && o.graphToggles.showPoskeepGap !== showPoskeepGap) toggleShowPoskeepGap(null);
+						if (o.graphToggles.showLabels !== undefined && o.graphToggles.showLabels !== showLabels) toggleShowLabels(null);
+					}
 				}
 			});
 		}
@@ -1740,7 +1755,7 @@ function App(props) {
 	// Auto-save settings whenever they change
 	useEffect(() => {
 		autoSaveSettings();
-	}, [courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, syncRng, skillWisdomCheck, rushedKakari, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakerIndices, competeFight, leadCompetition, duelingRates]);
+	}, [courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, syncRng, skillWisdomCheck, rushedKakari, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakerIndices, competeFight, leadCompetition, duelingRates, showHp, showPoskeepGap, showLabels]);
 	
 	useEffect(() => {
 		const shouldShow = posKeepMode === PosKeepMode.Virtual && selectedPacemakerIndices.length > 0;
@@ -1759,7 +1774,7 @@ function App(props) {
 			syncRng,
 			skillWisdomCheck,
 			rushedKakari
-		}, competeFight, leadCompetition, duelingRates).then(hash => {
+		}, competeFight, leadCompetition, duelingRates, { showHp, showPoskeepGap, showLabels }).then(hash => {
 			const url = window.location.protocol + '//' + window.location.host + window.location.pathname;
 			window.navigator.clipboard.writeText(url + '#' + hash);
 		});
@@ -2557,13 +2572,10 @@ function App(props) {
 								<button title="Randomize seed" onClick={() => { setSeed(Math.floor(Math.random() * (-1 >>> 0)) >>> 0); setRunOnceCounter(0); }}>🎲</button>
 							</div>
 						</div>
-						<div class="runBarGroup runBarCheckbox">
-							<label for="showhp">Show HP</label>
-							<input type="checkbox" id="showhp" checked={showHp} onClick={toggleShowHp} />
-						</div>
 					</div>
-					{mode == Mode.Compare && <RaceTrack courseid={courseId} width={960} height={240} xOffset={20} yOffset={15} yExtra={20} mouseMove={rtMouseMove} mouseLeave={rtMouseLeave} onSkillDrag={handleSkillDrag} regions={[...skillActivations, ...rushedIndicators]} posKeepLabels={posKeepLabels} uma1={uma1} uma2={uma2} pacer={pacer}>
-						<VelocityLines data={chartData} courseDistance={course.distance} width={960} height={250} xOffset={20} showHp={showHp} showLanes={mode == Mode.Compare ? showLanes : false} horseLane={course.horseLane} showVirtualPacemaker={showVirtualPacemakerOnGraph && posKeepMode === PosKeepMode.Virtual} selectedPacemakers={getSelectedPacemakers()} />
+					{mode == Mode.Compare && <div class="racetrackRow">
+					<RaceTrack courseid={courseId} width={960} height={240} xOffset={20} yOffset={15} yExtra={20} mouseMove={rtMouseMove} mouseLeave={rtMouseLeave} onSkillDrag={handleSkillDrag} regions={[...skillActivations, ...rushedIndicators]} posKeepLabels={showLabels ? posKeepLabels : []} uma1={uma1} uma2={uma2} pacer={pacer}>
+						<VelocityLines data={chartData} courseDistance={course.distance} width={960} height={250} xOffset={20} showHp={showHp} showPoskeepGap={showPoskeepGap} showLanes={mode == Mode.Compare ? showLanes : false} horseLane={course.horseLane} showVirtualPacemaker={showVirtualPacemakerOnGraph && posKeepMode === PosKeepMode.Virtual} selectedPacemakers={getSelectedPacemakers()} />
 						
 						<g id="rtMouseOverBox" style="display:none">
 							<text id="rtV1" x="25" y="10" fill="#2a77c5" font-size="10px"></text>
@@ -2572,7 +2584,13 @@ function App(props) {
 							<text id="pd1" x="25" y="10" fill="#2a77c5" font-size="10px"></text>
 							<text id="pd2" x="25" y="20" fill="#c52a2a" font-size="10px"></text>
 						</g>
-					</RaceTrack>}
+					</RaceTrack>
+					<div class="racetrackControls">
+						<label><input type="checkbox" checked={showHp} onClick={toggleShowHp} /> Show HP</label>
+						<label><input type="checkbox" checked={showPoskeepGap} onClick={toggleShowPoskeepGap} /> Show Poskeep Gap</label>
+						<label><input type="checkbox" checked={showLabels} onClick={toggleShowLabels} /> Show Labels</label>
+					</div>
+				</div>}
 					<div class="controlPanel">
 						<div class="controlPanelFields">
 							<div class="controlPanelField">
