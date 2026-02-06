@@ -69,6 +69,12 @@ export function IntroText(props) {
 			<details open={true}>
 				<summary>Changelog</summary>
 				<section>
+					<h2>2025-02-06</h2>
+					<ul>
+						<li>Restructured the UI.</li>
+					</ul>
+				</section>
+				<section>
 					<h2>2025-01-10</h2>
 					<ul>
 						<li>
