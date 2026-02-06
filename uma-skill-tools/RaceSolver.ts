@@ -330,6 +330,7 @@ export class RaceSolver {
 	leadCompetitionTimer: Timer
 	
 	// lane movement..........
+	laneMovementEnabled: boolean
 	currentLane: number
     targetLane: number
     laneChangeSpeed: number
@@ -379,6 +380,7 @@ export class RaceSolver {
 			lateSurger: number,
 			endCloser: number
 		},
+		laneMovement?: boolean,
 	}) {
 		// clone since green skills may modify the stat values
 		this.horse = Object.assign({}, params.horse);
@@ -483,6 +485,8 @@ export class RaceSolver {
 		this.leadCompetitionStart = null;
 		this.leadCompetitionEnd = null;
 		this.leadCompetitionTimer = this.getNewTimer();
+
+		this.laneMovementEnabled = params.laneMovement !== false;
 
 		const gateNumberRaw = this.gateRoll % 9;
 		const gateNumber = gateNumberRaw < 9 ? gateNumberRaw : 1 + (24 - gateNumberRaw) % 8;
@@ -670,7 +674,9 @@ export class RaceSolver {
 		this.updateLastSpurtState();
 		this.updateTargetSpeed();
 		this.applyForces();
-		this.applyLaneMovement();
+		if (this.laneMovementEnabled) {
+			this.applyLaneMovement();
+		}
 
 		let newSpeed = undefined;
 

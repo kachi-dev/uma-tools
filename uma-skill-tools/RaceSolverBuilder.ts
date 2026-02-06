@@ -409,6 +409,7 @@ export class RaceSolverBuilder {
 	_rushedKakari: boolean | undefined
 	_competeFight: boolean | undefined
 	_leadCompetition: boolean | undefined
+	_laneMovement: boolean | undefined
 	_duelingRates: {
 		runaway: number,
 		frontRunner: number,
@@ -448,6 +449,7 @@ export class RaceSolverBuilder {
 		this._rushedKakari = undefined;
 		this._competeFight = undefined;
 		this._leadCompetition = undefined;
+		this._laneMovement = undefined;
 		this._duelingRates = undefined;
 	}
 
@@ -598,7 +600,8 @@ export class RaceSolverBuilder {
 			isPacer: true,
 			competeFight: this._competeFight,
 			leadCompetition: this._leadCompetition,
-			duelingRates: this._duelingRates
+			duelingRates: this._duelingRates,
+			laneMovement: this._laneMovement
 		}) : null;
 	}
 
@@ -759,6 +762,11 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
+	laneMovement(enabled: boolean) {
+		this._laneMovement = enabled;
+		return this;
+	}
+
 	duelingRates(rates: {
 		runaway: number,
 		frontRunner: number,
@@ -805,6 +813,7 @@ export class RaceSolverBuilder {
 		clone._rushedKakari = this._rushedKakari;
 		clone._competeFight = this._competeFight;
 		clone._leadCompetition = this._leadCompetition;
+		clone._laneMovement = this._laneMovement;
 		clone._duelingRates = this._duelingRates;
 
 		// NB. GOTCHA: if asitame is enabled, it closes over *our* horse and mood data, and not the clone's
@@ -865,7 +874,8 @@ export class RaceSolverBuilder {
 				rushedKakari: this._rushedKakari,
 				competeFight: this._competeFight,
 				leadCompetition: this._leadCompetition,
-				duelingRates: this._duelingRates
+				duelingRates: this._duelingRates,
+				laneMovement: this._laneMovement
 			});
 
 			if (redo) {
