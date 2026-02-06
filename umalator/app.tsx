@@ -2023,8 +2023,8 @@ function App(props) {
 		const safeI0 = Math.max(0, Math.min(i0, chartData.v[0].length - 1));
 		const safeI1 = Math.max(0, Math.min(i1, chartData.v[1].length - 1));
 		
-		const hp0 = chartData.hp && chartData.hp[0] && safeI0 < chartData.hp[0].length ? chartData.hp[0][safeI0].toFixed(0) : 'N/A';
-		const hp1 = chartData.hp && chartData.hp[1] && safeI1 < chartData.hp[1].length ? chartData.hp[1][safeI1].toFixed(0) : 'N/A';
+		const hp0 = chartData.hp?.[0]?.[safeI0] != null ? chartData.hp[0][safeI0].toFixed(0) : 'N/A';
+		const hp1 = chartData.hp?.[1]?.[safeI1] != null ? chartData.hp[1][safeI1].toFixed(0) : 'N/A';
 		
 		document.getElementById('rtV1').textContent = `${chartData.v[0][safeI0].toFixed(2)} m/s  t=${chartData.t[0][safeI0].toFixed(2)} s  (${hp0} hp remaining)`;
 		document.getElementById('rtV2').textContent = `${chartData.v[1][safeI1].toFixed(2)} m/s  t=${chartData.t[1][safeI1].toFixed(2)} s  (${hp1} hp remaining)`;
