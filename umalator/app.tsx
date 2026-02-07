@@ -2,7 +2,7 @@ import { h, Fragment, render } from 'preact';
 import { useState, useReducer, useMemo, useEffect, useRef, useId, useCallback } from 'preact/hooks';
 import { Text, IntlProvider } from 'preact-i18n';
 import { Settings } from 'lucide-preact';
-import { Record, Set as ImmSet, Map as ImmMap } from 'immutable';
+import { Record, Map as ImmMap } from 'immutable';
 import * as d3 from 'd3';
 import { computePosition, flip } from '@floating-ui/dom';
 
@@ -1570,6 +1570,12 @@ function App(props) {
 		newData.forEach((v,k) => merged.set(k,v));
 		return merged;
 	}, new Map());
+
+
+	const [hintLevels, setHintLevels] = useState(() => ImmMap(Object.keys(skilldata).map(id => [id, 0])));
+	function updateHintLevel(id, hint) {
+		setHintLevels(hintLevels.set(id, hint));
+	}
 	const tableDataRef = useRef(tableData);
 	const selectedSkillIdRef = useRef('');
 	useEffect(() => {
@@ -2493,9 +2499,11 @@ function App(props) {
 				<div id="resultsPane" class="mode-chart">
 					<div class="basinnChartWrapperWrapper">
 						<BasinnChart 
-							data={Array.from(tableData.values())} 
+							data={tableData.values().toArray()}  
 							dirty={dirty}
-							hidden={mode == Mode.Chart ? uma1.skills : new Set()}
+							hidden={uma1.skills}
+							hints={hintLevels}
+							updateHint={updateHintLevel}
 							onSelectionChange={basinnChartSelection}
 							onRunTypeChange={setChartData}
 							onDblClickRow={addSkillFromTable}
