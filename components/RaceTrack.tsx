@@ -51,7 +51,7 @@ const STRINGS_en = Object.freeze({
 		'inner': ' (inner)',
 		'outer': ' (outer)',
 		'outin': ' (outer→inner)',
-		'orientation': Object.freeze(['', '(clockwise)', '(counterclockwise)', '', '(straight)']),
+		'orientation': Object.freeze(['', '(right)', '(left)', '', '(straight)']),
 		'turf': 'Turf',
 		'dirt': 'Dirt',
 		'straight': 'Straight →',
@@ -94,12 +94,18 @@ const coursesByTrack = (function () {
 export function TrackSelect(props) {
 	const lang = useLanguage();
 	let [trackid, setTrackid] = useState(courses[props.courseid].raceTrackId);
-	const changeCourse = useCallback((e) => props.setCourseid(+e.target.value), [props.setCourseid]);
+	const changeCourse = useCallback((e) => {
+		const newCourseId = +e.target.value;
+		console.log('Course ID changed:', newCourseId);
+		props.setCourseid(newCourseId);
+	}, [props.setCourseid]);
 	
 	function changeTrack(e) {
 		const newTrackId = +e.target.value;
 		setTrackid(newTrackId);
-		props.setCourseid(coursesByTrack[newTrackId][0]);
+		const newCourseId = coursesByTrack[newTrackId][0];
+		console.log('Course ID changed:', newCourseId);
+		props.setCourseid(newCourseId);
 	}
 
 	return (
@@ -135,7 +141,7 @@ function DistanceMarker(props) {
 	return (
 		<Fragment>
 			<text class="distanceMarker" x={`${props.x}%`} y={`${y - (props.up ? -0.8 : 0.8)}%`} font-size="10px" text-anchor="middle" dominant-baseline={props.up ? "hanging" : "auto"} fill="rgb(121,64,22)">{`${props.d}m`}</text>
-			<line x1={`${props.x}%`} y1={`${y}%`} x2={`${props.x}%`} y2={`${y + (props.up ? -2.5 : 2.5)}%`} stroke="rgb(121,64,22)" />
+			<line class="distanceMarkerLine" x1={`${props.x}%`} y1={`${y}%`} x2={`${props.x}%`} y2={`${y + (props.up ? -2.5 : 2.5)}%`} stroke="rgb(121,64,22)" />
 		</Fragment>
 	);
 }
@@ -266,7 +272,7 @@ export function RaceTrack(props) {
 			const thisEndHeight = lastEndHeight - (s.slope / 10000 * s.length) / range * 40;
 			slopeEndHeights.push(thisEndHeight);
 			if (s.slope == 0) {
-				elems.push(<rect x={`${s.start / course.distance * 100}%`} y={`${lastEndHeight * 0.262}%`} width={`${s.length / course.distance * 100}%`} height="26.2%" fill="rgb(211,243,68)" />);
+				elems.push(<rect class="elevationFill" x={`${s.start / course.distance * 100}%`} y={`${lastEndHeight * 0.262}%`} width={`${s.length / course.distance * 100}%`} height="26.2%" fill="rgb(211,243,68)" />);
 			} else {
 				elems.push(
 					<svg class={`hillArea ${s.slope < 0 ? 'downhill' : 'uphill'}`} x={`${s.start / course.distance * 100}%`} y="0" width={`${s.length / course.distance * 100}%`} height="26.2%" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -286,13 +292,13 @@ export function RaceTrack(props) {
 		return (
 			<Fragment>
 				{slopes}
-				<rect x="0" y="26.2%" width="100%" height="1.8%" fill="rgb(140,170,10)" />
-				<svg class="sectionsBg" x="0" y="28%" width="100%" height="18%">
+				<rect class="grassLine" x="0" y="26.2%" width="100%" height="1.8%" fill="rgb(140,170,10)" />
+				<svg class="sectionsBg slopesBg" x="0" y="28%" width="100%" height="18%">
 					<rect x="0" y="0" height="90%" width="100%" fill="rgb(239,229,241)" />
 					<rect x="0" y="90%" height="10%" width="100%" fill="rgb(163,106,175)" />
 				</svg>
 				{course.slopes.map(s =>
-					<svg class="slope" x={`${s.start / course.distance * 100}%`} y="28%" width={`${s.length / course.distance * 100}%`} height="18%">
+					<svg class={`slope ${s.slope > 0 ? 'uphill' : 'downhill'}`} x={`${s.start / course.distance * 100}%`} y="28%" width={`${s.length / course.distance * 100}%`} height="18%">
 						<rect x="0" y="0" height="90%" width="100%" fill={s.slope > 0 ? (upi % 2 == 0 ? "rgb(234,207,147)" : "rgb(229,196,120)") : (downi % 2 == 0 ? "rgb(82,195,184)" : "rgb(116,206,198)")} />
 						<rect x="0" y="90%" height="10%" width="100%" fill={s.slope > 0 ? (upi++ % 2 == 0 ? "rgb(191,143,37)" : "rgb(175,132,33)") : (downi++ % 2 == 0 ? "rgb(42,123,115)" : "rgb(50,142,134)")} />
 						<SectionText id={s.slope > 0 ? "uphill" : "downhill"} w={s.length / course.distance} />
@@ -363,10 +369,10 @@ export function RaceTrack(props) {
 				<DistanceMarker d={phase1Start} x="16.67" y={78} />
 				<DistanceMarker d={phase2Start} x="66.67" y={78} />
 				<DistanceMarker d={phase3Start} x="83.33" y={78} />
-				<rect x="0" y="82%" height="18%" width="100%" fill="rgb(228,235,240)" />
-				{Array.from({length: 25}, (_,i) => i).map(i => <line x1={`${i / 24 * 100}%`} y1="96%" x2={`${i / 24 * 100}%`} y2="100%" stroke="rgb(107,145,173)" stroke-width={i == 0 || i == 24 ? "4" : "2"} />)}
-				{Array.from({length: 24}, (_,i) => i + 1).map(i => <text x={`${(1/48 + (i-1)/24) * 100}%`} y="91%" font-size="10px" text-anchor="middle" dominant-baseline="central" fill="rgb(107,145,173)">{i}</text>)}
-				<rect x="0" y="98.2%" height="1.8%" width="100%" fill="rgb(107,145,173)" />
+				<rect class="rulerBg" x="0" y="82%" height="18%" width="100%" fill="rgb(228,235,240)" />
+				{Array.from({length: 25}, (_,i) => i).map(i => <line class="rulerTick" x1={`${i / 24 * 100}%`} y1="96%" x2={`${i / 24 * 100}%`} y2="100%" stroke="rgb(107,145,173)" stroke-width={i == 0 || i == 24 ? "4" : "2"} />)}
+				{Array.from({length: 24}, (_,i) => i + 1).map(i => <text class="rulerText" x={`${(1/48 + (i-1)/24) * 100}%`} y="91%" font-size="10px" text-anchor="middle" dominant-baseline="central" fill="rgb(107,145,173)">{i}</text>)}
+				<rect class="rulerBar" x="0" y="98.2%" height="1.8%" width="100%" fill="rgb(107,145,173)" />
 			</Fragment>
 		);
 	}, [props.courseid]);

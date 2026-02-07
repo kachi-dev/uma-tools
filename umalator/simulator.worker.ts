@@ -113,23 +113,22 @@ function runChart({skills, course, racedef, uma, pacer, options}) {
 	const pacer_ = pacer ? new HorseState(pacer)
 		.set('skills', fromJS(pacer.skills || []))
 		.set('forcedSkillPositions', ImmMap(pacer.forcedSkillPositions || {})) : null;
-	postMessage({type: 'chart-progress', round: 1, total: 4});
-	let results = run1Round(5, skills, course, racedef, uma_, pacer_, options);
+	postMessage({type: 'chart-progress', round: 1, total: 3});
+	let results = run1Round(25, skills, course, racedef, uma_, pacer_, options);
 	postMessage({type: 'chart', results});
+
 	skills = skills.filter(id => results.get(id).max > 0.1);
-	postMessage({type: 'chart-progress', round: 2, total: 4});
-	let update = run1Round(20, skills, course, racedef, uma_, pacer_, options);
+	postMessage({type: 'chart-progress', round: 2, total: 3});
+	let update = run1Round(50, skills, course, racedef, uma_, pacer_, options);
 	mergeResultSets(results, update);
 	postMessage({type: 'chart', results});
+
 	skills = skills.filter(id => Math.abs(results.get(id).max - results.get(id).min) > 0.1);
-	postMessage({type: 'chart-progress', round: 3, total: 4});
-	update = run1Round(50, skills, course, racedef, uma_, pacer_, options);
+	postMessage({type: 'chart-progress', round: 3, total: 3});
+	update = run1Round(125, skills, course, racedef, uma_, pacer_, options);
 	mergeResultSets(results, update);
 	postMessage({type: 'chart', results});
-	postMessage({type: 'chart-progress', round: 4, total: 4});
-	update = run1Round(200, skills, course, racedef, uma_, pacer_, options);
-	mergeResultSets(results, update);
-	postMessage({type: 'chart', results});
+
 	postMessage({type: 'chart-complete'});
 }
 

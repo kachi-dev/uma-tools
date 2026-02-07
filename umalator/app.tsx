@@ -1,6 +1,7 @@
 import { h, Fragment, render } from 'preact';
 import { useState, useReducer, useMemo, useEffect, useRef, useId, useCallback } from 'preact/hooks';
 import { Text, IntlProvider } from 'preact-i18n';
+import { Settings } from 'lucide-preact';
 import { Record, Set as ImmSet, Map as ImmMap } from 'immutable';
 import * as d3 from 'd3';
 import { computePosition, flip } from '@floating-ui/dom';
@@ -47,6 +48,9 @@ class RaceParams extends Record({
 const enum EventType { CM, LOH }
 
 const presets = (CC_GLOBAL ? [
+	{id: 10, type: EventType.CM, name: 'Aquarius Cup', date: '2026-02', courseId: 10611, season: Season.Winter, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
+	{id: 9, type: EventType.CM, name: 'Capricorn Cup', date: '2026-02', courseId: 10701, season: Season.Winter, ground: GroundCondition.Soft, weather: Weather.Snowy, time: Time.Midday},
+	{id: 8, type: EventType.CM, name: 'Sagittarius Cup', date: '2026-01', courseId: 10506, season: Season.Winter, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
 	{id: 7, type: EventType.CM, name: 'Scorpio Cup', date: '2026-01', courseId: 10604, season: Season.Autumn, ground: GroundCondition.Soft, weather: Weather.Rainy, time: Time.Midday},
 	{id: 6, type: EventType.CM, name: 'Libra Cup', date: '2025-12', courseId: 10810, season: Season.Autumn, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
 	{id: 5, type: EventType.CM, name: 'Virgo Cup', date: '2025-11-20', courseId: 10903, season: Season.Autumn, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
@@ -321,8 +325,8 @@ function BarChart(props) {
 	);
 }
 
-function LengthDifferenceChart(props) {
-	const {skillId, runData, courseDistance} = props;
+export function LengthDifferenceChart(props) {
+	const {skillId, runData, courseDistance, umaIndex = 1} = props;
 	const width = 300;
 	const height = 150;
 
@@ -336,7 +340,11 @@ function LengthDifferenceChart(props) {
 
 	const allActivations: Array<[number, number]> = [];
 	
-	runData.allruns.skBasinn.forEach((skBasinnMap: any) => {
+	const skBasinnToProcess = runData.allruns.skBasinn.length > umaIndex 
+		? [runData.allruns.skBasinn[umaIndex]] 
+		: runData.allruns.skBasinn;
+	
+	skBasinnToProcess.forEach((skBasinnMap: any) => {
 		if (!skBasinnMap) return;
 		let activations = null;
 		if (skBasinnMap instanceof Map || (typeof skBasinnMap.has === 'function' && typeof skBasinnMap.get === 'function')) {
@@ -364,20 +372,29 @@ function LengthDifferenceChart(props) {
 	const maxDistance = Math.ceil(courseDistance / binSize) * binSize;
 	const bins = [];
 	for (let i = 0; i < maxDistance; i += binSize) {
-		bins.push({start: i, end: i + binSize, maxBasinn: 0});
+		bins.push({start: i, end: i + binSize, maxBasinn: umaIndex === 0 ? Infinity : 0});
 	}
 
 	allActivations.forEach(([activationPos, basinn]) => {
-		if (basinn > 0) {
+		const isBeneficial = umaIndex === 0 ? basinn < 0 : basinn > 0;
+		if (isBeneficial) {
 			const binIndex = Math.floor(activationPos / binSize);
 			if (binIndex >= 0 && binIndex < bins.length) {
-				bins[binIndex].maxBasinn = Math.max(bins[binIndex].maxBasinn, basinn);
+				if (umaIndex === 0) {
+					bins[binIndex].maxBasinn = Math.min(bins[binIndex].maxBasinn, basinn);
+				} else {
+					bins[binIndex].maxBasinn = Math.max(bins[binIndex].maxBasinn, basinn);
+				}
 			}
 		}
 	});
 
 	bins.forEach(bin => {
-		bin.value = bin.maxBasinn;
+		if (umaIndex === 0) {
+			bin.value = bin.maxBasinn === Infinity ? 0 : Math.abs(bin.maxBasinn);
+		} else {
+			bin.value = bin.maxBasinn;
+		}
 	});
 
 	const maxValue = Math.max(...bins.map(b => b.value), 0);
@@ -418,6 +435,10 @@ function LengthDifferenceChart(props) {
 			yAxisTicks={5}
 			yTickValues={yTickValues}
 			yAxisFormat={(d, i, ticks) => {
+				const isMaxTick = ticks && i === ticks.length - 1;
+				if (isMaxTick || Math.abs(d - maxValue) < 0.001) {
+					return `${maxValue.toFixed(2)}L`;
+				}
 				return `${d.toFixed(1)}L`;
 			}}
 			barColor="#2a77c5"
@@ -517,8 +538,8 @@ function calculatePhaseBackgrounds(
 	return backgrounds;
 }
 
-function VelocityChart(props) {
-	const {skillId, runData, courseDistance, displaying} = props;
+export function VelocityChart(props) {
+	const {skillId, runData, courseDistance, displaying, umaIndex = 1} = props;
 	const width = 400;
 	const height = 200;
 	const margin = {top: 5, right: 5, bottom: 20, left: 40};
@@ -564,41 +585,50 @@ function VelocityChart(props) {
 		return null;
 	}
 
+	const skillUmaIndex = skillData.umaIndex;
 	const {positions: skillPositions} = skillData;
 	const [startPos, endPos] = skillPositions[0];
-	const startTime = interpolateValue(startPos, uma2Positions, uma2Times);
-	const endTime = interpolateValue(endPos, uma2Positions, uma2Times);
+	
+	const skillUmaTimes = skillUmaIndex === 0 ? uma1Times : uma2Times;
+	const skillUmaPositions = skillUmaIndex === 0 ? uma1Positions : uma2Positions;
+	const otherUmaTimes = skillUmaIndex === 0 ? uma2Times : uma1Times;
+	const otherUmaVelocities = skillUmaIndex === 0 ? uma2Velocities : uma1Velocities;
+	const otherUmaPositions = skillUmaIndex === 0 ? uma2Positions : uma1Positions;
+	
+	const startTime = interpolateValue(startPos, skillUmaPositions, skillUmaTimes);
+	const endTime = interpolateValue(endPos, skillUmaPositions, skillUmaTimes);
 
 	const timeWindowStart = Math.max(0, startTime - TIME_WINDOW_PADDING);
 	const timeWindowEnd = endTime + TIME_WINDOW_PADDING;
 
-	const uma1VelocityData: Array<[number, number]> = [];
-	const uma2VelocityData: Array<[number, number]> = [];
+	const skillUmaVelocityData: Array<[number, number]> = [];
+	const otherUmaVelocityData: Array<[number, number]> = [];
 	const positionData: Array<[number, number]> = [];
 	
-	for (let i = 0; i < uma1Times.length; i++) {
-		const t = uma1Times[i];
+	for (let i = 0; i < skillUmaTimes.length; i++) {
+		const t = skillUmaTimes[i];
 		if (t >= timeWindowStart && t <= timeWindowEnd) {
-			uma1VelocityData.push([t, uma1Velocities[i]]);
-			positionData.push([t, uma1Positions[i]]);
+			const velocities = skillUmaIndex === 0 ? uma1Velocities : uma2Velocities;
+			skillUmaVelocityData.push([t, velocities[i]]);
+			positionData.push([t, skillUmaPositions[i]]);
 		}
 	}
 
-	for (let i = 0; i < uma2Times.length; i++) {
-		const t = uma2Times[i];
+	for (let i = 0; i < otherUmaTimes.length; i++) {
+		const t = otherUmaTimes[i];
 		if (t >= timeWindowStart && t <= timeWindowEnd) {
-			uma2VelocityData.push([t, uma2Velocities[i]]);
+			otherUmaVelocityData.push([t, otherUmaVelocities[i]]);
 		}
 	}
 
-	if (uma1VelocityData.length === 0 || uma2VelocityData.length === 0) {
+	if (skillUmaVelocityData.length === 0 || otherUmaVelocityData.length === 0) {
 		return null;
 	}
 
 	const minTime = timeWindowStart;
 	const maxTime = timeWindowEnd;
 	
-	const allVelocities = [...uma1VelocityData.map(d => d[1]), ...uma2VelocityData.map(d => d[1])];
+	const allVelocities = [...skillUmaVelocityData.map(d => d[1]), ...otherUmaVelocityData.map(d => d[1])];
 	const minVelocity = Math.min(...allVelocities);
 	const maxVelocity = Math.max(...allVelocities);
 
@@ -626,30 +656,30 @@ function VelocityChart(props) {
 		.y(d => y(d[1]))
 		.curve(d3.curveMonotoneX);
 
-	const uma1PathData = line(uma1VelocityData);
+	const otherUmaPathData = line(otherUmaVelocityData);
 
 	let convergenceTime = maxTime;
-	for (let i = 0; i < uma2Times.length; i++) {
-		const t = uma2Times[i];
+	for (let i = 0; i < otherUmaTimes.length; i++) {
+		const t = otherUmaTimes[i];
 		if (t >= endTime) {
-			const uma2Vel = uma2Velocities[i];
-			const uma1Vel = uma1Velocities[i];
-			if (Math.abs(uma1Vel - uma2Vel) <= VELOCITY_CONVERGENCE_THRESHOLD) {
+			const otherVel = otherUmaVelocities[i];
+			const skillVel = (skillUmaIndex === 0 ? uma1Velocities : uma2Velocities)[i];
+			if (Math.abs(skillVel - otherVel) <= VELOCITY_CONVERGENCE_THRESHOLD) {
 				convergenceTime = t;
 				break;
 			}
 		}
 	}
 
-	const uma2VelocityDataFiltered: Array<[number, number]> = [];
-	for (let i = 0; i < uma2VelocityData.length; i++) {
-		const [t, v] = uma2VelocityData[i];
+	const skillUmaVelocityDataFiltered: Array<[number, number]> = [];
+	for (let i = 0; i < skillUmaVelocityData.length; i++) {
+		const [t, v] = skillUmaVelocityData[i];
 		if (t >= startTime && t <= Math.min(convergenceTime, timeWindowEnd)) {
-			uma2VelocityDataFiltered.push([t, v]);
+			skillUmaVelocityDataFiltered.push([t, v]);
 		}
 	}
 
-	const uma2PathData = uma2VelocityDataFiltered.length > 0 ? line(uma2VelocityDataFiltered) : null;
+	const skillUmaPathData = skillUmaVelocityDataFiltered.length > 0 ? line(skillUmaVelocityDataFiltered) : null;
 
 	useEffect(function() {
 		if (!canvasRef.current) return;
@@ -703,11 +733,11 @@ function VelocityChart(props) {
 			ctx.stroke();
 		});
 		
-		if (uma1PathData && uma1VelocityData.length > 0) {
+		if (otherUmaPathData && otherUmaVelocityData.length > 0) {
 			ctx.strokeStyle = '#2a77c5';
 			ctx.lineWidth = 2;
 			ctx.beginPath();
-			uma1VelocityData.forEach((d, i) => {
+			otherUmaVelocityData.forEach((d, i) => {
 				const roundedTime = Number(d[0].toFixed(2));
 				const roundedVelocity = Number(d[1].toFixed(2));
 				if (i === 0) {
@@ -719,11 +749,11 @@ function VelocityChart(props) {
 			ctx.stroke();
 		}
 		
-		if (uma2PathData && uma2VelocityDataFiltered.length > 0) {
+		if (skillUmaPathData && skillUmaVelocityDataFiltered.length > 0) {
 			ctx.strokeStyle = '#ff69b4';
 			ctx.lineWidth = 2;
 			ctx.beginPath();
-			uma2VelocityDataFiltered.forEach((d, i) => {
+			skillUmaVelocityDataFiltered.forEach((d, i) => {
 				const roundedTime = Number(d[0].toFixed(2));
 				const roundedVelocity = Number(d[1].toFixed(2));
 				if (i === 0) {
@@ -736,7 +766,7 @@ function VelocityChart(props) {
 		}
 		
 		ctx.restore();
-	}, [x, y, chartWidth, chartHeight, yMin, maxVelocityRoundedUp, phaseBackgrounds, uma1VelocityData, uma2VelocityDataFiltered, width, height, margin]);
+	}, [x, y, chartWidth, chartHeight, yMin, maxVelocityRoundedUp, phaseBackgrounds, skillUmaVelocityDataFiltered, otherUmaVelocityData, width, height, margin]);
 
 	useEffect(function() {
 		if (!axesRef.current) return;
@@ -781,8 +811,8 @@ function VelocityChart(props) {
 	);
 }
 
-function ActivationFrequencyChart(props) {
-	const {skillId, runData, courseDistance} = props;
+export function ActivationFrequencyChart(props) {
+	const {skillId, runData, courseDistance, umaIndex = 1} = props;
 	const width = 300;
 	const height = 50;
 	const yW = 40;
@@ -798,7 +828,11 @@ function ActivationFrequencyChart(props) {
 		return null;
 	}
 	
-	runData.allruns.sk.forEach((skMap: any) => {
+	const skToProcess = runData.allruns.sk.length > umaIndex 
+		? [runData.allruns.sk[umaIndex]] 
+		: runData.allruns.sk;
+	
+	skToProcess.forEach((skMap: any) => {
 		if (!skMap) return;
 		let positions = null;
 		if (skMap instanceof Map || (typeof skMap.has === 'function' && typeof skMap.get === 'function')) {
@@ -952,7 +986,7 @@ function VelocityLines(props) {
 					<path fill="none" stroke={laneColors[i]} stroke-width="2.5" d={
 						d3.line().x(j => x(data.p[i][j])).y(j => laneY(lanes[j]))(data.p[i].map((_,j) => j))
 					} />
-				) : []).concat(data.pacerGap && pacemakerY ? data.pacerGap.map((gap,i) => {
+				) : []).concat(props.showPoskeepGap && data.pacerGap && pacemakerY ? data.pacerGap.map((gap,i) => {
 					const validPoints = data.p[i].map((_,j) => ({x: j, gap: gap[j]})).filter(p => p.gap !== undefined && p.gap >= 0);
 					if (validPoints.length === 0) return null;
 					
@@ -1000,6 +1034,9 @@ function ResultsTable(props) {
 				{runData?.allruns?.leadCompetition && (
 					<tr><th>Spot Struggle frequency</th><td>{runData.allruns.leadCompetition[idx].frequency > 0 ? `${runData.allruns.leadCompetition[idx].frequency.toFixed(1)}%` : '0%'}</td></tr>
 				)}
+				{runData?.allruns?.competeFight && (
+					<tr><th>Dueling frequency</th><td>{runData.allruns.competeFight[idx].frequency > 0 ? `${runData.allruns.competeFight[idx].frequency.toFixed(1)}%` : '0%'}</td></tr>
+				)}
 			</tbody>
 			{chartData.sk[idx].size > 0 &&
 				<tbody>
@@ -1042,7 +1079,13 @@ async function serialize(courseId: number, nsamples: number, seed: number, posKe
 	syncRng: boolean,
 	skillWisdomCheck: boolean,
 	rushedKakari: boolean
-}) {
+}, competeFight: boolean, leadCompetition: boolean, duelingRates: {
+	runaway: number,
+	frontRunner: number,
+	paceChaser: number,
+	lateSurger: number,
+	endCloser: number
+}, graphToggles: { showHp: boolean, showPoskeepGap: boolean, showLabels: boolean }) {
 	const json = JSON.stringify({
 		courseId,
 		nsamples,
@@ -1056,7 +1099,11 @@ async function serialize(courseId: number, nsamples: number, seed: number, posKe
 		showVirtualPacemakerOnGraph,
 		pacemakerCount,
 		selectedPacemakers,
-		showLanes
+		showLanes,
+		competeFight,
+		leadCompetition,
+		duelingRates,
+		graphToggles
 	});
 	const enc = new TextEncoder();
 	const stringStream = new ReadableStream({
@@ -1119,7 +1166,17 @@ async function deserialize(hash) {
 					showVirtualPacemakerOnGraph: o.showVirtualPacemakerOnGraph != null ? o.showVirtualPacemakerOnGraph : false,
 					pacemakerCount: o.pacemakerCount != null ? o.pacemakerCount : 1,
 					selectedPacemakers: o.selectedPacemakers != null ? o.selectedPacemakers : [false, false, false],
-					showLanes: o.showLanes != null ? o.showLanes : false
+					showLanes: o.showLanes != null ? o.showLanes : false,
+					competeFight: o.competeFight != null ? o.competeFight : true,
+					leadCompetition: o.leadCompetition != null ? o.leadCompetition : true,
+					duelingRates: o.duelingRates || {
+						runaway: 10,
+						frontRunner: 20,
+						paceChaser: 30,
+						lateSurger: 35,
+						endCloser: 35
+					},
+					graphToggles: o.graphToggles || { showHp: false, showPoskeepGap: true, showLabels: true }
 				};
 			} catch (_) {
 				return {
@@ -1139,7 +1196,17 @@ async function deserialize(hash) {
 					showVirtualPacemakerOnGraph: false,
 					pacemakerCount: 1,
 					selectedPacemakers: [false, false, false],
-					showLanes: false
+					showLanes: false,
+					competeFight: true,
+					leadCompetition: true,
+					duelingRates: {
+						runaway: 10,
+						frontRunner: 20,
+						paceChaser: 30,
+						lateSurger: 35,
+						endCloser: 35
+					},
+					graphToggles: { showHp: false, showPoskeepGap: true, showLabels: true }
 				};
 			}
 		} else {
@@ -1152,9 +1219,15 @@ async function saveToLocalStorage(courseId: number, nsamples: number, seed: numb
 	syncRng: boolean,
 	skillWisdomCheck: boolean,
 	rushedKakari: boolean
-}) {
+}, competeFight: boolean, leadCompetition: boolean, duelingRates: {
+	runaway: number,
+	frontRunner: number,
+	paceChaser: number,
+	lateSurger: number,
+	endCloser: number
+}, graphToggles: { showHp: boolean, showPoskeepGap: boolean, showLabels: boolean }) {
 	try {
-		const hash = await serialize(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakers, showLanes, witVarianceSettings);
+		const hash = await serialize(courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakers, showLanes, witVarianceSettings, competeFight, leadCompetition, duelingRates, graphToggles);
 		localStorage.setItem('umalator-settings', hash);
 	} catch (error) {
 		console.warn('Failed to save settings to localStorage:', error);
@@ -1279,13 +1352,10 @@ function RacePresets(props) {
 	const id = useId();
 	const selectedIdx = presets.findIndex(p => p.courseId == props.courseId && p.racedef.equals(props.racedef));
 	return (
-		<Fragment>
-			<label for={id}>Preset:</label>
-			<select id={id} onChange={e => { const i = +e.currentTarget.value; i > -1 && props.set(presets[i].courseId, presets[i].racedef); }}>
-				<option value="-1"></option>
-				{presets.map((p,i) => <option value={i} selected={i == selectedIdx}>{'CM ' + p.id + ' - ' + p.name}</option>)}
-			</select>
-		</Fragment>
+		<select id={id} onChange={e => { const i = +e.currentTarget.value; i > -1 && props.set(presets[i].courseId, presets[i].racedef); }}>
+			<option value="-1"></option>
+			{presets.map((p,i) => <option value={i} selected={i == selectedIdx}>{'CM ' + p.id + ' - ' + p.name}</option>)}
+		</select>
 	);
 }
 
@@ -1365,7 +1435,17 @@ function StatsTable({ caption, captionColor, rows }) {
 
 function App(props) {
 	//const [language, setLanguage] = useLanguageSelect(); 
-	const [darkMode, toggleDarkMode] = useReducer(b=>!b, false);
+	const [darkMode, setDarkMode] = useState(() => {
+		const stored = localStorage.getItem('theme');
+		if (stored) return stored === 'dark';
+		return window.matchMedia('(prefers-color-scheme: dark)').matches;
+	});
+
+	useEffect(() => {
+		document.documentElement.classList.toggle('dark', darkMode);
+		localStorage.setItem('theme', darkMode ? 'dark' : 'light');
+	}, [darkMode]);
+	const [leftPanel, setLeftPanel] = useState<'uma' | 'settings'>('uma');
 	const [skillsOpen, setSkillsOpen] = useState(false);
 	const [racedef, setRaceDef] = useState(() => DEFAULT_PRESET.racedef);
 	const [nsamples, setSamples] = useState(DEFAULT_SAMPLES);
@@ -1377,9 +1457,8 @@ function App(props) {
 	const [posKeepMode, setPosKeepModeRaw] = useState(PosKeepMode.Approximate);
 	const [showHp, toggleShowHp] = useReducer((b,_) => !b, false);
 	const [showLanes, toggleShowLanes] = useReducer((b,_) => !b, false);
-	
-	useEffect(() => { document.documentElement.classList.toggle('dark', darkMode);}, [darkMode]);
-	//fuck dark mode
+	const [showPoskeepGap, toggleShowPoskeepGap] = useReducer((b,_) => !b, true);
+	const [showLabels, toggleShowLabels] = useReducer((b,_) => !b, true);
 	
 	// Wrapper to handle mode changes and reset tab if needed
 	function setPosKeepMode(mode: PosKeepMode) {
@@ -1393,6 +1472,16 @@ function App(props) {
 	const [syncRng, toggleSyncRng] = useReducer((b,_) => !b, false);
 	const [skillWisdomCheck, toggleSkillWisdomCheck] = useReducer((b,_) => !b, true);
 	const [rushedKakari, toggleRushedKakari] = useReducer((b,_) => !b, true);
+	const [competeFight, setCompeteFight] = useState(false);
+	const [leadCompetition, setLeadCompetition] = useState(true);
+	const [duelingConfigOpen, setDuelingConfigOpen] = useState(false);
+	const [duelingRates, setDuelingRates] = useState({
+		runaway: 10,
+		frontRunner: 20,
+		paceChaser: 30,
+		lateSurger: 35,
+		endCloser: 35
+	});
 	const [hpDeathPositionTab, setHpDeathPositionTab] = useState(0);
 	const [showVirtualPacemakerOnGraph, toggleShowVirtualPacemakerOnGraph] = useReducer((b,_) => !b, false);
 	const [pacemakerCount, setPacemakerCount] = useState(1);
@@ -1450,7 +1539,7 @@ function App(props) {
 			syncRng,
 			skillWisdomCheck,
 			rushedKakari
-		});
+		}, competeFight, leadCompetition, duelingRates, { showHp, showPoskeepGap, showLabels });
 	}
 
 	function resetUmas() {
@@ -1500,6 +1589,7 @@ function App(props) {
 	const [pacer, setPacer] = useState(() => new HorseState({strategy: 'Nige'}));
 
 	const [lastRunChartUma, setLastRunChartUma] = useState(uma1);
+	const [lastRunChartCourseId, setLastRunChartCourseId] = useState(courseId);
 
 	const [{mode, currentIdx, expanded}, updateUiState] = useReducer(nextUiState, DEFAULT_UI_STATE);
 	function toggleExpand(e: Event) {
@@ -1591,6 +1681,21 @@ function App(props) {
 					if (settings.skillWisdomCheck !== undefined && settings.skillWisdomCheck !== skillWisdomCheck) toggleSkillWisdomCheck(null);
 					if (settings.rushedKakari !== undefined && settings.rushedKakari !== rushedKakari) toggleRushedKakari(null);
 				}
+				
+				if (o.competeFight !== undefined) {
+					setCompeteFight(o.competeFight);
+				}
+				if (o.leadCompetition !== undefined) {
+					setLeadCompetition(o.leadCompetition);
+				}
+				if (o.duelingRates) {
+					setDuelingRates(o.duelingRates);
+				}
+				if (o.graphToggles) {
+					if (o.graphToggles.showHp !== showHp) toggleShowHp(null);
+					if (o.graphToggles.showPoskeepGap !== undefined && o.graphToggles.showPoskeepGap !== showPoskeepGap) toggleShowPoskeepGap(null);
+					if (o.graphToggles.showLabels !== undefined && o.graphToggles.showLabels !== showLabels) toggleShowLabels(null);
+				}
 			});
 		} else {
 			loadFromLocalStorage().then(o => {
@@ -1622,6 +1727,21 @@ function App(props) {
 						if (settings.skillWisdomCheck !== undefined && settings.skillWisdomCheck !== skillWisdomCheck) toggleSkillWisdomCheck(null);
 						if (settings.rushedKakari !== undefined && settings.rushedKakari !== rushedKakari) toggleRushedKakari(null);
 					}
+					
+					if (o.competeFight !== undefined) {
+						setCompeteFight(o.competeFight);
+					}
+					if (o.leadCompetition !== undefined) {
+						setLeadCompetition(o.leadCompetition);
+					}
+					if (o.duelingRates) {
+						setDuelingRates(o.duelingRates);
+					}
+					if (o.graphToggles) {
+						if (o.graphToggles.showHp !== showHp) toggleShowHp(null);
+						if (o.graphToggles.showPoskeepGap !== undefined && o.graphToggles.showPoskeepGap !== showPoskeepGap) toggleShowPoskeepGap(null);
+						if (o.graphToggles.showLabels !== undefined && o.graphToggles.showLabels !== showLabels) toggleShowLabels(null);
+					}
 				}
 			});
 		}
@@ -1635,7 +1755,7 @@ function App(props) {
 	// Auto-save settings whenever they change
 	useEffect(() => {
 		autoSaveSettings();
-	}, [courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, syncRng, skillWisdomCheck, rushedKakari, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakerIndices]);
+	}, [courseId, nsamples, seed, posKeepMode, racedef, uma1, uma2, pacer, syncRng, skillWisdomCheck, rushedKakari, showVirtualPacemakerOnGraph, pacemakerCount, selectedPacemakerIndices, competeFight, leadCompetition, duelingRates, showHp, showPoskeepGap, showLabels]);
 	
 	useEffect(() => {
 		const shouldShow = posKeepMode === PosKeepMode.Virtual && selectedPacemakerIndices.length > 0;
@@ -1654,7 +1774,7 @@ function App(props) {
 			syncRng,
 			skillWisdomCheck,
 			rushedKakari
-		}).then(hash => {
+		}, competeFight, leadCompetition, duelingRates, { showHp, showPoskeepGap, showLabels }).then(hash => {
 			const url = window.location.protocol + '//' + window.location.host + window.location.pathname;
 			window.navigator.clipboard.writeText(url + '#' + hash);
 		});
@@ -1699,7 +1819,10 @@ function App(props) {
 					pacemakerCount: posKeepMode === PosKeepMode.Virtual ? pacemakerCount : 1,
 					syncRng: syncRng,
 					skillWisdomCheck: skillWisdomCheck,
-					rushedKakari: rushedKakari
+					rushedKakari: rushedKakari,
+					competeFight: competeFight,
+					leadCompetition: leadCompetition,
+					duelingRates: duelingRates
 				}
 			}
 		});
@@ -1725,7 +1848,10 @@ function App(props) {
 					pacemakerCount: posKeepMode === PosKeepMode.Virtual ? pacemakerCount : 1,
 					syncRng: syncRng,
 					skillWisdomCheck: skillWisdomCheck,
-					rushedKakari: rushedKakari
+					rushedKakari: rushedKakari,
+					competeFight: competeFight,
+					leadCompetition: leadCompetition,
+					duelingRates: duelingRates
 				}
 			}
 		});
@@ -1747,6 +1873,7 @@ function App(props) {
 	function doBasinnChart() {
 		postEvent('doBasinnChart', {});
 		setLastRunChartUma(uma1);
+		setLastRunChartCourseId(courseId);
 		chartWorkersCompletedRef.current = 0;
 		setIsSimulationRunning(true);
 		setSimulationProgress(null);
@@ -1783,7 +1910,9 @@ function App(props) {
 			posKeepMode: PosKeepMode.Approximate, 
 			pacemakerCount: 1,
 			skillWisdomCheck: false,
-			rushedKakari: false
+			rushedKakari: false,
+			competeFight: false,
+			laneMovement: false
 		};
 		worker1.postMessage({
 			msg: 'chart', 
@@ -1915,8 +2044,8 @@ function App(props) {
 		const safeI0 = Math.max(0, Math.min(i0, chartData.v[0].length - 1));
 		const safeI1 = Math.max(0, Math.min(i1, chartData.v[1].length - 1));
 		
-		const hp0 = chartData.hp && chartData.hp[0] && safeI0 < chartData.hp[0].length ? chartData.hp[0][safeI0].toFixed(0) : 'N/A';
-		const hp1 = chartData.hp && chartData.hp[1] && safeI1 < chartData.hp[1].length ? chartData.hp[1][safeI1].toFixed(0) : 'N/A';
+		const hp0 = chartData.hp?.[0]?.[safeI0] != null ? chartData.hp[0][safeI0].toFixed(0) : 'N/A';
+		const hp1 = chartData.hp?.[1]?.[safeI1] != null ? chartData.hp[1][safeI1].toFixed(0) : 'N/A';
 		
 		document.getElementById('rtV1').textContent = `${chartData.v[0][safeI0].toFixed(2)} m/s  t=${chartData.t[0][safeI0].toFixed(2)} s  (${hp0} hp remaining)`;
 		document.getElementById('rtV2').textContent = `${chartData.v[1][safeI1].toFixed(2)} m/s  t=${chartData.t[1][safeI1].toFixed(2)} s  (${hp1} hp remaining)`;
@@ -2123,20 +2252,27 @@ function App(props) {
 
 	const umaTabs = (
 		<Fragment>
-			<div class={`umaTab ${currentIdx == 0 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx0)}>Umamusume 1</div>
-			{mode == Mode.Compare && <div class={`umaTab ${currentIdx == 1 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx1)}>Umamusume 2{posKeepMode != PosKeepMode.Virtual && <div id="expandBtn" title="Expand panel" onClick={toggleExpand} />}</div>}
-			{posKeepMode == PosKeepMode.Virtual && mode == Mode.Compare && <div class={`umaTab ${currentIdx == 2 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx2)}>Virtual Pacemaker<div id="expandBtn" title="Expand panel" onClick={toggleExpand} /></div>}
+			<div class="umaTabBar">
+				<div class={`umaTabItem ${currentIdx == 0 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx0)}>Uma 1</div>
+				{mode == Mode.Compare && <div class={`umaTabItem ${currentIdx == 1 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx1)}>Uma 2</div>}
+				{posKeepMode == PosKeepMode.Virtual && mode == Mode.Compare && <div class={`umaTabItem ${currentIdx == 2 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx2)}>Pacemaker</div>}
+				{mode == Mode.Compare && <div id="expandBtn" title="Expand panel" onClick={toggleExpand} />}
+			</div>
 		</Fragment>
 	);
 
 	const createExpandedContent = useCallback((skillId: string, runData: any, courseDistance: number) => {
 		const currentDisplaying = displaying || 'meanrun';
+		const umaIndexForChart = (mode == Mode.Chart || mode == Mode.UniquesChart) ? 1 : (currentIdx < 2 ? currentIdx : 1);
 		let effectivenessRate = 0;
 		const totalCount = runData.allruns?.totalRuns || 0;
 		let skillProcs = 0;
 		if (runData.allruns && runData.allruns.skBasinn && Array.isArray(runData.allruns.skBasinn)) {
 			const allBasinnActivations: Array<[number, number]> = [];
-			runData.allruns.skBasinn.forEach((skBasinnMap: any) => {
+			const skBasinnToProcess = (mode == Mode.Chart || mode == Mode.UniquesChart) 
+				? [runData.allruns.skBasinn[umaIndexForChart]] 
+				: runData.allruns.skBasinn;
+			skBasinnToProcess.forEach((skBasinnMap: any) => {
 				if (!skBasinnMap) return;
 				let activations = null;
 				if (skBasinnMap instanceof Map || (typeof skBasinnMap.has === 'function' && typeof skBasinnMap.get === 'function')) {
@@ -2156,8 +2292,14 @@ function App(props) {
 				}
 			});
 			skillProcs = allBasinnActivations.length;
-			const positiveCount = allBasinnActivations.filter(([_, basinn]) => basinn > 0).length;
-			effectivenessRate = totalCount > 0 ? (positiveCount / totalCount) * 100 : 0;
+			const beneficialCount = allBasinnActivations.filter(([_, basinn]) => {
+				if (umaIndexForChart === 0) {
+					return basinn < 0;
+				} else {
+					return basinn > 0;
+				}
+			}).length;
+			effectivenessRate = totalCount > 0 ? (beneficialCount / totalCount) * 100 : 0;
 		}
 		
 		return (
@@ -2185,11 +2327,13 @@ function App(props) {
 							skillId={skillId} 
 							runData={runData} 
 							courseDistance={courseDistance}
+							umaIndex={umaIndexForChart}
 						/>
 						<ActivationFrequencyChart 
 							skillId={skillId} 
 							runData={runData} 
 							courseDistance={courseDistance}
+							umaIndex={umaIndexForChart}
 						/>
 					</div>
 					<VelocityChart 
@@ -2197,6 +2341,7 @@ function App(props) {
 						runData={runData}
 						courseDistance={courseDistance}
 						displaying={currentDisplaying}
+						umaIndex={umaIndexForChart}
 					/>
 				</div>
 				<div style="position: absolute; bottom: 0; right: 0; font-size: 9px; font-style: italic; padding: 4px;">
@@ -2204,7 +2349,7 @@ function App(props) {
 				</div>
 			</div>
 		);
-	}, [displaying, loadingAdditionalSamples, isSimulationRunning, runAdditionalSamplesForSkill]);
+	}, [displaying, loadingAdditionalSamples, isSimulationRunning, runAdditionalSamplesForSkill, currentIdx, mode]);
 
 	let resultsPane;
 	if (mode == Mode.Compare && results.length > 0) {
@@ -2274,18 +2419,16 @@ function App(props) {
 					<Histogram width={500} height={333} data={results} />
 					{staminaStats && (
 						<div style={{marginTop: '20px', width: '500px', paddingBottom: '20px'}}>
-							<div style={{display: 'flex', marginBottom: '0'}}>
+							<div class="umaTabsGroup" style={{marginBottom: '4px'}}>
 								<div 
 									class={`umaTab staminaTab ${hpDeathPositionTab == 0 ? 'selected' : ''}`} 
 									onClick={() => setHpDeathPositionTab(0)}
-									style={{cursor: 'pointer'}}
 								>
 									Uma 1
 								</div>
 								<div 
 									class={`umaTab staminaTab ${hpDeathPositionTab == 1 ? 'selected' : ''}`} 
 									onClick={() => setHpDeathPositionTab(1)}
-									style={{cursor: 'pointer'}}
 								>
 									Uma 2
 								</div>
@@ -2338,13 +2481,13 @@ function App(props) {
 					)}
 				</div>
 				<div id="infoTables">
-					<ResultsTable caption="Umamusume 1" color="#2a77c5" chartData={chartData} idx={0} runData={runData} />
-					<ResultsTable caption="Umamusume 2" color="#c52a2a" chartData={chartData} idx={1} runData={runData} />
+					<ResultsTable caption="Uma 1" color="#2a77c5" chartData={chartData} idx={0} runData={runData} />
+					<ResultsTable caption="Uma 2" color="#c52a2a" chartData={chartData} idx={1} runData={runData} />
 				</div>
 			</div>
 		);
 	} else if ((mode == Mode.Chart || mode == Mode.UniquesChart) && tableData.size > 0) {
-		const dirty = !uma1.equals(lastRunChartUma);
+		const dirty = !uma1.equals(lastRunChartUma) || courseId !== lastRunChartCourseId;
 		resultsPane = (
 			<div id="resultsPaneWrapper">
 				<div id="resultsPane" class="mode-chart">
@@ -2382,9 +2525,57 @@ function App(props) {
 	return (
 		<Language.Provider value={props.lang}>
 			<IntlProvider definition={strings}>
+				<nav id="navBar">
+					<div id="navTabs">
+						<div class="navTab selected">Umalator</div>
+						<div class="navTab disabled">Umas</div>
+					</div>
+					<button id="themeToggle" onClick={() => setDarkMode(d => !d)} title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
+						{darkMode
+							? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+							: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+						}
+					</button>
+				</nav>
+				<div id="iconSidebar">
+					<button class={`sidebarIcon ${leftPanel === 'uma' ? 'active' : ''}`} onClick={() => setLeftPanel('uma')} title="Uma">
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+					</button>
+					<button class={`sidebarIcon ${leftPanel === 'settings' ? 'active' : ''}`} onClick={() => setLeftPanel('settings')} title="Settings">
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+					</button>
+				</div>
+				<div id="mainContent">
 				<div id="topPane" class={chartData ? 'hasResults' : ''}>
-					<RaceTrack courseid={courseId} width={960} height={240} xOffset={20} yOffset={15} yExtra={20} mouseMove={rtMouseMove} mouseLeave={rtMouseLeave} onSkillDrag={handleSkillDrag} regions={[...skillActivations, ...rushedIndicators]} posKeepLabels={posKeepLabels} uma1={uma1} uma2={uma2} pacer={pacer}>
-						<VelocityLines data={chartData} courseDistance={course.distance} width={960} height={250} xOffset={20} showHp={showHp} showLanes={mode == Mode.Compare ? showLanes : false} horseLane={course.horseLane} showVirtualPacemaker={showVirtualPacemakerOnGraph && posKeepMode === PosKeepMode.Virtual} selectedPacemakers={getSelectedPacemakers()} />
+					<div id="modeTabs">
+						<div class={`modeTab ${mode == Mode.Compare ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetModeCompare)}>Compare</div>
+						<div class={`modeTab ${mode == Mode.Chart ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetModeChart)}>Skill Chart</div>
+						<div class={`modeTab ${mode == Mode.UniquesChart ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetModeUniquesChart)}>Uma Chart</div>
+					</div>
+					<div id="runBar">
+						{
+							mode == Mode.Compare
+							? <button id="run" onClick={doComparison} tabindex={1} disabled={isSimulationRunning || loadingAdditionalSamples.size > 0}>COMPARE</button>
+							: <button id="run" onClick={doBasinnChart} tabindex={1} disabled={isSimulationRunning || loadingAdditionalSamples.size > 0}>
+								{simulationProgress ? `Run (${simulationProgress.round}/${simulationProgress.total})` : 'RUN'}
+							</button>
+						}
+						{mode == Mode.Compare && <button id="runOnce" onClick={doRunOnce} tabindex={1} disabled={isSimulationRunning || loadingAdditionalSamples.size > 0}>Run Once</button>}
+						<div class="runBarGroup">
+							<label for="nsamples">Samples</label>
+							<input type="number" id="nsamples" min="1" max="10000" value={nsamples} onInput={(e) => setSamples(+e.currentTarget.value)} />
+						</div>
+						<div class="runBarGroup">
+							<label for="seed">Seed</label>
+							<div id="seedWrapper">
+								<input type="number" id="seed" value={seed} onInput={(e) => { setSeed(+e.currentTarget.value); setRunOnceCounter(0); }} />
+								<button title="Randomize seed" onClick={() => { setSeed(Math.floor(Math.random() * (-1 >>> 0)) >>> 0); setRunOnceCounter(0); }}>🎲</button>
+							</div>
+						</div>
+					</div>
+					{mode == Mode.Compare && <div class="racetrackRow">
+					<RaceTrack courseid={courseId} width={960} height={240} xOffset={20} yOffset={15} yExtra={20} mouseMove={rtMouseMove} mouseLeave={rtMouseLeave} onSkillDrag={handleSkillDrag} regions={[...skillActivations, ...rushedIndicators]} posKeepLabels={showLabels ? posKeepLabels : []} uma1={uma1} uma2={uma2} pacer={pacer}>
+						<VelocityLines data={chartData} courseDistance={course.distance} width={960} height={250} xOffset={20} showHp={showHp} showPoskeepGap={showPoskeepGap} showLanes={mode == Mode.Compare ? showLanes : false} horseLane={course.horseLane} showVirtualPacemaker={showVirtualPacemakerOnGraph && posKeepMode === PosKeepMode.Virtual} selectedPacemakers={getSelectedPacemakers()} />
 						
 						<g id="rtMouseOverBox" style="display:none">
 							<text id="rtV1" x="25" y="10" fill="#2a77c5" font-size="10px"></text>
@@ -2394,156 +2585,48 @@ function App(props) {
 							<text id="pd2" x="25" y="20" fill="#c52a2a" font-size="10px"></text>
 						</g>
 					</RaceTrack>
-					<div id="runPane">
-						<fieldset>
-							<legend>Mode:</legend>
-							<div>
-								<input type="radio" id="mode-compare" name="mode" value="compare" checked={mode == Mode.Compare} onClick={() => updateUiState(UiStateMsg.SetModeCompare)} />
-								<label for="mode-compare">Compare</label>
-							</div>
-							<div>
-								<input type="radio" id="mode-chart" name="mode" value="chart" checked={mode == Mode.Chart} onClick={() => updateUiState(UiStateMsg.SetModeChart)} />
-								<label for="mode-chart">Skill chart</label>
-							</div>
-							<div>
-								<input type="radio" id="mode-uniques-chart" name="mode" value="uniques-chart" checked={mode == Mode.UniquesChart} onClick={() => updateUiState(UiStateMsg.SetModeUniquesChart)} />
-								<label for="mode-uniques-chart">Uma chart</label>
-							</div>
-						</fieldset>
-						{
-							mode == Mode.Compare
-							? <button id="run" onClick={doComparison} tabindex={1} disabled={isSimulationRunning || loadingAdditionalSamples.size > 0}>COMPARE</button>
-							: <button id="run" onClick={doBasinnChart} tabindex={1} disabled={isSimulationRunning || loadingAdditionalSamples.size > 0}>
-								{simulationProgress ? `Run (${simulationProgress.round}/${simulationProgress.total})` : 'RUN'}
-							</button>
-						}
-						{
-							mode == Mode.Compare
-							? <button id="runOnce" onClick={doRunOnce} tabindex={1} disabled={isSimulationRunning || loadingAdditionalSamples.size > 0}>Run Once</button>
-							: null
-						}
-						<label for="nsamples">Samples:</label>
-						<input type="number" id="nsamples" min="1" max="10000" value={nsamples} onInput={(e) => setSamples(+e.currentTarget.value)} />
-						<label for="seed">Seed:</label>
-						<div id="seedWrapper">
-							<input type="number" id="seed" value={seed} onInput={(e) => { setSeed(+e.currentTarget.value); setRunOnceCounter(0); }} />
-							<button title="Randomize seed" onClick={() => { setSeed(Math.floor(Math.random() * (-1 >>> 0)) >>> 0); setRunOnceCounter(0); }}>🎲</button>
-						</div>
-						{mode == Mode.Compare && (
-							<fieldset id="posKeepFieldset">
-								<legend>Position Keep:</legend>
-								<select id="poskeepmode" value={posKeepMode} onInput={(e) => setPosKeepMode(+e.currentTarget.value)}>
-									<option value={PosKeepMode.None}>None</option>
-									<option value={PosKeepMode.Approximate}>Approximate</option>
-									<option value={PosKeepMode.Virtual}>Virtual Pacemaker</option>
-								</select>
-								{posKeepMode == PosKeepMode.Approximate && (
-									<div id="pacemakerIndicator">
-										<span>Using default pacemaker</span>
-									</div>
-								)}
-								{posKeepMode == PosKeepMode.Virtual && (
-									<div id="pacemakerIndicator">
-										<div>
-											<label>Show Pacemakers:</label>
-											<div className="pacemaker-combobox">
-												<button 
-													className="pacemaker-combobox-button"
-													onClick={() => setIsPacemakerDropdownOpen(!isPacemakerDropdownOpen)}
-												>
-													{selectedPacemakerIndices.length === 0
-														? 'None'
-														: selectedPacemakerIndices.length === 1 
-														? `Pacemaker ${selectedPacemakerIndices[0] + 1}`
-														: selectedPacemakerIndices.length === pacemakerCount
-														? 'All Pacemakers'
-														: `${selectedPacemakerIndices.length} Pacemakers`
-													}
-													<span className="pacemaker-combobox-arrow">▼</span>
-												</button>
-												{isPacemakerDropdownOpen && (
-													<div className="pacemaker-combobox-dropdown">
-														{[...Array(pacemakerCount)].map((_, index) => (
-															<label key={index} className="pacemaker-combobox-option">
-																<input 
-																	type="checkbox" 
-																	checked={selectedPacemakerIndices.includes(index)}
-																	onChange={() => togglePacemakerSelection(index)}
-																/>
-																<span style={{color: index === 0 ? '#22c55e' : index === 1 ? '#a855f7' : '#ec4899'}}>
-																	Pacemaker {index + 1}
-																</span>
-															</label>
-														))}
-													</div>
-												)}
-											</div>
-										</div>
-										<div id="pacemakerCountControl">
-											<label for="pacemakercount">Number of pacemakers: {pacemakerCount}</label>
-											<input 
-												type="range" 
-												id="pacemakercount" 
-												min="1" 
-												max="3" 
-												value={pacemakerCount} 
-												onInput={(e) => handlePacemakerCountChange(+e.currentTarget.value)} 
-											/>
-										</div>
-									</div>
-								)}
-							</fieldset>
-						)}
-						{/**
-						{mode == Mode.Compare && (
-							<div>
-								<label for="showlanes">Show Lanes</label>
-								<input type="checkbox" id="showlanes" checked={showLanes} onClick={toggleShowLanes} />
-							</div>
-						)} **/}
-						{mode == Mode.Compare && (
-							<div>
-								<label for="syncRng">Sync RNG</label>
-								<input type="checkbox" id="syncRng" checked={syncRng} onClick={handleSyncRngToggle} />
-							</div>
-						)}
-						{mode == Mode.Compare && (
-							<div>
-								<label for="skillWisdomCheck">Skill Wit Check</label>
-								<input type="checkbox" id="skillWisdomCheck" checked={skillWisdomCheck} onClick={handleSkillWisdomCheckToggle} />
-							</div>
-						)}
-						{mode == Mode.Compare && (
-							<div>
-								<label for="rushedKakari">Rushed / Kakari</label>
-								<input type="checkbox" id="rushedKakari" checked={rushedKakari} onClick={handleRushedKakariToggle} />
-							</div>
-						)}
-						<div>
-							<label for="showhp">Show HP</label>
-							<input type="checkbox" id="showhp" checked={showHp} onClick={toggleShowHp} />
-						</div>
-
-						<a href="#" onClick={copyStateUrl}>Copy link</a>
-						<RacePresets courseId={courseId} racedef={racedef} set={(courseId, racedef) => { setCourseId(courseId); setRaceDef(racedef); }} />
+					<div class="racetrackControls">
+						<label><input type="checkbox" checked={showHp} onClick={toggleShowHp} /> Show HP</label>
+						<label><input type="checkbox" checked={showPoskeepGap} onClick={toggleShowPoskeepGap} /> Show Poskeep Gap</label>
+						<label><input type="checkbox" checked={showLabels} onClick={toggleShowLabels} /> Show Labels</label>
 					</div>
-					<div id="buttonsRow">
-						<TrackSelect key={courseId} courseid={courseId} setCourseid={setCourseId} tabindex={2} />
-						<div id="buttonsRowSpace" />
-						<TimeOfDaySelect value={racedef.time} set={racesetter('time')} />
-						<div>
-							<GroundSelect value={racedef.ground} set={racesetter('ground')} />
-							<WeatherSelect value={racedef.weather} set={racesetter('weather')} />
+				</div>}
+					<div class="controlPanel">
+						<div class="controlPanelFields">
+							<div class="controlPanelField">
+								<span class="controlPanelLabel">Preset</span>
+								<RacePresets courseId={courseId} racedef={racedef} set={(courseId, racedef) => { setCourseId(courseId); setRaceDef(racedef); }} />
+							</div>
+							<div class="controlPanelField">
+								<span class="controlPanelLabel">Track</span>
+								<TrackSelect key={courseId} courseid={courseId} setCourseid={setCourseId} tabindex={2} />
+							</div>
+							<div class="controlPanelField">
+								<span class="controlPanelLabel">Time of Day</span>
+								<TimeOfDaySelect value={racedef.time} set={racesetter('time')} />
+							</div>
+							<div class="controlPanelField">
+								<span class="controlPanelLabel">Ground</span>
+								<GroundSelect value={racedef.ground} set={racesetter('ground')} />
+							</div>
+							<div class="controlPanelField">
+								<span class="controlPanelLabel">Weather</span>
+								<WeatherSelect value={racedef.weather} set={racesetter('weather')} />
+							</div>
+							<div class="controlPanelField">
+								<span class="controlPanelLabel">Season</span>
+								<SeasonSelect value={racedef.season} set={racesetter('season')} />
+							</div>
 						</div>
-						<SeasonSelect value={racedef.season} set={racesetter('season')} />
 					</div>
 				</div>
 				{resultsPane}
+				</div>
 				{expanded && <div id="umaPane" />}
-				<div id={expanded ? 'umaOverlay' : 'umaPane'}>
+				{leftPanel === 'uma' && <div id={expanded ? 'umaOverlay' : 'umaPane'}>
 					<div class={!expanded && currentIdx == 0 ? 'selected' : ''}>
-						<HorseDef key={uma1.outfitId} state={uma1} setState={setUma1} courseDistance={course.distance} tabstart={() => 4} onResetAll={resetAllUmas}>
-							{expanded ? 'Umamusume 1' : umaTabs}
+						<HorseDef key={uma1.outfitId} state={uma1} setState={setUma1} courseDistance={course.distance} tabstart={() => 4} onResetAll={resetAllUmas} runData={mode == Mode.Compare ? runData : null} umaIndex={mode == Mode.Compare ? 0 : null}>
+							{expanded ? 'Uma 1' : umaTabs}
 						</HorseDef>
 					</div>
 					{expanded &&
@@ -2553,18 +2636,167 @@ function App(props) {
 							<div id="swapUmas" title="Swap umas" onClick={swapUmas}>⮂</div>
 						</div>}
 					{mode == Mode.Compare && <div class={!expanded && currentIdx == 1 ? 'selected' : ''}>
-						<HorseDef key={uma2.outfitId} state={uma2} setState={setUma2} courseDistance={course.distance} tabstart={() => 4 + horseDefTabs()} onResetAll={resetAllUmas}>
-							{expanded ? 'Umamusume 2' : umaTabs}
+						<HorseDef key={uma2.outfitId} state={uma2} setState={setUma2} courseDistance={course.distance} tabstart={() => 4 + horseDefTabs()} onResetAll={resetAllUmas} runData={runData} umaIndex={1}>
+							{expanded ? 'Uma 2' : umaTabs}
 						</HorseDef>
 					</div>}
 					{posKeepMode == PosKeepMode.Virtual && mode == Mode.Compare && <div class={!expanded && currentIdx == 2 ? 'selected' : ''}>
 						<HorseDef key={pacer.outfitId} state={pacer} setState={setPacer} courseDistance={course.distance} tabstart={() => 4 + (mode == Mode.Compare ? 2 : 1) * horseDefTabs()} onResetAll={resetAllUmas}>
-							{expanded ? 'Virtual Pacemaker' : umaTabs}
+							{expanded ? 'Pacemaker' : umaTabs}
 						</HorseDef>
 					</div>}
 					{expanded && <div id="closeUmaOverlay" title="Close panel" onClick={toggleExpand}>✕</div>}
-				</div>
+				</div>}
+				{leftPanel === 'settings' && <div id="settingsPane">
+					<h3>Settings</h3>
+					{mode == Mode.Compare && (
+						<div class="settingsCard">
+							<h4>Position Keep</h4>
+							<select id="poskeepmode" value={posKeepMode} onInput={(e) => setPosKeepMode(+e.currentTarget.value)}>
+								<option value={PosKeepMode.None}>None</option>
+								<option value={PosKeepMode.Approximate}>Approximate</option>
+								<option value={PosKeepMode.Virtual}>Virtual Pacemaker</option>
+							</select>
+							{posKeepMode == PosKeepMode.Approximate && (
+								<div id="pacemakerIndicator">
+									<span>Using default pacemaker</span>
+								</div>
+							)}
+							{posKeepMode == PosKeepMode.Virtual && (
+								<div id="pacemakerIndicator">
+									<div>
+										<label>Show Pacemakers:</label>
+										<div className="pacemaker-combobox">
+											<button 
+												className="pacemaker-combobox-button"
+												onClick={() => setIsPacemakerDropdownOpen(!isPacemakerDropdownOpen)}
+											>
+												{selectedPacemakerIndices.length === 0
+													? 'None'
+													: selectedPacemakerIndices.length === 1 
+													? `Pacemaker ${selectedPacemakerIndices[0] + 1}`
+													: selectedPacemakerIndices.length === pacemakerCount
+													? 'All Pacemakers'
+													: `${selectedPacemakerIndices.length} Pacemakers`
+												}
+												<span className="pacemaker-combobox-arrow">▼</span>
+											</button>
+											{isPacemakerDropdownOpen && (
+												<div className="pacemaker-combobox-dropdown">
+													{[...Array(pacemakerCount)].map((_, index) => (
+														<label key={index} className="pacemaker-combobox-option">
+															<input 
+																type="checkbox" 
+																checked={selectedPacemakerIndices.includes(index)}
+																onChange={() => togglePacemakerSelection(index)}
+															/>
+															<span style={{color: index === 0 ? '#22c55e' : index === 1 ? '#a855f7' : '#ec4899'}}>
+																Pacemaker {index + 1}
+															</span>
+														</label>
+													))}
+												</div>
+											)}
+										</div>
+									</div>
+									<div id="pacemakerCountControl">
+										<label for="pacemakercount">Number of pacemakers: {pacemakerCount}</label>
+										<input 
+											type="range" 
+											id="pacemakercount" 
+											min="1" 
+											max="3" 
+											value={pacemakerCount} 
+											onInput={(e) => handlePacemakerCountChange(+e.currentTarget.value)} 
+										/>
+									</div>
+								</div>
+							)}
+						</div>
+					)}
+					{mode == Mode.Compare && (
+						<div class="settingsCard">
+							<h4>Simulation</h4>
+							<div class="settingsToggleRow">
+								<span>Sync RNG</span>
+								<label class="toggleSwitch">
+									<input type="checkbox" checked={syncRng} onClick={handleSyncRngToggle} />
+									<span class="toggleTrack"></span>
+								</label>
+							</div>
+							<div class="settingsToggleRow">
+								<span>Skill Wit Check</span>
+								<label class="toggleSwitch">
+									<input type="checkbox" checked={skillWisdomCheck} onClick={handleSkillWisdomCheckToggle} />
+									<span class="toggleTrack"></span>
+								</label>
+							</div>
+							<div class="settingsToggleRow">
+								<span>Rushed / Kakari</span>
+								<label class="toggleSwitch">
+									<input type="checkbox" checked={rushedKakari} onClick={handleRushedKakariToggle} />
+									<span class="toggleTrack"></span>
+								</label>
+							</div>
+							<div class="settingsToggleRow">
+								<span>Spot Struggle</span>
+								<label class="toggleSwitch">
+									<input type="checkbox" checked={leadCompetition} onClick={() => setLeadCompetition(!leadCompetition)} />
+									<span class="toggleTrack"></span>
+								</label>
+							</div>
+							<div class="settingsToggleRow">
+								<span>Dueling</span>
+								<div style="display:flex;align-items:center;gap:8px;">
+									<label class="toggleSwitch">
+										<input type="checkbox" checked={competeFight} onClick={() => setCompeteFight(!competeFight)} />
+										<span class="toggleTrack"></span>
+									</label>
+									<button type="button" onClick={() => setDuelingConfigOpen(true)} class="settingsSmallBtn" title="Configure dueling rates">
+										<Settings size={14} />
+									</button>
+								</div>
+							</div>
+						</div>
+					)}
+					<button class="settingsCopyBtn" onClick={copyStateUrl}>Copy Link</button>
+				</div>}
 				{popoverSkill && <BasinnChartPopover skillid={popoverSkill} results={tableData.get(popoverSkill).results} courseDistance={course.distance} />}
+				{duelingConfigOpen && (
+					<div class="duelingOverlay" onClick={(e) => { if (e.target === e.currentTarget) setDuelingConfigOpen(false); }}>
+						<div class="duelingModal">
+							<h2>Dueling Configuration</h2>
+							<div class="duelingSliders">
+								<div>
+									<label>Runaway: {duelingRates.runaway}%</label>
+									<input type="range" min="0" max="100" value={duelingRates.runaway} onInput={(e) => setDuelingRates({...duelingRates, runaway: parseInt(e.target.value)})} />
+								</div>
+								<div>
+									<label>Front Runner: {duelingRates.frontRunner}%</label>
+									<input type="range" min="0" max="100" value={duelingRates.frontRunner} onInput={(e) => setDuelingRates({...duelingRates, frontRunner: parseInt(e.target.value)})} />
+								</div>
+								<div>
+									<label>Pace Chaser: {duelingRates.paceChaser}%</label>
+									<input type="range" min="0" max="100" value={duelingRates.paceChaser} onInput={(e) => setDuelingRates({...duelingRates, paceChaser: parseInt(e.target.value)})} />
+								</div>
+								<div>
+									<label>Late Surger: {duelingRates.lateSurger}%</label>
+									<input type="range" min="0" max="100" value={duelingRates.lateSurger} onInput={(e) => setDuelingRates({...duelingRates, lateSurger: parseInt(e.target.value)})} />
+								</div>
+								<div>
+									<label>End Closer: {duelingRates.endCloser}%</label>
+									<input type="range" min="0" max="100" value={duelingRates.endCloser} onInput={(e) => setDuelingRates({...duelingRates, endCloser: parseInt(e.target.value)})} />
+								</div>
+								<div class="duelingWarning">
+									<p>These are estimate %'s extracted from in-game race data, your actual dueling rate will vary based CM-by-CM based on overall lobby compositions.</p>
+								</div>
+							</div>
+							<div class="duelingActions">
+								<button onClick={() => setDuelingConfigOpen(false)}>Close</button>
+							</div>
+						</div>
+					</div>
+				)}
 			</IntlProvider>
 		</Language.Provider>
 	);

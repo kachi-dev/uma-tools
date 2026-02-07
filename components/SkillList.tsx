@@ -143,7 +143,7 @@ export const STRINGS_en = Object.freeze({
 		'motivation': Object.freeze(['', 'Terrible', 'Bad', 'Normal', 'Good', 'Perfect']),
 		'order_rate': 'CM: {{cm}}, LOH: {{loh}}',
 		'preconditions': 'Preconditions:',
-		'rotation': Object.freeze(['', 'Clockwise', 'Counterclockwise']),
+		'rotation': Object.freeze(['', 'Right', 'Left']),
 		'running_style': Object.freeze(['', 'Runner', 'Leader', 'Betweener', 'Chaser']),
 		'season': Object.freeze(['', 'Early spring', 'Summer', 'Autumn', 'Winter', 'Late spring']),
 		'seconds': '{{n}}s',
@@ -435,6 +435,17 @@ export function ExpandedSkillDetails(props) {
 							step="10"
 						/>
 					</div>
+					{props.runData != null && props.umaIndex != null && props.onViewProcData && (
+						<div class="skillDetailsSection">
+							<button 
+								class="runAdditionalSamples"
+								onClick={(e) => { e.stopPropagation(); props.onViewProcData(); }}
+								title="View Proc Data"
+							>
+								View Proc Data
+							</button>
+						</div>
+					)}
 				</div>
 			</div>
 		</IntlProvider>

@@ -4,6 +4,7 @@ import { IntlProvider, Text, Localizer } from 'preact-i18n';
 import { Set as ImmSet } from 'immutable';
 
 import { SkillList, Skill, ExpandedSkillDetails } from '../components/SkillList';
+import { SkillProcDataDialog } from './SkillProcDataDialog';
 
 import { HorseParameters } from '../uma-skill-tools/HorseTypes';
 
@@ -273,6 +274,7 @@ export function HorseDef(props) {
 	const {state, setState} = props;
 	const [skillPickerOpen, setSkillPickerOpen] = useState(false);
 	const [expanded, setExpanded] = useState(() => ImmSet());
+	const [procDataSkillId, setProcDataSkillId] = useState<string | null>(null);
 
 	const tabstart = props.tabstart();
 	let tabi = 0;
@@ -387,6 +389,7 @@ export function HorseDef(props) {
 
 	const skillList = useMemo(function () {
 		const u = uniqueSkillForUma(umaId);
+		const hasRunData = props.runData != null && props.umaIndex != null;
 		return Array.from(state.skills.values()).sort(skillOrder).map(id =>
 			expanded.has(id)
 				? <li key={id} class="horseExpandedSkill">
@@ -396,6 +399,9 @@ export function HorseDef(props) {
 						  dismissable={id != u}
 						  forcedPosition={state.forcedSkillPositions.get(id) || ''}
 						  onPositionChange={(value: string) => handlePositionChange(id, value)}
+						  runData={hasRunData ? props.runData : null}
+						  umaIndex={hasRunData ? props.umaIndex : null}
+						  onViewProcData={hasRunData ? () => setProcDataSkillId(id) : null}
 					  />
 				  </li>
 				: <li key={id} style="">
@@ -407,7 +413,7 @@ export function HorseDef(props) {
 						  )}
 				  </li>
 		);
-	}, [state.skills, umaId, expanded, props.courseDistance, state.forcedSkillPositions]);
+	}, [state.skills, umaId, expanded, props.courseDistance, state.forcedSkillPositions, props.runData, props.umaIndex]);
 
 	return (
 		<div class="horseDef">
@@ -435,16 +441,16 @@ export function HorseDef(props) {
 					<AptitudeSelect a={state.distanceAptitude} setA={setter('distanceAptitude')} tabindex={tabnext()} />
 				</div>
 				<div>
-					<span>Mood:</span>
-					<MoodSelect m={state.mood} setM={setter('mood')} tabindex={tabnext()} />
+					<span>{CC_GLOBAL ? 'Style aptitude:' : 'Strategy aptitude:'}</span>
+					<AptitudeSelect a={state.strategyAptitude} setA={setter('strategyAptitude')} tabindex={tabnext()} />
 				</div>
 				<div>
 					<span>{CC_GLOBAL ? 'Style:' : 'Strategy:'}</span>
 					<StrategySelect s={state.strategy} setS={setter('strategy')} disabled={hasRunawaySkill} tabindex={tabnext()} />
 				</div>
 				<div>
-					<span>{CC_GLOBAL ? 'Style aptitude:' : 'Strategy aptitude:'}</span>
-					<AptitudeSelect a={state.strategyAptitude} setA={setter('strategyAptitude')} tabindex={tabnext()} />
+					<span>Mood:</span>
+					<MoodSelect m={state.mood} setM={setter('mood')} tabindex={tabnext()} />
 				</div>
 			</div>
 			<div class="horseSkillHeader">Skills</div>
@@ -462,6 +468,15 @@ export function HorseDef(props) {
 			<div class={`horseSkillPickerWrapper ${skillPickerOpen ? "open" : ""}`}>
 				<SkillList ids={selectableSkills} selected={state.skills} setSelected={setSkillsAndClose} isOpen={skillPickerOpen} />
 			</div>
+			{procDataSkillId && props.runData != null && props.umaIndex != null && (
+				<SkillProcDataDialog
+					skillId={procDataSkillId}
+					compareRunData={props.runData}
+					courseDistance={props.courseDistance}
+					umaIndex={props.umaIndex}
+					onClose={() => setProcDataSkillId(null)}
+				/>
+			)}
 		</div>
 	);
 }

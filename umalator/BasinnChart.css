@@ -2,7 +2,8 @@
 	/*border: 2px solid rgb(224,214,204);*/
 	border: 2px solid rgb(181,174,187);
 	border-radius: 6px;
-	height: 550px;
+	flex: 1;
+	min-height: 0;
 	overflow-x: hidden;
 	overflow-y: auto;
 	width: 100%;
@@ -99,6 +100,10 @@
 .basinnChartWrapperWrapper {
 	position: relative;
 	width: 100%;
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
 }
 
 .basinnChartRefresh {
@@ -139,4 +144,41 @@
 
 .basinnChartRefreshText.hidden {
 	display: none;
+}
+
+/* --- Dark mode --- */
+.dark .basinnChartWrapper {
+	border-color: var(--border, #2e2e2e);
+}
+.dark .basinnChartWrapper.dirty {
+	border-color: rgb(180, 120, 50);
+}
+.dark .basinnChart {
+	color: var(--theme-brown, #d4a574);
+}
+.dark .basinnChart th {
+	background: linear-gradient(#2a2a2a, #222);
+}
+.dark .basinnChart .columnHeader {
+	border-bottom-color: var(--border, #2e2e2e);
+}
+.dark .basinnChartSortedAsc span::after,
+.dark .basinnChartSortedDesc span::after {
+	border-bottom-color: var(--theme-brown, #d4a574);
+	border-right-color: var(--theme-brown, #d4a574);
+}
+.dark .basinnChart tr.expanded {
+	background: #3d6e1e;
+}
+.dark .basinnChart tr.expanded-content-row {
+	background: var(--surface, #1e1e1e);
+}
+.dark .basinnChart tr.expanded-content-row td {
+	border-top-color: var(--border, #2e2e2e);
+}
+.dark .basinnChartRefresh {
+	color: rgb(180, 120, 50);
+}
+.dark .basinnChartRefreshText {
+	color: rgb(180, 120, 50);
 }

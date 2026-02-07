@@ -28,6 +28,7 @@
 .racetrackStatThresholds {
 	font-size: 0.8em;
 	text-align: center;
+	margin-bottom: 5px;
 }
 
 .mouseoverText {
@@ -68,3 +69,56 @@
 .poskeep-label line {
 	filter: drop-shadow(0.5px 0.5px 1px rgba(0, 0, 0, 0.3)) opacity(1) !important;
 }
+
+/* --- Dark mode --- */
+.dark .racetrackName {
+	color: var(--fg, #e4e4e7);
+	text-stroke: 1px var(--fg, #e4e4e7);
+	-webkit-text-stroke: 1px var(--fg, #e4e4e7);
+	text-shadow: -1px -1px 0 #1a1a1a, 1px -1px 0 #1a1a1a, -1px 1px 0 #1a1a1a, 1px 1px 0 #1a1a1a;
+}
+
+/* Elevation profile */
+.dark .elevationFill,
+.dark .hillArea polygon { fill: #8ec482; }
+.dark .grassLine { fill: #6a9a42; }
+
+/* Slopes row */
+.dark .slopesBg > rect:first-child { fill: #5e5468; }
+.dark .slopesBg > rect:last-child { fill: #8a6a9a; }
+.dark .slope.uphill > rect:first-child { fill: #d4be92; }
+.dark .slope.uphill > rect:nth-child(2) { fill: #a89058; }
+.dark .slope.downhill > rect:first-child { fill: #82d0c6; }
+.dark .slope.downhill > rect:nth-child(2) { fill: #5aa298; }
+
+/* Straights & corners row */
+.dark .sectionsBg:not(.slopesBg) > rect:first-child { fill: #4e4e58; }
+.dark .sectionsBg:not(.slopesBg) > rect:last-child { fill: #7a7a84; }
+.dark .straight > rect:first-child { fill: #88b4d6; }
+.dark .straight > rect:last-child { fill: #5e92c0; }
+.dark .corner > rect:first-child { fill: #dab090; }
+.dark .corner > rect:last-child { fill: #b88450; }
+
+/* Phases row */
+.dark .phase0 > rect:first-child { fill: #5cc4a0; }
+.dark .phase0 > rect:last-child { fill: #3e9478; }
+.dark .phase1 > rect:first-child { fill: #d8d090; }
+.dark .phase1 > rect:last-child { fill: #b0a850; }
+.dark .phase2 > rect:first-child { fill: #cca0b8; }
+.dark .phase2 > rect:last-child { fill: #a06e88; }
+.dark .phase3 > rect:first-child { fill: #c490b0; }
+.dark .phase3 > rect:last-child { fill: #985e80; }
+
+/* Ruler */
+.dark .rulerBg { fill: #444a54; }
+.dark .rulerTick { stroke: #98b4c4; }
+.dark .rulerText { fill: #98b4c4; }
+.dark .rulerBar { fill: #98b4c4; }
+
+/* Text & markers */
+.dark .sectionText { fill: #e0c8a4; stroke: #2a2a2a; }
+.dark .distanceMarker { fill: #e0c8a4; stroke: #2a2a2a; }
+.dark .distanceMarkerLine { stroke: #e0c8a4; }
+.dark .mouseoverLine { stroke: #e0c8a4; }
+.dark .mouseoverText { fill: #e0c8a4; stroke: #2a2a2a; }
+.dark .poskeep-label text { stroke: #2a2a2a; }

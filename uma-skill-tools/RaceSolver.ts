@@ -243,6 +243,7 @@ export class RaceSolver {
 	posKeepRng: PRNG
 	laneMovementRng: PRNG
 	specialConditionRng: PRNG
+	competeFightRng: PRNG
 	timers: Timer[]
 	startDash: boolean
 	startDelay: number
@@ -307,18 +308,29 @@ export class RaceSolver {
 	downhillActivations: Array<[number, number]>
 
 	// Compete Fight
+	canCompeteFight: boolean | null
 	competeFight: boolean
 	competeFightStart: number | null
 	competeFightEnd: number | null
 	competeFightTimer: Timer
+	competeFightEnabled: boolean
+	duelingRates: {
+		runaway: number,
+		frontRunner: number,
+		paceChaser: number,
+		lateSurger: number,
+		endCloser: number
+	} | null
 
 	// Lead Competition
+	leadCompetitionEnabled: boolean
 	leadCompetition: boolean
 	leadCompetitionStart: number | null
 	leadCompetitionEnd: number | null
 	leadCompetitionTimer: Timer
 	
 	// lane movement..........
+	laneMovementEnabled: boolean
 	currentLane: number
     targetLane: number
     laneChangeSpeed: number
@@ -359,6 +371,16 @@ export class RaceSolver {
 		isPacer?: boolean,
 		skillWisdomCheck?: boolean,
 		rushedKakari?: boolean,
+		competeFight?: boolean,
+		leadCompetition?: boolean,
+		duelingRates?: {
+			runaway: number,
+			frontRunner: number,
+			paceChaser: number,
+			lateSurger: number,
+			endCloser: number
+		},
+		laneMovement?: boolean,
 	}) {
 		// clone since green skills may modify the stat values
 		this.horse = Object.assign({}, params.horse);
@@ -375,6 +397,7 @@ export class RaceSolver {
 		this.posKeepRng = new Rule30CARng(this.rng.int32());
 		this.laneMovementRng = new Rule30CARng(this.rng.int32());
 		this.specialConditionRng = new Rule30CARng(this.rng.int32());
+		this.competeFightRng = new Rule30CARng(this.rng.int32());
 		this.timers = [];
 		this.conditionTimer = this.getNewTimer(-1.0);
 		this.accumulatetime = this.getNewTimer();
@@ -449,15 +472,21 @@ export class RaceSolver {
 			this.initRushedState();
 		}
 
+		this.competeFightEnabled = params.competeFight !== false;
+		this.duelingRates = params.duelingRates || null;
+		this.canCompeteFight = null;
 		this.competeFight = false;
 		this.competeFightStart = null;
 		this.competeFightEnd = null;
 		this.competeFightTimer = this.getNewTimer();
 
+		this.leadCompetitionEnabled = params.leadCompetition !== false;
 		this.leadCompetition = false;
 		this.leadCompetitionStart = null;
 		this.leadCompetitionEnd = null;
 		this.leadCompetitionTimer = this.getNewTimer();
+
+		this.laneMovementEnabled = params.laneMovement !== false;
 
 		const gateNumberRaw = this.gateRoll % 9;
 		const gateNumber = gateNumberRaw < 9 ? gateNumberRaw : 1 + (24 - gateNumberRaw) % 8;
@@ -640,12 +669,14 @@ export class RaceSolver {
 		this.processSkillActivations();
 		this.applyPositionKeepStates();
 		this.updatePositionKeepCoefficient();
-		// this.updateCompeteFight();
+		this.updateCompeteFight();
 		this.updateLeadCompetition();
 		this.updateLastSpurtState();
 		this.updateTargetSpeed();
 		this.applyForces();
-		this.applyLaneMovement();
+		if (this.laneMovementEnabled) {
+			this.applyLaneMovement();
+		}
 
 		let newSpeed = undefined;
 
@@ -1001,6 +1032,10 @@ export class RaceSolver {
 	}
 
 	updateCompeteFight() {
+		if (!this.competeFightEnabled) {
+			return;
+		}
+		
 		if (this.competeFight) {
 			if (this.hp.hpRatioRemaining() <= 0.05) {
 				this.competeFight = false;
@@ -1018,13 +1053,48 @@ export class RaceSolver {
 			return;
 		}
 
-		if (this.competeFightTimer.t >= 2) {
-			this.competeFight = true;
-			this.competeFightStart = this.pos;
+		if (this.canCompeteFight === null) {
+			if (this.duelingRates) {
+				let rate = 0;
+				if (this.posKeepStrategy === Strategy.Oonige) {
+					rate = this.duelingRates.runaway;
+				} else if (this.posKeepStrategy === Strategy.Nige) {
+					rate = this.duelingRates.frontRunner;
+				} else if (this.posKeepStrategy === Strategy.Senkou) {
+					rate = this.duelingRates.paceChaser;
+				} else if (this.posKeepStrategy === Strategy.Sasi) {
+					rate = this.duelingRates.lateSurger;
+				} else if (this.posKeepStrategy === Strategy.Oikomi) {
+					rate = this.duelingRates.endCloser;
+				}
+				
+				this.canCompeteFight = this.competeFightRng.random() < (rate / 100);
+				this.competeFightTimer.t = 0;
+			} else {
+				this.canCompeteFight = false;
+			}
+		}
+
+		if (!this.canCompeteFight) {
+			return;
+		}
+
+		if (this.competeFightTimer.t >= 1) {
+			if (this.competeFightRng.random() <= 0.4) {
+				this.competeFight = true;
+				this.competeFightStart = this.pos;
+			}
+			else {
+				this.competeFightTimer.t = 0;
+			}
 		}
 	}
 
 	updateLeadCompetition() {
+		if (!this.leadCompetitionEnabled) {
+			return;
+		}
+		
 		if (this.leadCompetition) {
 			let leadCompeteDuration = Math.pow(700 * this.horse.guts, 0.5) * 0.012;
 
@@ -1089,9 +1159,9 @@ export class RaceSolver {
 		selectedUma.firstUmaInLateRace = true;
 	}
 
-	updateLastSpurtState() {
+	updateLastSpurtState(force: boolean = false) {
 		if (this.isLastSpurt || this.phase < 2) return;
-		if (this.lastSpurtTransition == -1) {
+		if (this.lastSpurtTransition == -1 || force) {
 			const initialLastSpurtSpeed = this.lastSpurtSpeed;
 			const v = this.hp.getLastSpurtPair(this, this.lastSpurtSpeed, this.baseTargetSpeed[2]);
 			this.lastSpurtTransition = v[0];
@@ -1128,7 +1198,7 @@ export class RaceSolver {
 		}
 
 		if (this.competeFight) {
-			this.targetSpeed += Math.pow(200 * this.horse.guts, 0.709) * 0.0001;
+			this.targetSpeed += Math.pow(200 * this.horse.guts, 0.708) * 0.0001;
 		}
 
 		if (this.leadCompetition) {
@@ -1349,7 +1419,7 @@ export class RaceSolver {
 				if (s.perspective == Perspective.Self) ++this.activateCountHeal;
 				this.hp.recover(ef.modifier);
 				if (this.phase >= 2 && !this.isLastSpurt) {
-					this.updateLastSpurtState();
+					this.updateLastSpurtState(true);
 				}
 				break;
 			case SkillType.ActivateRandomGold:
