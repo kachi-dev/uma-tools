@@ -1,7 +1,7 @@
 import { h, Fragment } from 'preact';
 import { useState, useMemo, useId, useRef } from 'preact/hooks';
 import { Text, Localizer } from 'preact-i18n';
-
+import {Map as ImmMap} from 'immutable';
 import {
 	ColumnDef, SortFn, SortingState,
 	createSortedRowModel, flexRender, rowSortingFeature, sortFns, tableFeatures, useTable
@@ -23,6 +23,13 @@ import skillnames from '../uma-skill-tools/data/skillnames.json';
 import skillmeta from '../skill_meta.json';
 import umas from '../umas.json';
 import icons from '../icons.json';
+
+function skillmeta(id: string) {
+	// handle the fake skills (e.g., variations of Sirius unique) inserted by make_skill_data with ids like 100701-1
+	return skill_meta[id.split('-')[0]];
+}
+
+
 
 export function isPurpleSkill(id) {
 	const iconId = skillmeta[id].iconId;
@@ -97,6 +104,45 @@ function SkillNameCell(props) {
 	);
 }
 
+
+function scaleBaseCost(baseCost: number, hint: number) {
+	return Math.floor(baseCost * (1 - (hint <= 3 ? 0.1 * hint : 0.3 + 0.05 * (hint - 3))));
+}
+
+function costForId(id, hints) {
+	const groupId = skillmeta(id).groupId;
+	return Object.keys(skilldata).reduce((a,b) => {
+		const info = skillmeta(b);
+		const rb = skilldata[b].rarity, rid = skilldata[id].rarity;
+		return a + (info.groupId == groupId &&
+			// sum cost for skills with ○ and ◎ variants of the same rarity
+			(b == id || rb < rid || rb == rid && +b > +id) && info.iconId[info.iconId.length-1] != '4'  // avoid counting purple skills toward their normal versions
+			? scaleBaseCost(info.baseCost, hints.get(b)) : 0)
+	}, 0);
+}
+
+
+function SkillCostCell(props) {
+	return (
+		<Fragment>
+			<button class={`hintbtn hintDown${props.hint == 0 ? ' hintbtnDisabled' : ''}`} disabled={props.hint == 0}
+				onClick={() => props.updateHint(props.id, props.hint - 1)}>
+				<div class="hintbtnDummyBackground"></div>
+				<span class="hintbtnText">−</span>
+			</button>
+			<span class="hintedCost">{costForId(props.id, props.hints)}</span>
+			<button class={`hintbtn hintUp${props.hint == 5 ? ' hintbtnDisabled' : ''}`} disabled={props.hint == 5}
+				onClick={() => props.updateHint(props.id, props.hint + 1)}>
+				<div class="hintbtnDummyBackground"></div>
+				<span class="hintbtnText">+</span>
+			</button>
+			{props.hint > 0 && <span class="hintLevel">{props.hint}</span>}
+		</Fragment>
+	);
+}
+
+
+
 function headerRenderer(radioGroup, selectedType, type, text, onClick) {
 	function click(e) {
 		e.stopPropagation();
@@ -133,10 +179,10 @@ export function BasinnChart(props) {
 	}
 
 	const columns = useMemo(() => [{
-		header: () => <span>Skill name</span>,
+		header: () => <span onClick={c.header.column.getToggleSortingHandler()}>Skill name</span>,
 		accessorKey: 'id',
 		cell: (info) => <SkillNameCell id={info.getValue()} showUmaIcons={props.showUmaIcons} />,
-		sortingFn: (a,b,_) => skillnames[a] < skillnames[b] ? -1 : 1
+		sortingFn: (a,b) => skillnames[a.getValue('id')][0] < skillnames[b.getValue('id')][0] ? -1 : 1
 	}, {
 		header: headerRenderer(radioGroup, selectedType, 'min', 'Minimum', headerClick),
 		accessorKey: 'min',
@@ -156,7 +202,26 @@ export function BasinnChart(props) {
 		accessorKey: 'median',
 		cell: formatBasinn,
 		sortDescFirst: true
-	}], [selectedType, props.showUmaIcons]);
+	}, {
+		header: (c) => <span onClick={c.header.column.getToggleSortingHandler()}>SP Cost</span>,
+		id: 'spcost',
+		accessorFn: (row) => ({id: row.id, hint: props.hints.get(row.id)}),
+		cell: (info) => <SkillCostCell {...info.getValue()} hints={props.hints} updateHint={props.updateHint} />,
+		sortFn: (a,b) => {
+			const ac = costForId(a.getValue('id'), props.hints), bc = costForId(b.getValue('id'), props.hints);
+			return (bc < ac) - (ac < bc);
+		},
+		sortDescFirst: false
+	}, {
+		header: (c) => <span onClick={c.header.column.getToggleSortingHandler()}>{CC_GLOBAL ? 'L / SP' : 'バ / SP'}</span>,
+		id: 'bsp',
+		accessorFn: (row) => row.mean / costForId(row.id, props.hints),
+		cell: (info) => {
+			const x = info.getValue();
+			return <span>{isNaN(x) || Math.abs(x) == Infinity ? '--' : x.toFixed(6)}</span>;
+		},
+		sortDescFirst: true
+	}], [selectedType, props.hints]);
 
 	const [sorting, setSorting] = useState<SortingState>([{id: 'median', desc: true}]);
 

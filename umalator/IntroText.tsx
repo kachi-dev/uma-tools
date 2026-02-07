@@ -68,10 +68,12 @@ export function IntroText(props) {
 			</details>
 			<details open={true}>
 				<summary>Changelog</summary>
+
 				<section>
 					<h2>2025-02-06</h2>
 					<ul>
 						<li>Restructured the UI.</li>
+						<li>Added skill point cost implementation from the original Umalator.</li>
 					</ul>
 				</section>
 				<section>
