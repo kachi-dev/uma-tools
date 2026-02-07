@@ -2573,7 +2573,7 @@ function App(props) {
 							</div>
 						</div>
 					</div>
-					{mode == Mode.Compare && <div class="racetrackRow">
+					<div class="racetrackRow">
 					<RaceTrack courseid={courseId} width={960} height={240} xOffset={20} yOffset={15} yExtra={20} mouseMove={rtMouseMove} mouseLeave={rtMouseLeave} onSkillDrag={handleSkillDrag} regions={[...skillActivations, ...rushedIndicators]} posKeepLabels={showLabels ? posKeepLabels : []} uma1={uma1} uma2={uma2} pacer={pacer}>
 						<VelocityLines data={chartData} courseDistance={course.distance} width={960} height={250} xOffset={20} showHp={showHp} showPoskeepGap={showPoskeepGap} showLanes={mode == Mode.Compare ? showLanes : false} horseLane={course.horseLane} showVirtualPacemaker={showVirtualPacemakerOnGraph && posKeepMode === PosKeepMode.Virtual} selectedPacemakers={getSelectedPacemakers()} />
 						
@@ -2590,7 +2590,7 @@ function App(props) {
 						<label><input type="checkbox" checked={showPoskeepGap} onClick={toggleShowPoskeepGap} /> Show Poskeep Gap</label>
 						<label><input type="checkbox" checked={showLabels} onClick={toggleShowLabels} /> Show Labels</label>
 					</div>
-				</div>}
+				</div>
 					<div class="controlPanel">
 						<div class="controlPanelFields">
 							<div class="controlPanelField">
