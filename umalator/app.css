@@ -1735,3 +1735,134 @@ body {
 }
 
 body { background: var(--bg); color: var(--fg); }
+
+@media (max-width: 768px) {
+	#app {
+		grid-template-columns: 1fr;
+	}
+	#mainContent {
+		grid-column: 1;
+		padding-bottom: 72px;
+	}
+	#mobileBottomBar {
+		position: fixed;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		height: 56px;
+		padding-bottom: env(safe-area-inset-bottom, 0);
+		display: flex;
+		align-items: stretch;
+		justify-content: center;
+		gap: 0;
+		background: var(--bg, #fff);
+		border-top: 1px solid hsl(210 10% 85%);
+		z-index: 100;
+	}
+	.mobileBottomBarBtn {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 2px;
+		padding: 8px;
+		border: none;
+		background: transparent;
+		color: hsl(215 16% 50%);
+		cursor: pointer;
+		font-size: 11px;
+		font-weight: 500;
+		transition: all 0.15s ease;
+	}
+	.mobileBottomBarBtn:hover {
+		background: hsl(210 6% 93%);
+		color: hsl(215 20% 30%);
+	}
+	.mobileBottomBarBtn.active {
+		background: hsl(215 95% 95%);
+		color: hsl(215 70% 50%);
+	}
+	.mobileDialogOverlay {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.5);
+		z-index: 1000;
+		display: flex;
+		align-items: flex-end;
+		justify-content: center;
+	}
+	.mobileDialog {
+		position: relative;
+		width: 100%;
+		max-width: 100%;
+		max-height: 85vh;
+		background: var(--bg, #fff);
+		border-radius: 12px 12px 0 0;
+		box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+	.mobileDialogContent {
+		overflow-y: auto;
+		flex: 1;
+		min-height: 0;
+		padding: 16px 16px 24px;
+		padding-bottom: calc(24px + env(safe-area-inset-bottom, 0));
+	}
+	.mobileDialogContent--uma > div {
+		display: none;
+	}
+	.mobileDialogContent--uma > div.selected {
+		display: block;
+	}
+	.mobileDialogClose {
+		position: absolute;
+		top: 12px;
+		right: 12px;
+		width: 36px;
+		height: 36px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border: none;
+		background: transparent;
+		color: hsl(215 16% 50%);
+		font-size: 1.25rem;
+		cursor: pointer;
+		z-index: 1;
+		border-radius: 8px;
+		transition: all 0.15s ease;
+	}
+	.mobileDialogClose:hover {
+		background: hsl(210 6% 93%);
+		color: hsl(215 20% 30%);
+	}
+}
+
+.dark #mobileBottomBar {
+	background: var(--bg);
+	border-top-color: var(--border);
+}
+.dark .mobileBottomBarBtn {
+	color: var(--muted);
+}
+.dark .mobileBottomBarBtn:hover {
+	background: hsl(210 10% 20%);
+	color: var(--fg);
+}
+.dark .mobileBottomBarBtn.active {
+	background: hsl(215 95% 20%);
+	color: hsl(215 70% 70%);
+}
+.dark .mobileDialog {
+	background: var(--bg);
+}
+.dark .mobileDialogClose {
+	color: var(--muted);
+}
+.dark .mobileDialogClose:hover {
+	background: hsl(210 10% 20%);
+	color: var(--fg);
+}
