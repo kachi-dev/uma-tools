@@ -425,28 +425,28 @@ export function HorseDef(props) {
 				<Stat value={state.guts} change={setter('guts')} tabindex={tabnext()} label="Guts" statIdx={3} />
 				<Stat value={state.wisdom} change={setter('wisdom')} tabindex={tabnext()} label={CC_GLOBAL ? 'Wit' : 'Wisdom'} statIdx={4} />
 			</div>
-			<div class="horseApts">
-				<div class="horseAptCell">
-					<span class="horseAptLabel">Surf</span>
-					<AptitudeSelect a={state.surfaceAptitude} setA={setter('surfaceAptitude')} tabindex={tabnext()} />
-				</div>
-				<div class="horseAptCell">
-					<span class="horseAptLabel">Dist</span>
-					<AptitudeSelect a={state.distanceAptitude} setA={setter('distanceAptitude')} tabindex={tabnext()} />
-				</div>
-				<div class="horseAptCell">
-					<span class="horseAptLabel">{CC_GLOBAL ? 'Style' : 'Strat'}</span>
-					<AptitudeSelect a={state.strategyAptitude} setA={setter('strategyAptitude')} tabindex={tabnext()} />
-				</div>
-				<div class="horseAptCell horseAptCell--run">
-					<span class="horseAptLabel">{CC_GLOBAL ? 'Strategy' : 'Run Style'}</span>
-					<StrategySelect s={state.strategy} setS={setter('strategy')} disabled={hasRunawaySkill} tabindex={tabnext()} />
-				</div>
-				<div class="horseAptCell">
-					<span class="horseAptLabel">Mood</span>
-					<MoodSelect m={state.mood} setM={setter('mood')} tabindex={tabnext()} />
-				</div>
+		<div class="horseApts">
+			<div class="horseAptCell horseAptCell--run">
+				<span class="horseAptLabel">{CC_GLOBAL ? 'Strategy' : 'Run Style'}</span>
+				<StrategySelect s={state.strategy} setS={setter('strategy')} disabled={hasRunawaySkill} tabindex={tabnext()} />
 			</div>
+			<div class="horseAptCell horseAptCell--fixed">
+				<span class="horseAptLabel">Surf</span>
+				<AptitudeSelect a={state.surfaceAptitude} setA={setter('surfaceAptitude')} tabindex={tabnext()} />
+			</div>
+			<div class="horseAptCell horseAptCell--fixed">
+				<span class="horseAptLabel">Dist</span>
+				<AptitudeSelect a={state.distanceAptitude} setA={setter('distanceAptitude')} tabindex={tabnext()} />
+			</div>
+			<div class="horseAptCell horseAptCell--fixed">
+				<span class="horseAptLabel">{CC_GLOBAL ? 'Style' : 'Strat'}</span>
+				<AptitudeSelect a={state.strategyAptitude} setA={setter('strategyAptitude')} tabindex={tabnext()} />
+			</div>
+			<div class="horseAptCell horseAptCell--fixed">
+				<span class="horseAptLabel">Mood</span>
+				<MoodSelect m={state.mood} setM={setter('mood')} tabindex={tabnext()} />
+			</div>
+		</div>
 	<div class="horseSectionLabel">Skills</div>
 		<div class="horseSkillListWrapper" onClick={handleSkillClick}>
 			<ul class="horseSkillPills">

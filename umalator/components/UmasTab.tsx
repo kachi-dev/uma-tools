@@ -72,6 +72,20 @@ function skillOrder(a: string, b: string): number {
     return +(y < x) - +(x < y) || +(b < a) - +(a < b);
 }
 
+function calcTotalSP(skills: Array<{ id: number; level: number }>): number {
+    return skills.reduce((sum, s) => {
+        const idStr = String(s.id);
+        const rarity: number = (skilldata as any)[idStr]?.rarity ?? 1;
+        if (rarity >= 3 && rarity <= 5) return sum;
+        return sum + ((skillmeta as any)[idStr]?.baseCost ?? 0);
+    }, 0);
+}
+
+type SortKey = 'sp';
+type SortDir = 'asc' | 'desc';
+interface SortState { key: SortKey; dir: SortDir; }
+const SORT_LABELS: Record<SortKey, string> = { sp: 'Total SP' };
+
 // ── Filter logic ─────────────────────────────────────────────────────────────
 
 function panelFilterCount(f: FilterState): number {
@@ -291,12 +305,54 @@ function FilterPanel({ filters, onChange, availableSkills }: {
     );
 }
 
-function SearchBar({ name, onNameChange, filtersOpen, onToggleFilters, filterCount }: {
+function SortControl({ sort, onSortChange }: {
+    sort: SortState | null;
+    onSortChange: (s: SortState | null) => void;
+}) {
+    const sortKeys = Object.keys(SORT_LABELS) as SortKey[];
+
+    function handleKeyChange(e: Event) {
+        const val = (e.target as HTMLSelectElement).value;
+        if (!val) {
+            onSortChange(null);
+        } else {
+            onSortChange({ key: val as SortKey, dir: sort?.dir ?? 'asc' });
+        }
+    }
+
+    function toggleDir() {
+        if (!sort) return;
+        onSortChange({ ...sort, dir: sort.dir === 'asc' ? 'desc' : 'asc' });
+    }
+
+    return (
+        <div class="umasSortControl">
+            <span class="umasSortLabel">Sort</span>
+            <select class="umasSortSelect" value={sort?.key ?? ''} onChange={handleKeyChange}>
+                <option value="">—</option>
+                {sortKeys.map(k => <option key={k} value={k}>{SORT_LABELS[k]}</option>)}
+            </select>
+            <button
+                type="button"
+                class={`umasSortDirBtn${!sort ? ' umasSortDirBtn--disabled' : ''}`}
+                onClick={toggleDir}
+                disabled={!sort}
+                title={sort?.dir === 'asc' ? 'Ascending' : 'Descending'}
+            >
+                {sort?.dir === 'desc' ? '▼' : '▲'}
+            </button>
+        </div>
+    );
+}
+
+function SearchBar({ name, onNameChange, filtersOpen, onToggleFilters, filterCount, sort, onSortChange }: {
     name: string;
     onNameChange: (v: string) => void;
     filtersOpen: boolean;
     onToggleFilters: () => void;
     filterCount: number;
+    sort: SortState | null;
+    onSortChange: (s: SortState | null) => void;
 }) {
     return (
         <div class="umasSearchBar">
@@ -307,6 +363,7 @@ function SearchBar({ name, onNameChange, filtersOpen, onToggleFilters, filterCou
                 value={name}
                 onInput={(e) => onNameChange((e.target as HTMLInputElement).value)}
             />
+            <SortControl sort={sort} onSortChange={onSortChange} />
             <button
                 class={`umasFiltersToggle${filtersOpen ? ' umasFiltersToggle--open' : ''}`}
                 onClick={onToggleFilters}
@@ -328,21 +385,28 @@ function SkillGrid({ skills, cardId }: { skills: Array<{ id: number; level: numb
         })
         .sort((a, b) => skillOrder(String(a.id), String(b.id)));
     if (known.length === 0) return null;
+    const totalSP = calcTotalSP(skills);
     return (
-        <div class="umasSkillGrid">
-            {known.map(s => {
-                const idStr = String(s.id);
-                const iconId = (skillmeta as any)[idStr]?.iconId;
-                const rarity: number = (skilldata as any)[idStr]?.rarity ?? 1;
-                const rarityClass = RARITY_CLASS[rarity] ?? 'skill-white';
-                if (!iconId) return null;
-                return (
-                    <div key={idStr} class={`umasSkillPill ${rarityClass}`}>
-                        <img class="umasSkillPillIcon" src={`/uma-tools/icons/${iconId}.png`} loading="lazy" />
-                        <span class="umasSkillPillName"><Text id={`skillnames.${idStr}`} /></span>
-                    </div>
-                );
-            })}
+        <div class="umasSkillSection">
+            <div class="umasSkillGrid">
+                {known.map(s => {
+                    const idStr = String(s.id);
+                    const iconId = (skillmeta as any)[idStr]?.iconId;
+                    const rarity: number = (skilldata as any)[idStr]?.rarity ?? 1;
+                    const rarityClass = RARITY_CLASS[rarity] ?? 'skill-white';
+                    if (!iconId) return null;
+                    return (
+                        <div key={idStr} class={`umasSkillPill ${rarityClass}`}>
+                            <img class="umasSkillPillIcon" src={`/uma-tools/icons/${iconId}.png`} loading="lazy" />
+                            <span class="umasSkillPillName"><Text id={`skillnames.${idStr}`} /></span>
+                        </div>
+                    );
+                })}
+            </div>
+            <div class="umasSkillSpTotal">
+                <span class="umasSkillSpTotalLabel">Total SP</span>
+                <span class="umasSkillSpTotalValue">{totalSP.toLocaleString()}</span>
+            </div>
         </div>
     );
 }
@@ -466,6 +530,7 @@ export function UmasTab({ onLoadUma1, onLoadUma2, onExport }: UmasTabProps = {})
     const [isImporting, setIsImporting] = useState(false);
     const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
     const [filtersOpen, setFiltersOpen] = useState(false);
+    const [sort, setSort] = useState<SortState | null>(null);
     const intlCtx = useContext(IntlContext as any) as any;
     const intlSkillNames: Record<string, string> = intlCtx?.intl?.dictionary?.skillnames ?? {};
 
@@ -508,7 +573,15 @@ export function UmasTab({ onLoadUma1, onLoadUma2, onExport }: UmasTabProps = {})
 
     const availableSkills = useMemo(() => buildSkillIndex(importedUmas, intlSkillNames), [importedUmas, intlSkillNames]);
 
-    const visible = useMemo(() => filterUmas(importedUmas, filters), [importedUmas, filters]);
+    const visible = useMemo(() => {
+        const filtered = filterUmas(importedUmas, filters);
+        if (!sort) return filtered;
+        return [...filtered].sort((a, b) => {
+            let valA = 0, valB = 0;
+            if (sort.key === 'sp') { valA = calcTotalSP(a.skills); valB = calcTotalSP(b.skills); }
+            return sort.dir === 'asc' ? valA - valB : valB - valA;
+        });
+    }, [importedUmas, filters, sort]);
 
     const badgeCount = panelFilterCount(filters);
     const showCount = isFilterActive(filters) && importedUmas.length > 0;
@@ -554,6 +627,8 @@ export function UmasTab({ onLoadUma1, onLoadUma2, onExport }: UmasTabProps = {})
                         filtersOpen={filtersOpen}
                         onToggleFilters={() => setFiltersOpen(o => !o)}
                         filterCount={badgeCount}
+                        sort={sort}
+                        onSortChange={setSort}
                     />
                     {filtersOpen && (
                         <FilterPanel

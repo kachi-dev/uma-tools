@@ -19,7 +19,7 @@ import { HorseDef, horseDefTabs, isGeneralSkill } from '../components/HorseDef';
 import { TRACKNAMES_ja, TRACKNAMES_en } from '../strings/common';
 import { RaceState } from '../uma-skill-tools/RaceSolver';
 
-import { getActivateableSkills, isPurpleSkill, getNullRow, BasinnChart } from './BasinnChart';
+import { getActivateableSkills, isPurpleSkill, isHpOnlySkill, getNullRow, BasinnChart } from './BasinnChart';
 
 import { initTelemetry, postEvent } from './telemetry';
 
@@ -2222,6 +2222,8 @@ function App(props) {
 
 			uma = uma1.toJS();
 		}
+
+		skills = skills.filter(id => !isPurpleSkill(id) && !isHpOnlySkill(id));
 		
 		const filler = new Map();
 		skills.forEach(id => filler.set(id, getNullRow(id)));
@@ -2275,7 +2277,7 @@ function App(props) {
 
 	function basinnChartSelection(skillId) {
 		const r = tableData.get(skillId);
-		if (r.runData != null) {
+		if (r?.runData != null) {
 			setResults(r);
 			setSelectedSkillId(skillId);
 		} else {

@@ -188,6 +188,72 @@
     color: var(--muted, #6b7280);
 }
 
+/* Sort control */
+
+.umasSortControl {
+    display: flex;
+    align-items: stretch;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.umasSortLabel {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted, #6b7280);
+    align-self: center;
+}
+
+.umasSortSelect {
+    padding: 7px 8px;
+    font-size: 14px;
+    font-family: inherit;
+    background: var(--input-bg, #fff);
+    border: 1px solid var(--input-border, hsl(210 14% 83%));
+    border-radius: 6px 0 0 6px;
+    color: var(--fg, #111827);
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.12s;
+    line-height: 1;
+}
+
+.umasSortSelect:focus {
+    border-color: hsl(215 70% 55%);
+    z-index: 1;
+    position: relative;
+}
+
+.umasSortDirBtn {
+    padding: 0 8px;
+    font-size: 13px;
+    font-family: inherit;
+    background: var(--input-bg, #fff);
+    border: 1px solid var(--input-border, hsl(210 14% 83%));
+    border-left: none;
+    border-radius: 0 6px 6px 0;
+    color: var(--fg, #111827);
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+}
+
+.umasSortDirBtn:hover:not(:disabled) {
+    background: hsl(215 50% 95%);
+    border-color: hsl(215 70% 55%);
+    z-index: 1;
+    position: relative;
+}
+
+.umasSortDirBtn--disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
 /* Filter panel */
 
 .umasFilterPanel {
@@ -319,7 +385,7 @@
 .umasSkillSearch {
     width: 100%;
     box-sizing: border-box;
-    padding: 6px 10px;
+    padding: 8px 10px;
     font-size: 13px;
     font-family: inherit;
     background: var(--input-bg, #fff);
@@ -569,6 +635,11 @@
 
 /* Skills */
 
+.umasSkillSection {
+    display: flex;
+    flex-direction: column;
+}
+
 .umasSkillGrid {
     display: flex;
     flex-wrap: wrap;
@@ -576,12 +647,36 @@
     padding: 8px 12px;
 }
 
+.umasSkillSpTotal {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    padding: 5px 12px 7px;
+    border-top: 1px solid var(--border, #e5e7eb);
+}
+
+.umasSkillSpTotalLabel {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted, #6b7280);
+}
+
+.umasSkillSpTotalValue {
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--fg, #111827);
+}
+
 .umasSkillPill {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 3px 7px 3px 5px;
-    border-radius: 5px;
+    gap: 5px;
+    padding: 5px 9px 5px 7px;
+    border-radius: 6px;
     border: 1px solid var(--border, #e5e7eb);
     border-left-width: 3px;
     background: hsl(220 10% 97%);
@@ -589,13 +684,13 @@
 }
 
 .umasSkillPillIcon {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     flex-shrink: 0;
 }
 
 .umasSkillPillName {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 500;
     color: var(--fg, #111827);
     white-space: nowrap;
@@ -612,6 +707,31 @@
     border-top-color: var(--border);
     border-right-color: var(--border);
     border-bottom-color: var(--border);
+}
+
+.dark .umasSkillSpTotal {
+    border-top-color: var(--border);
+}
+
+.dark .umasSortSelect {
+    background: var(--input-bg);
+    border-color: var(--input-border);
+    color: var(--fg);
+}
+
+.dark .umasSortSelect:focus {
+    border-color: hsl(215 60% 55%);
+}
+
+.dark .umasSortDirBtn {
+    background: var(--input-bg);
+    border-color: var(--input-border);
+    color: var(--fg);
+}
+
+.dark .umasSortDirBtn:hover:not(:disabled) {
+    background: hsl(215 20% 20%);
+    border-color: hsl(215 60% 55%);
 }
 
 /* ── Card actions ────────────────────────────────────────────── */
