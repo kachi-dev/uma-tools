@@ -112,10 +112,6 @@ export function UmaSelector(props) {
 			</div>
 			<div class="umaEpithet"><span>{props.value && u.outfits[props.value]}</span></div>
 			{props.actions && <div class="umaSelectorActions">{props.actions}</div>}
-			<div class="resetButtons">
-				{props.onReset && <button className="resetUmaButton" onClick={props.onReset} title="Reset this horse to default stats and skills">Reset</button>}
-				{props.onResetAll && <button className="resetUmaButton" onClick={props.onResetAll} title="Reset all horses to default stats and skills">Reset All</button>}
-			</div>
 			<div class="umaSelectWrapper">
 				<input type="text" class="umaSelectInput" value={query.input} tabindex={props.tabindex} onInput={handleInput} onKeyDown={handleKeyDown} onFocus={() => setOpen(true)} onBlur={handleBlur} ref={input} />
 				<ul class={`umaSuggestions ${open ? 'open' : ''}`} onMouseDown={handleClick} ref={suggestionsContainer}>
@@ -316,10 +312,6 @@ export function HorseDef(props) {
 		);
 	}
 
-	function resetThisHorse() {
-		setState(new HorseState());
-	}
-
 	function openSkillPicker(e) {
 		e.stopPropagation();
 		setSkillPickerOpen(true);
@@ -425,7 +417,7 @@ export function HorseDef(props) {
 	return (
 		<div class="horseDef">
 			<div class="horseDefHeader">{props.children}</div>
-			<UmaSelector value={umaId} select={setUma} tabindex={tabnext()} onReset={resetThisHorse} onResetAll={props.onResetAll} actions={props.headerActions} />
+			<UmaSelector value={umaId} select={setUma} tabindex={tabnext()} actions={props.headerActions} />
 			<div class="horseStats">
 				<Stat value={state.speed} change={setter('speed')} tabindex={tabnext()} label="Speed" statIdx={0} />
 				<Stat value={state.stamina} change={setter('stamina')} tabindex={tabnext()} label="Stamina" statIdx={1} />

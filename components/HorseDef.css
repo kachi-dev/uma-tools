@@ -46,8 +46,8 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 24px;
-	height: 24px;
+	width: 28px;
+	height: 28px;
 	background: var(--bg, white);
 	border: 1px solid hsl(210 10% 82%);
 	border-radius: 5px;
@@ -108,7 +108,7 @@
 }
 
 .umaEpithet > span {
-	color: var(--uma-brown, rgb(121,64,22));
+	color: white;
 	font-size: 1.4em;
 	font-weight: bold;
 	margin: 0 auto;
@@ -124,7 +124,7 @@
 	background: none;
 	border: none;
 	box-sizing: border-box;
-	color: var(--uma-brown, rgb(121,64,22));
+	color: white;
 	font-size: 1.4em;
 	font-weight: bold;
 	text-align: center;
@@ -866,11 +866,11 @@
 }
 
 .dark .umaEpithet > span {
-	color: var(--theme-brown, #d4a574);
+	color: white;
 }
 
 .dark .umaSelectInput {
-	color: var(--theme-brown, #d4a574);
+	color: white;
 }
 
 .dark .umaSuggestions {

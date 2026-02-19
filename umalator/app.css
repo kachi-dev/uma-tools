@@ -1163,7 +1163,8 @@ body {
 	border-bottom-color: hsl(215 70% 50%);
 }
 
-.umaTabBar #expandBtn {
+.umaTabBar #expandBtn,
+.umaTabBar .horseActionBtn:last-child {
 	margin-left: auto;
 	align-self: center;
 	margin-right: 8px;

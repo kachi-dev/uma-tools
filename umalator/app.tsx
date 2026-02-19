@@ -1,7 +1,7 @@
 import { h, Fragment, render } from 'preact';
 import { useState, useReducer, useMemo, useEffect, useRef, useId, useCallback } from 'preact/hooks';
 import { Text, IntlProvider } from 'preact-i18n';
-import { Settings, Save, Upload, Download, Copy, Clipboard, Trash2, Camera } from 'lucide-preact';
+import { Settings, Save, Upload, Download, Copy, Clipboard, Trash2, Camera, RotateCcw } from 'lucide-preact';
 import { Record, Set as ImmSet, Map as ImmMap } from 'immutable';
 import * as d3 from 'd3';
 import { computePosition, flip } from '@floating-ui/dom';
@@ -1595,7 +1595,7 @@ function ImportDialog({ onClose, onImport }: { onClose: () => void; onImport: (s
     );
 }
 
-function HorseSaveLoadActions({ state, setState }: { state: HorseState; setState: (s: HorseState) => void }) {
+function HorseSaveLoadActions({ state, setState, onReset }: { state: HorseState; setState: (s: HorseState) => void; onReset?: () => void }) {
     const [savedSlots, setSavedSlots] = useState(() => getSavedSlotNames());
     const [isOCRModalOpen, setIsOCRModalOpen] = useState(false);
     const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
@@ -1700,13 +1700,14 @@ function HorseSaveLoadActions({ state, setState }: { state: HorseState; setState
     return (
         <>
             <Dropdown
-                trigger={h('button', { class: 'horseActionBtn', title: 'Save' }, h(Save, { size: 14 }))}
+                trigger={h('button', { class: 'horseActionBtn', title: 'Save' }, h(Save, { size: 16 }))}
                 items={saveMenuItems}
             />
             <Dropdown
-                trigger={h('button', { class: 'horseActionBtn', title: 'Load' }, h(Upload, { size: 14 }))}
+                trigger={h('button', { class: 'horseActionBtn', title: 'Load' }, h(Upload, { size: 16 }))}
                 items={loadMenuItems}
             />
+            {onReset && <button class="horseActionBtn" title="Reset this uma" onClick={onReset}>{h(RotateCcw, { size: 16 })}</button>}
             <OCRModal
                 isOpen={isOCRModalOpen}
                 onClose={() => setIsOCRModalOpen(false)}
@@ -2583,7 +2584,7 @@ function App(props) {
 				<div class={`umaTabItem ${currentIdx == 0 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx0)}>Uma 1</div>
 				{mode == Mode.Compare && <div class={`umaTabItem ${currentIdx == 1 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx1)}>Uma 2</div>}
 				{posKeepMode == PosKeepMode.Virtual && mode == Mode.Compare && <div class={`umaTabItem ${currentIdx == 2 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx2)}>Pacemaker</div>}
-				{mode == Mode.Compare && <div id="expandBtn" title="Expand panel" onClick={toggleExpand} />}
+				{mode == Mode.Compare && <button class="horseActionBtn" title="Reset all umas" onClick={resetAllUmas}>{h(Trash2, { size: 16 })}</button>}
 			</div>
 		</Fragment>
 	);
@@ -2739,9 +2740,9 @@ function App(props) {
 		<>
 			<div class={!expanded && currentIdx == 0 ? 'selected' : ''}>
 				<HorseDef key={uma1.outfitId} state={uma1} setState={setUma1} courseDistance={course.distance} tabstart={() => 4} onResetAll={resetAllUmas} runData={mode == Mode.Compare ? runData : null} umaIndex={mode == Mode.Compare ? 0 : null}
-					headerActions={<HorseSaveLoadActions state={uma1} setState={setUma1} />}>
-					{expanded ? 'Uma 1' : umaTabs}
-				</HorseDef>
+				headerActions={<HorseSaveLoadActions state={uma1} setState={setUma1} onReset={() => setUma1(new HorseState())} />}>
+				{expanded ? 'Uma 1' : umaTabs}
+			</HorseDef>
 			</div>
 			{expanded &&
 				<div id="copyUmaButtons">
@@ -2751,14 +2752,14 @@ function App(props) {
 				</div>}
 			{mode == Mode.Compare && <div class={!expanded && currentIdx == 1 ? 'selected' : ''}>
 				<HorseDef key={uma2.outfitId} state={uma2} setState={setUma2} courseDistance={course.distance} tabstart={() => 4 + horseDefTabs()} onResetAll={resetAllUmas} runData={runData} umaIndex={1}
-					headerActions={<HorseSaveLoadActions state={uma2} setState={setUma2} />}>
-					{expanded ? 'Uma 2' : umaTabs}
-				</HorseDef>
+				headerActions={<HorseSaveLoadActions state={uma2} setState={setUma2} onReset={() => setUma2(new HorseState())} />}>
+				{expanded ? 'Uma 2' : umaTabs}
+			</HorseDef>
 			</div>}
 			{posKeepMode == PosKeepMode.Virtual && mode == Mode.Compare && <div class={!expanded && currentIdx == 2 ? 'selected' : ''}>
 				<HorseDef key={pacer.outfitId} state={pacer} setState={setPacer} courseDistance={course.distance} tabstart={() => 4 + (mode == Mode.Compare ? 2 : 1) * horseDefTabs()} onResetAll={resetAllUmas}
-					headerActions={<HorseSaveLoadActions state={pacer} setState={setPacer} />}>
-					{expanded ? 'Pacemaker' : umaTabs}
+				headerActions={<HorseSaveLoadActions state={pacer} setState={setPacer} onReset={() => setPacer(new HorseState({strategy: 'Nige'}))} />}>
+				{expanded ? 'Pacemaker' : umaTabs}
 				</HorseDef>
 			</div>}
 			{expanded && <div id="closeUmaOverlay" title="Close panel" onClick={toggleExpand}>✕</div>}
