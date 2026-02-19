@@ -1,7 +1,7 @@
 import { h, Fragment, render } from 'preact';
 import { useState, useReducer, useMemo, useEffect, useRef, useId, useCallback } from 'preact/hooks';
 import { Text, IntlProvider } from 'preact-i18n';
-import { Settings } from 'lucide-preact';
+import { Settings, Save, Upload, Download, Copy, Clipboard, Trash2, Camera } from 'lucide-preact';
 import { Record, Set as ImmSet, Map as ImmMap } from 'immutable';
 import * as d3 from 'd3';
 import { computePosition, flip } from '@floating-ui/dom';
@@ -24,13 +24,22 @@ import { getActivateableSkills, isPurpleSkill, getNullRow, BasinnChart } from '.
 import { initTelemetry, postEvent } from './telemetry';
 
 import { IntroText } from './IntroText';
-import { ResultsPane, type CompareResults } from './ResultsPane';
+import { ResultsPane, type CompareResults } from './components/ResultsPane';
+import { OCRModal } from './components/OCRModal';
+import {
+    UmaState,
+    getSavedSlotNames, saveHorseSlot, loadHorseSlot, deleteHorseSlot,
+    downloadHorseJson, importHorseJson, copyHorseToClipboard, pasteHorseFromClipboard,
+} from './storage';
+import { Dropdown } from './ui-components/Dropdown';
 
 import skilldata from '../uma-skill-tools/data/skill_data.json';
 import skillnames from '../uma-skill-tools/data/skillnames.json';
 import skillmeta from '../skill_meta.json';
+import umas from '../umas.json';
 
 import './app.css';
+import './components/OCRModal.css';
 
 const DEFAULT_SAMPLES = 500;
 const DEFAULT_SEED = 2615953739;
@@ -1449,6 +1458,197 @@ function StatsTable({ caption, captionColor, rows }) {
 	);
 }
 
+function horseStateToUmaState(state: HorseState): UmaState {
+    return {
+        outfitId: state.outfitId,
+        speed: state.speed,
+        stamina: state.stamina,
+        power: state.power,
+        guts: state.guts,
+        wisdom: state.wisdom,
+        strategy: state.strategy,
+        distanceAptitude: state.distanceAptitude,
+        surfaceAptitude: state.surfaceAptitude,
+        strategyAptitude: state.strategyAptitude,
+        mood: state.mood,
+        skills: Array.from(state.skills.values()),
+        forcedSkillPositions: state.forcedSkillPositions.toJS() as { [key: string]: number },
+    };
+}
+
+function umaStateToHorseState(uma: UmaState): HorseState {
+    return new HorseState({
+        outfitId: uma.outfitId,
+        speed: uma.speed,
+        stamina: uma.stamina,
+        power: uma.power,
+        guts: uma.guts,
+        wisdom: uma.wisdom,
+        strategy: uma.strategy,
+        distanceAptitude: uma.distanceAptitude,
+        surfaceAptitude: uma.surfaceAptitude,
+        strategyAptitude: uma.strategyAptitude,
+        mood: uma.mood as Mood,
+        skills: SkillSet(uma.skills),
+        forcedSkillPositions: ImmMap(uma.forcedSkillPositions),
+    });
+}
+
+function HorseSaveLoadActions({ state, setState }: { state: HorseState; setState: (s: HorseState) => void }) {
+    const [savedSlots, setSavedSlots] = useState(() => getSavedSlotNames());
+    const [isOCRModalOpen, setIsOCRModalOpen] = useState(false);
+    const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+    const [saveModalName, setSaveModalName] = useState('');
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [deleteSlotName, setDeleteSlotName] = useState('');
+    const [copyFeedback, setCopyFeedback] = useState(false);
+
+    function refreshSlots() {
+        setSavedSlots(getSavedSlotNames());
+    }
+
+    function handleSaveNew() {
+        const uma = state.outfitId ? (umas as any)[state.outfitId.slice(0, 4)]?.name?.[1] : null;
+        setSaveModalName(uma || 'Horse');
+        setIsSaveModalOpen(true);
+    }
+
+    function handleSaveConfirm() {
+        const name = saveModalName.trim();
+        if (!name) return;
+        saveHorseSlot(name, horseStateToUmaState(state));
+        refreshSlots();
+        setIsSaveModalOpen(false);
+    }
+
+    function handleSaveOverwrite(name: string) {
+        saveHorseSlot(name, horseStateToUmaState(state));
+        refreshSlots();
+    }
+
+    async function handleDownloadJson() {
+        downloadHorseJson(horseStateToUmaState(state));
+    }
+
+    async function handleCopyToClipboard() {
+        const ok = await copyHorseToClipboard(horseStateToUmaState(state));
+        if (ok) {
+            setCopyFeedback(true);
+            setTimeout(() => setCopyFeedback(false), 1500);
+        }
+    }
+
+    async function handleImportJson() {
+        const uma = await importHorseJson();
+        if (uma) setState(umaStateToHorseState(uma));
+    }
+
+    async function handlePasteFromClipboard() {
+        const uma = await pasteHorseFromClipboard();
+        if (uma) setState(umaStateToHorseState(uma));
+    }
+
+    function handleDeleteSlot(name: string) {
+        setDeleteSlotName(name);
+        setIsDeleteModalOpen(true);
+    }
+
+    function handleDeleteConfirm() {
+        deleteHorseSlot(deleteSlotName);
+        refreshSlots();
+        setIsDeleteModalOpen(false);
+    }
+
+    const saveMenuItems = [
+        { label: 'Save as new...', icon: h(Save, { size: 14 }), onClick: handleSaveNew },
+        { label: 'Download JSON', icon: h(Download, { size: 14 }), onClick: handleDownloadJson },
+        { label: copyFeedback ? 'Copied!' : 'Copy to clipboard', icon: h(Copy, { size: 14 }), onClick: handleCopyToClipboard },
+        ...(savedSlots.length > 0 ? [
+            { divider: true },
+            { label: 'Overwrite existing:', disabled: true },
+            ...savedSlots.slice(0, 5).map(name => ({
+                label: name,
+                onClick: () => handleSaveOverwrite(name),
+            })),
+        ] : []),
+    ];
+
+    const loadMenuItems = [
+        { label: 'Import JSON file...', icon: h(Upload, { size: 14 }), onClick: handleImportJson },
+        { label: 'Paste from clipboard', icon: h(Clipboard, { size: 14 }), onClick: handlePasteFromClipboard },
+        { label: 'Import from screenshot (OCR)', icon: h(Camera, { size: 14 }), onClick: () => setIsOCRModalOpen(true) },
+        ...(savedSlots.length > 0 ? [
+            { divider: true },
+            { label: 'Saved builds:', disabled: true },
+            ...savedSlots.map(name => ({
+                label: name,
+                onClick: () => {
+                    const uma = loadHorseSlot(name);
+                    if (uma) setState(umaStateToHorseState(uma));
+                },
+                suffix: h('button', {
+                    class: 'dropdownDeleteBtn',
+                    title: 'Delete',
+                    onMouseDown: (e: MouseEvent) => e.stopPropagation(),
+                    onClick: (e: MouseEvent) => { e.stopPropagation(); handleDeleteSlot(name); },
+                }, h(Trash2, { size: 12 })),
+            })),
+        ] : []),
+    ];
+
+    return (
+        <>
+            <Dropdown
+                trigger={h('button', { class: 'horseActionBtn', title: 'Save' }, h(Save, { size: 14 }))}
+                items={saveMenuItems}
+            />
+            <Dropdown
+                trigger={h('button', { class: 'horseActionBtn', title: 'Load' }, h(Upload, { size: 14 }))}
+                items={loadMenuItems}
+            />
+            <OCRModal
+                isOpen={isOCRModalOpen}
+                onClose={() => setIsOCRModalOpen(false)}
+                onConfirm={(uma) => setState(umaStateToHorseState(uma))}
+            />
+            {isSaveModalOpen && (
+                <div class="saveLoadOverlay" onClick={(e) => { if (e.target === e.currentTarget) setIsSaveModalOpen(false); }}>
+                    <div class="saveLoadModal">
+                        <h2 class="saveLoadModalTitle">Save Build</h2>
+                        <label class="saveLoadInputLabel">Build Name</label>
+                        <input
+                            type="text"
+                            class="saveLoadInput"
+                            value={saveModalName}
+                            onInput={(e) => setSaveModalName(e.currentTarget.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSaveConfirm()}
+                            autoFocus
+                        />
+                        <div class="saveLoadModalActions">
+                            <button class="saveLoadBtnSecondary" onClick={() => setIsSaveModalOpen(false)}>Cancel</button>
+                            <button class="saveLoadBtnPrimary" onClick={handleSaveConfirm}>Save</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {isDeleteModalOpen && (
+                <div class="saveLoadOverlay" onClick={(e) => { if (e.target === e.currentTarget) setIsDeleteModalOpen(false); }}>
+                    <div class="saveLoadModal">
+                        <h2 class="saveLoadModalTitle">Delete Build</h2>
+                        <p class="saveLoadDeleteText">
+                            Are you sure you want to delete "<strong>{deleteSlotName}</strong>"?
+                        </p>
+                        <div class="saveLoadModalActions">
+                            <button class="saveLoadBtnSecondary" onClick={() => setIsDeleteModalOpen(false)}>Cancel</button>
+                            <button class="saveLoadBtnDanger" onClick={handleDeleteConfirm}>Delete</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
+    );
+}
+
 function App(props) {
 	//const [language, setLanguage] = useLanguageSelect(); 
 	const [darkMode, setDarkMode] = useState(() => {
@@ -2430,7 +2630,8 @@ function App(props) {
 	const umaPaneInner = (
 		<>
 			<div class={!expanded && currentIdx == 0 ? 'selected' : ''}>
-				<HorseDef key={uma1.outfitId} state={uma1} setState={setUma1} courseDistance={course.distance} tabstart={() => 4} onResetAll={resetAllUmas} runData={mode == Mode.Compare ? runData : null} umaIndex={mode == Mode.Compare ? 0 : null}>
+				<HorseDef key={uma1.outfitId} state={uma1} setState={setUma1} courseDistance={course.distance} tabstart={() => 4} onResetAll={resetAllUmas} runData={mode == Mode.Compare ? runData : null} umaIndex={mode == Mode.Compare ? 0 : null}
+					headerActions={<HorseSaveLoadActions state={uma1} setState={setUma1} />}>
 					{expanded ? 'Uma 1' : umaTabs}
 				</HorseDef>
 			</div>
@@ -2441,12 +2642,14 @@ function App(props) {
 					<div id="swapUmas" title="Swap umas" onClick={swapUmas}>⮂</div>
 				</div>}
 			{mode == Mode.Compare && <div class={!expanded && currentIdx == 1 ? 'selected' : ''}>
-				<HorseDef key={uma2.outfitId} state={uma2} setState={setUma2} courseDistance={course.distance} tabstart={() => 4 + horseDefTabs()} onResetAll={resetAllUmas} runData={runData} umaIndex={1}>
+				<HorseDef key={uma2.outfitId} state={uma2} setState={setUma2} courseDistance={course.distance} tabstart={() => 4 + horseDefTabs()} onResetAll={resetAllUmas} runData={runData} umaIndex={1}
+					headerActions={<HorseSaveLoadActions state={uma2} setState={setUma2} />}>
 					{expanded ? 'Uma 2' : umaTabs}
 				</HorseDef>
 			</div>}
 			{posKeepMode == PosKeepMode.Virtual && mode == Mode.Compare && <div class={!expanded && currentIdx == 2 ? 'selected' : ''}>
-				<HorseDef key={pacer.outfitId} state={pacer} setState={setPacer} courseDistance={course.distance} tabstart={() => 4 + (mode == Mode.Compare ? 2 : 1) * horseDefTabs()} onResetAll={resetAllUmas}>
+				<HorseDef key={pacer.outfitId} state={pacer} setState={setPacer} courseDistance={course.distance} tabstart={() => 4 + (mode == Mode.Compare ? 2 : 1) * horseDefTabs()} onResetAll={resetAllUmas}
+					headerActions={<HorseSaveLoadActions state={pacer} setState={setPacer} />}>
 					{expanded ? 'Pacemaker' : umaTabs}
 				</HorseDef>
 			</div>}

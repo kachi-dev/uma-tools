@@ -1,0 +1,361 @@
+.ocrOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.ocrModal {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    width: 900px;
+    max-width: 95vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.dark .ocrModal {
+    background: #1e1e1e;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.ocrModalHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.ocrModalTitle {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: hsl(215 20% 15%);
+}
+
+.dark .ocrModalTitle {
+    color: var(--fg);
+}
+
+.ocrModalClose {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    line-height: 1;
+    transition: background 0.1s, color 0.1s;
+}
+.ocrModalClose:hover {
+    background: var(--surface);
+    color: var(--fg);
+}
+
+.ocrModalBody {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.ocrSection {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ocrLabel {
+    font-size: 13px;
+    font-weight: 600;
+    color: hsl(215 20% 25%);
+}
+
+.dark .ocrLabel {
+    color: var(--fg);
+}
+
+
+.ocrInput {
+    flex: 1;
+    padding: 7px 12px;
+    border: 1px solid var(--input-border);
+    border-radius: 6px;
+    background: var(--input-bg);
+    color: var(--fg);
+    font-size: 13px;
+    font-family: inherit;
+    transition: border-color 0.15s;
+}
+.ocrInput:focus {
+    outline: none;
+    border-color: var(--input-border-hover);
+}
+
+
+.ocrApiLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: hsl(215 70% 50%);
+    font-size: 12px;
+    text-decoration: none;
+    transition: opacity 0.15s;
+}
+.ocrApiLink:hover {
+    opacity: 0.75;
+}
+
+.ocrDropzone {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 32px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    background: var(--card);
+    min-height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.ocrDropzone:hover {
+    border-color: hsl(215 70% 50%);
+    background: var(--surface);
+}
+.ocrDropzone.dragover {
+    border-color: hsl(215 70% 50%);
+    background: hsl(210 6% 93%);
+}
+.dark .ocrDropzone.dragover {
+    background: #2a2a2a;
+}
+.ocrDropzone.hasImage {
+    padding: 8px;
+}
+
+.ocrDropzoneContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.ocrDropzoneIcon {
+    color: var(--muted);
+}
+
+.ocrPreview {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 6px;
+}
+
+.ocrError {
+    background: #fee;
+    border: 1px solid #fcc;
+    border-radius: 6px;
+    color: #c00;
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+.dark .ocrError {
+    background: #2a1a1a;
+    border-color: #4a2020;
+    color: #f88;
+}
+
+.ocrSpinner {
+    animation: ocrSpin 1s linear infinite;
+}
+@keyframes ocrSpin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+/* Review step */
+.ocrReviewLayout {
+    display: flex;
+    gap: 16px;
+}
+
+.ocrReviewImageSection {
+    flex: 0 0 280px;
+}
+
+.ocrReviewImage {
+    width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--card);
+}
+
+.ocrReviewDataSection {
+    flex: 1;
+    min-width: 0;
+}
+
+.ocrReviewGrid {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.ocrReviewItem {
+    display: flex;
+    align-items: center;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 8px;
+}
+.ocrReviewItem:last-child {
+    border-bottom: none;
+}
+
+.ocrReviewKey {
+    font-weight: 600;
+    color: hsl(215 20% 25%);
+    min-width: 85px;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.dark .ocrReviewKey {
+    color: var(--fg);
+}
+
+.ocrReviewValue {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.ocrReviewStats {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.ocrReviewEditable {
+    gap: 12px;
+}
+
+.ocrReviewSkills {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.ocrSkillList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    max-height: 130px;
+    overflow-y: auto;
+}
+
+.ocrSkillTag {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--muted);
+    font-size: 11px;
+    padding: 2px 8px;
+}
+
+/* Footer */
+.ocrModalFooter {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 4px;
+    margin-top: auto;
+}
+
+.ocrBtnSecondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    background: white;
+    border: 1px solid hsl(210 10% 85%);
+    border-radius: 6px;
+    color: hsl(215 20% 35%);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+.ocrBtnSecondary:hover {
+    background: hsl(210 6% 95%);
+    border-color: hsl(210 10% 78%);
+}
+
+.dark .ocrBtnSecondary {
+    background: #1e1e1e;
+    border-color: var(--border);
+    color: var(--fg);
+}
+.dark .ocrBtnSecondary:hover {
+    background: #2a2a2a;
+}
+
+.ocrBtnPrimary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    background: rgb(148, 150, 189);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.ocrBtnPrimary:hover:not(:disabled) {
+    background: rgb(128, 130, 172);
+}
+.ocrBtnPrimary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.dark .ocrBtnPrimary {
+    background: rgb(120, 122, 168);
+}
+.dark .ocrBtnPrimary:hover:not(:disabled) {
+    background: rgb(140, 142, 188);
+}
+
+/* Responsive */
+@media (max-width: 700px) {
+    .ocrReviewLayout {
+        flex-direction: column;
+    }
+    .ocrReviewImageSection {
+        flex: none;
+    }
+    .ocrReviewImage {
+        max-height: 200px;
+    }
+}

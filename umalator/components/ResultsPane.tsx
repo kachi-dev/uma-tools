@@ -1,7 +1,7 @@
 import { h } from 'preact';
 import { useMemo } from 'preact/hooks';
 import { Clock, Zap, Heart, Swords, Flag, TrendingUp } from 'lucide-preact';
-import skillnames from '../uma-skill-tools/data/skillnames.json';
+import skillnames from '../../uma-skill-tools/data/skillnames.json';
 import './ResultsPane.css';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -294,7 +294,12 @@ function UmaStatsCard({ snapshot, allruns, staminaStats, umaIndex }: UmaStatsCar
                     <div class="stat-item">
                         <Heart size={14} />
                         <span class="value">{staminaStats.fullSpurtRate.toFixed(1)}%</span>
-                        <span class="label">Full Spurt</span>
+                        <span class="label">Spurt Rate</span>
+                    </div>
+                    <div class="stat-item">
+                        <Heart size={14} />
+                        <span class="value">{staminaStats.staminaSurvivalRate.toFixed(1)}%</span>
+                        <span class="label">Survival</span>
                     </div>
                 </div>
 
@@ -302,10 +307,6 @@ function UmaStatsCard({ snapshot, allruns, staminaStats, umaIndex }: UmaStatsCar
                     <div class="stat-row">
                         <span class="label">Start Delay</span>
                         <span class="value">{startDelay}s</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="label">HP Survival</span>
-                        <span class="value">{staminaStats.staminaSurvivalRate.toFixed(1)}%</span>
                     </div>
                 </div>
 
