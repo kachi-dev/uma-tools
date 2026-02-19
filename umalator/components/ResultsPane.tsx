@@ -257,7 +257,7 @@ interface UmaStatsCardProps {
     umaIndex: 0 | 1;
 }
 
-function UmaStatsCard({ snapshot, allruns, staminaStats, umaIndex }: UmaStatsCardProps) {
+function UmaStatsCard({ snapshot, allruns, staminaStats, firstPlaceRate, umaIndex }: UmaStatsCardProps) {
     const label = umaIndex === 0 ? 'Uma 1' : 'Uma 2';
     const cls = umaIndex === 0 ? 'uma1' : 'uma2';
     const skillNameDict: Record<string, string> = (useContext(IntlContext as any) as any)?.intl?.dictionary?.skillnames ?? {};
@@ -333,6 +333,60 @@ function UmaStatsCard({ snapshot, allruns, staminaStats, umaIndex }: UmaStatsCar
                         )}
                     </div>
                 )}
+
+                <div class="misc-section">
+                    <h4>Miscellaneous</h4>
+                    <div class="stat-row">
+                        <span class="label">1st into Late Race</span>
+                        <span class="value">{firstPlaceRate.toFixed(1)}%</span>
+                    </div>
+                    {staminaStats.hpDiedPositionStatsNonFullSpurt.count > 0 && (
+                        <div class="stat-row">
+                            <span class="label">Failed Spurt HP Die Pos</span>
+                            <span class="value">
+                                {staminaStats.hpDiedPositionStatsNonFullSpurt.mean?.toFixed(0)}m
+                                <span class="stat-subtext">
+                                    {' '}({staminaStats.hpDiedPositionStatsNonFullSpurt.min?.toFixed(0)} – {staminaStats.hpDiedPositionStatsNonFullSpurt.max?.toFixed(0)},
+                                    {' '}{((staminaStats.hpDiedPositionStatsNonFullSpurt.count / (allruns.totalRuns || 1)) * 100).toFixed(1)}% of runs)
+                                </span>
+                            </span>
+                        </div>
+                    )}
+                    {staminaStats.hpDiedPositionStatsFullSpurt.count > 0 && (
+                        <div class="stat-row">
+                            <span class="label">Spurt HP Die Pos</span>
+                            <span class="value">
+                                {staminaStats.hpDiedPositionStatsFullSpurt.mean?.toFixed(0)}m
+                                <span class="stat-subtext">
+                                    {' '}({staminaStats.hpDiedPositionStatsFullSpurt.min?.toFixed(0)} – {staminaStats.hpDiedPositionStatsFullSpurt.max?.toFixed(0)},
+                                    {' '}{((staminaStats.hpDiedPositionStatsFullSpurt.count / (allruns.totalRuns || 1)) * 100).toFixed(1)}% of runs)
+                                </span>
+                            </span>
+                        </div>
+                    )}
+                    {staminaStats.nonFullSpurtVelocityStats.count > 0 && (
+                        <div class="stat-row">
+                            <span class="label">Failed Spurt End Velocity</span>
+                            <span class="value">
+                                {staminaStats.nonFullSpurtVelocityStats.mean?.toFixed(2)} m/s
+                                <span class="stat-subtext">
+                                    {' '}({staminaStats.nonFullSpurtVelocityStats.min?.toFixed(2)} – {staminaStats.nonFullSpurtVelocityStats.max?.toFixed(2)})
+                                </span>
+                            </span>
+                        </div>
+                    )}
+                    {staminaStats.nonFullSpurtDelayStats.count > 0 && (
+                        <div class="stat-row">
+                            <span class="label">Failed Spurt End Delay</span>
+                            <span class="value">
+                                {staminaStats.nonFullSpurtDelayStats.mean?.toFixed(2)}s
+                                <span class="stat-subtext">
+                                    {' '}({staminaStats.nonFullSpurtDelayStats.min?.toFixed(2)} – {staminaStats.nonFullSpurtDelayStats.max?.toFixed(2)})
+                                </span>
+                            </span>
+                        </div>
+                    )}
+                </div>
 
                 {showSkills && (
                     <div class="skills-section">

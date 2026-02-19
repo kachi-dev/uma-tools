@@ -589,14 +589,14 @@
 	width: auto;
 	height: auto;
 	min-width: 0;
-	padding: 3px 6px 3px 5px;
-	border-radius: 5px;
+	padding: 5px 9px 5px 7px;
+	border-radius: 6px;
 	border: 1px solid var(--border, hsl(210 10% 85%));
 	border-left-width: 3px;
 	box-shadow: none;
 	cursor: pointer;
-	font-size: 12px;
-	max-width: 200px;
+	font-size: 13px;
+	max-width: 240px;
 	transition: opacity 0.1s;
 }
 
@@ -625,15 +625,15 @@
 }
 
 .horseSkillPills .skillIcon {
-	width: 18px;
-	height: 18px;
-	margin: 0 5px 0 0;
+	width: 22px;
+	height: 22px;
+	margin: 0 6px 0 0;
 	flex-shrink: 0;
 }
 
 .horseSkillPills .skillName {
 	color: var(--fg, #111827);
-	font-size: 11px;
+	font-size: 13px;
 	font-weight: 500;
 	text-stroke: none;
 	-webkit-text-stroke: 0;
@@ -641,13 +641,13 @@
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	max-width: 130px;
+	max-width: 170px;
 }
 
 .horseSkillPills .skillDismiss {
 	color: var(--muted, #9ca3af);
-	font-size: 10px;
-	padding: 0 0 0 4px;
+	font-size: 11px;
+	padding: 0 0 0 5px;
 	flex-shrink: 0;
 }
 

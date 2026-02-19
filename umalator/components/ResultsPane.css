@@ -259,15 +259,22 @@
     font-family: "JetBrains Mono", monospace;
     color: var(--rp-text);
 }
+.stat-row .value .stat-subtext {
+    font-size: var(--font-sm);
+    color: var(--rp-text-secondary);
+    opacity: 0.75;
+}
 
-/* ── Race mechanics + skills ─────────────────────────────────────────────── */
+/* ── Race mechanics + skills + misc ─────────────────────────────────────── */
 .mechanics-section,
-.skills-section {
+.skills-section,
+.misc-section {
     padding-top: var(--space-xs);
     border-top: 1px solid var(--rp-border);
 }
 .mechanics-section h4,
-.skills-section h4 {
+.skills-section h4,
+.misc-section h4 {
     font-size: var(--font-sm);
     font-weight: 600;
     color: var(--rp-text-secondary);
