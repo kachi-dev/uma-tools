@@ -1005,6 +1005,7 @@ export class RaceSolver {
 				break;
 			case PositionKeepState.Overtake:
 				this.posKeepSpeedCoef = 1.05;
+				break;
 			case PositionKeepState.PaceUp:
 				this.posKeepSpeedCoef = 1.04;
 				break;
