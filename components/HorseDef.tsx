@@ -433,15 +433,15 @@ export function HorseDef(props) {
 			</div>
 			<div class="horseAptitudes">
 				<div>
-					<span>Surface aptitude:</span>
+					<span>Surface:</span>
 					<AptitudeSelect a={state.surfaceAptitude} setA={setter('surfaceAptitude')} tabindex={tabnext()} />
 				</div>
 				<div>
-					<span>Distance aptitude:</span>
+					<span>Distance:</span>
 					<AptitudeSelect a={state.distanceAptitude} setA={setter('distanceAptitude')} tabindex={tabnext()} />
 				</div>
 				<div>
-					<span>{CC_GLOBAL ? 'Style aptitude:' : 'Strategy aptitude:'}</span>
+					<span>{CC_GLOBAL ? 'Style:' : 'Strategy:'}</span>
 					<AptitudeSelect a={state.strategyAptitude} setA={setter('strategyAptitude')} tabindex={tabnext()} />
 				</div>
 				<div>

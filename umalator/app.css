@@ -888,25 +888,21 @@ body {
 
 .racetrackRow {
 	position: relative;
-	width: fit-content;
+	width: 100%;
+	max-width: 100%;
 	margin: 0 auto;
 }
 
-.racetrackWrapper {
-	width: auto !important;
-}
 
 .racetrackControls {
-	position: absolute;
-	left: calc(100% + 5px);
-	top: 0;
 	display: flex;
-	flex-direction: column;
-	gap: 8px;
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 12px 16px;
+	justify-content: center;
 	padding: 8px 0;
 	font-family: Inter, "Noto Sans JP", sans-serif;
 	font-size: 12px;
-	white-space: nowrap;
 }
 
 .racetrackControls label {
@@ -1743,6 +1739,16 @@ body { background: var(--bg); color: var(--fg); }
 	#mainContent {
 		grid-column: 1;
 		padding-bottom: 72px;
+	}
+	#resultsPaneWrapper:has(.mode-chart) {
+		min-height: 40vh;
+	}
+	#resultsPane.mode-chart {
+		min-height: 0;
+	}
+	.racetrackRow {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
 	}
 	#mobileBottomBar {
 		position: fixed;

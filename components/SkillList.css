@@ -261,6 +261,8 @@
 .dark .filterButton {
 	background: #333;
 	color: var(--theme-brown, #d4a574);
+	text-stroke: 1px var(--theme-brown, #d4a574);
+	-webkit-text-stroke: 1px var(--theme-brown, #d4a574);
 }
 .dark .filterSearch {
 	background: var(--input-bg, #191919);

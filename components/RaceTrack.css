@@ -1,3 +1,21 @@
+.racetrackControlsSlot {
+	display: flex;
+	justify-content: center;
+	padding-bottom: 8px;
+}
+
+.racetrackWrapper {
+	width: var(--track-width, 981px);
+	max-width: 100%;
+	margin: 0 auto;
+}
+
+.racetrackView {
+	width: 100%;
+	height: auto;
+	display: block;
+}
+
 .distanceMarker {
 	font-weight: 600;
 	paint-order: stroke;
@@ -17,12 +35,11 @@
 
 .racetrackName {
 	color: rgb(121,64,22);
-	font: 22px bold sans-serif;
+	font-family: Inter, "Noto Sans JP", sans-serif;
+	font-size: 22px;
+	font-weight: bold;
 	margin-bottom: 0.3em;
 	text-align: center;
-	text-stroke: 1px rgb(121,64,22);
-	-webkit-text-stroke: 1px rgb(121,64,22);
-	text-shadow: -1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;
 }
 
 .racetrackStatThresholds {
@@ -72,10 +89,7 @@
 
 /* --- Dark mode --- */
 .dark .racetrackName {
-	color: var(--fg, #e4e4e7);
-	text-stroke: 1px var(--fg, #e4e4e7);
-	-webkit-text-stroke: 1px var(--fg, #e4e4e7);
-	text-shadow: -1px -1px 0 #1a1a1a, 1px -1px 0 #1a1a1a, -1px 1px 0 #1a1a1a, 1px 1px 0 #1a1a1a;
+	color: #fff;
 }
 
 /* Elevation profile */
@@ -116,9 +130,9 @@
 .dark .rulerBar { fill: #98b4c4; }
 
 /* Text & markers */
-.dark .sectionText { fill: #e0c8a4; stroke: #2a2a2a; }
-.dark .distanceMarker { fill: #e0c8a4; stroke: #2a2a2a; }
-.dark .distanceMarkerLine { stroke: #e0c8a4; }
-.dark .mouseoverLine { stroke: #e0c8a4; }
-.dark .mouseoverText { fill: #e0c8a4; stroke: #2a2a2a; }
-.dark .poskeep-label text { stroke: #2a2a2a; }
+.dark .sectionText { fill: #fff; stroke: #2a2a2a; }
+.dark .distanceMarker { fill: #fff; stroke: #2a2a2a; }
+.dark .distanceMarkerLine { stroke: #fff; }
+.dark .mouseoverLine { stroke: #fff; }
+.dark .mouseoverText { fill: #fff; stroke: #2a2a2a; }
+.dark .poskeep-label text { fill: #fff; stroke: #2a2a2a; }
