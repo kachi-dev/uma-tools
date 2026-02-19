@@ -65,17 +65,11 @@ function getCharInfo(card_id: number) {
     return { charName, outfitName, iconSrc };
 }
 
-function ownUniqueId(outfitId: string): string {
-    const i = +outfitId.slice(1, -2);
-    const v = +outfitId.slice(-2);
-    return String(100000 + 10000 * (v - 1) + i * 10 + 1);
-}
 
-function skillSortPriority(skillId: string, ownId: string): number {
-    const rarity: number = (skilldata as any)[skillId]?.rarity ?? 1;
-    if (rarity >= 3) return skillId === ownId ? 0 : 1;
-    if (rarity === 2) return 2;
-    return 3;
+function skillOrder(a: string, b: string): number {
+    const x = (skillmeta as any)[a]?.order ?? 0;
+    const y = (skillmeta as any)[b]?.order ?? 0;
+    return +(y < x) - +(x < y) || +(b < a) - +(a < b);
 }
 
 // ── Filter logic ─────────────────────────────────────────────────────────────
@@ -327,13 +321,12 @@ function SearchBar({ name, onNameChange, filtersOpen, onToggleFilters, filterCou
 }
 
 function SkillGrid({ skills, cardId }: { skills: Array<{ id: number; level: number }>; cardId: number }) {
-    const ownId = ownUniqueId(String(cardId));
     const known = skills
         .filter(s => {
             const idStr = String(s.id);
             return (skillmeta as any)[idStr] && (skilldata as any)[idStr];
         })
-        .sort((a, b) => skillSortPriority(String(a.id), ownId) - skillSortPriority(String(b.id), ownId));
+        .sort((a, b) => skillOrder(String(a.id), String(b.id)));
     if (known.length === 0) return null;
     return (
         <div class="umasSkillGrid">
