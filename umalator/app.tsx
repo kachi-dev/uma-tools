@@ -2692,14 +2692,21 @@ function App(props) {
 
 	let resultsPane;
 	if (mode == Mode.Compare) {
+		const showIntroOnCompare = compareResults === null && !isSimulationRunning;
 		resultsPane = (
 			<div id="resultsPaneWrapper">
-				<ResultsPane
-					results={compareResults}
-					isRunning={isSimulationRunning}
-					displayRun={displayRun}
-					onDisplayRunChange={handleDisplayRunChange}
-				/>
+				{showIntroOnCompare ? (
+					<div id="resultsPane">
+						<IntroText />
+					</div>
+				) : (
+					<ResultsPane
+						results={compareResults}
+						isRunning={isSimulationRunning}
+						displayRun={displayRun}
+						onDisplayRunChange={handleDisplayRunChange}
+					/>
+				)}
 			</div>
 		);
 	} else if ((mode == Mode.Chart || mode == Mode.UniquesChart) && tableData.size > 0) {

@@ -69,13 +69,21 @@ export function IntroText(props) {
 			<details open={true}>
 				<summary>Changelog</summary>
 				<section>
-					<h2>2025-02-06</h2>
+					<h2>2026-02-19</h2>
+					<ul>
+						<li>Merged UI changes from fork https://github.com/TheCing/uma-tools</li>
+						<li>Merged accumulatetime bugfix from upstream.</li>
+						<li>Added umas tab.</li>
+					</ul>
+				</section>
+				<section>
+					<h2>2026-02-06</h2>
 					<ul>
 						<li>Restructured the UI.</li>
 					</ul>
 				</section>
 				<section>
-					<h2>2025-01-10</h2>
+					<h2>2026-01-10</h2>
 					<ul>
 						<li>
 							<details>

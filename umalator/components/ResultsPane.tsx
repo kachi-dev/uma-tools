@@ -366,7 +366,7 @@ function UmaStatsCard({ snapshot, allruns, staminaStats, firstPlaceRate, umaInde
                     )}
                     {staminaStats.nonFullSpurtVelocityStats.count > 0 && (
                         <div class="stat-row">
-                            <span class="label">Failed Spurt End Velocity</span>
+                            <span class="label">Failed Spurt Velocity</span>
                             <span class="value">
                                 {staminaStats.nonFullSpurtVelocityStats.mean?.toFixed(2)} m/s
                                 <span class="stat-subtext">
@@ -377,7 +377,7 @@ function UmaStatsCard({ snapshot, allruns, staminaStats, firstPlaceRate, umaInde
                     )}
                     {staminaStats.nonFullSpurtDelayStats.count > 0 && (
                         <div class="stat-row">
-                            <span class="label">Failed Spurt End Delay</span>
+                            <span class="label">Failed Spurt Delay</span>
                             <span class="value">
                                 {staminaStats.nonFullSpurtDelayStats.mean?.toFixed(2)}s
                                 <span class="stat-subtext">
