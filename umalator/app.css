@@ -1827,6 +1827,9 @@ body { background: var(--bg); color: var(--fg); }
 		padding: 16px 16px 24px;
 		padding-bottom: calc(24px + env(safe-area-inset-bottom, 0));
 	}
+	.mobileDialogContent--uma {
+		padding-top: 48px;
+	}
 	.mobileDialogContent--uma > div {
 		display: none;
 	}
