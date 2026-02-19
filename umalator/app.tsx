@@ -24,6 +24,7 @@ import { getActivateableSkills, isPurpleSkill, getNullRow, BasinnChart } from '.
 import { initTelemetry, postEvent } from './telemetry';
 
 import { IntroText } from './IntroText';
+import { ResultsPane, type CompareResults } from './ResultsPane';
 
 import skilldata from '../uma-skill-tools/data/skill_data.json';
 import skillnames from '../uma-skill-tools/data/skillnames.json';
@@ -1469,6 +1470,7 @@ function App(props) {
 	const [seed, setSeed] = useState(DEFAULT_SEED);
 	const [runOnceCounter, setRunOnceCounter] = useState(0);
 	const [isSimulationRunning, setIsSimulationRunning] = useState(false);
+	const [displayRun, setDisplayRun] = useState<'mean' | 'median' | 'min' | 'max'>('median');
 	const [simulationProgress, setSimulationProgress] = useState<{round: number, total: number} | null>(null);
 	const chartWorkersCompletedRef = useRef(0);
 	const [posKeepMode, setPosKeepModeRaw] = useState(PosKeepMode.Approximate);
@@ -2088,8 +2090,8 @@ function App(props) {
 	const mean = results.reduce((a,b) => a+b, 0) / results.length;
 
 	const colors = [
-		{stroke: 'rgb(42, 119, 197)', fill: 'rgba(42, 119, 197, 0.7)'},
-		{stroke: 'rgb(197, 42, 42)', fill: 'rgba(197, 42, 42, 0.7)'}
+		{stroke: '#2a77c5', fill: 'rgba(42, 119, 197, 0.3)'},
+		{stroke: '#c52a2a', fill: 'rgba(197, 42, 42, 0.3)'}
 	];
 	const skillActivations = chartData == null ? [] : chartData.sk.flatMap((a,i) => {
 		return Array.from(a.keys()).flatMap(id => {
@@ -2368,139 +2370,25 @@ function App(props) {
 		);
 	}, [displaying, loadingAdditionalSamples, isSimulationRunning, runAdditionalSamplesForSkill, currentIdx, mode]);
 
+	const compareResults: CompareResults | null = (results.length > 0 && runData && staminaStats && firstUmaStats)
+		? { results, runData, staminaStats, firstUmaStats }
+		: null;
+
+	function handleDisplayRunChange(run: 'mean' | 'median' | 'min' | 'max') {
+		setDisplayRun(run);
+		setChartData(`${run}run`);
+	}
+
 	let resultsPane;
-	if (mode == Mode.Compare && results.length > 0) {
+	if (mode == Mode.Compare) {
 		resultsPane = (
 			<div id="resultsPaneWrapper">
-				<div id="resultsPane" class="mode-compare">
-					<table id="resultsSummary">
-						<tfoot>
-							<tr>
-								{Object.entries({
-									minrun: ['Minimum', 'Set chart display to the run with minimum bashin difference'],
-									maxrun: ['Maximum', 'Set chart display to the run with maximum bashin difference'],
-									meanrun: ['Mean', 'Set chart display to a run representative of the mean bashin difference'],
-									medianrun: ['Median', 'Set chart display to a run representative of the median bashin difference']
-								}).map(([k,label]) =>
-									<th scope="col" class={displaying == k ? 'selected' : ''} title={label[1]} onClick={() => setChartData(k)}>{label[0]}</th>
-								)}
-							</tr>
-						</tfoot>
-						<tbody>
-							<tr>
-								<td onClick={() => setChartData('minrun')}>{results[0].toFixed(2)}<span class="unit-basinn">{CC_GLOBAL?'lengths':'バ身'}</span></td>
-								<td onClick={() => setChartData('maxrun')}>{results[results.length-1].toFixed(2)}<span class="unit-basinn">{CC_GLOBAL?'lengths':'バ身'}</span></td>
-								<td onClick={() => setChartData('meanrun')}>{mean.toFixed(2)}<span class="unit-basinn">{CC_GLOBAL?'lengths':'バ身'}</span></td>
-								<td onClick={() => setChartData('medianrun')}>{median.toFixed(2)}<span class="unit-basinn">{CC_GLOBAL?'lengths':'バ身'}</span></td>
-							</tr>
-						</tbody>
-					</table>
-					<div id="resultsHelp">Negative numbers mean <strong style="color:#2a77c5">Umamusume 1</strong> is faster, positive numbers mean <strong style="color:#c52a2a">Umamusume 2</strong> is faster.</div>
-					
-					
-					{(firstUmaStats || staminaStats) && (
-						<div style={{marginTop: '15px', marginBottom: '10px', textAlign: 'center'}}>
-							{firstUmaStats && (
-								<div style={{marginBottom: '2px', display: 'flex', justifyContent: 'center', gap: '40px'}}>
-									<div style={{textAlign: 'right', minWidth: '250px'}}>
-										<strong>Uma 1:</strong> Final leg 1st place: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{firstUmaStats.uma1.firstPlaceRate.toFixed(1)}%</span>
-									</div>
-									<div style={{textAlign: 'left', minWidth: '250px'}}>
-										<strong>Uma 2:</strong> Final leg 1st place: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{firstUmaStats.uma2.firstPlaceRate.toFixed(1)}%</span>
-									</div>
-								</div>
-							)}
-							{staminaStats && (
-								<>
-									<div style={{marginBottom: '2px', display: 'flex', justifyContent: 'center', gap: '40px'}}>
-										<div style={{textAlign: 'right', minWidth: '250px'}}>
-											<strong>Uma 1:</strong> Spurt Rate: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{staminaStats.uma1.fullSpurtRate.toFixed(1)}%</span>
-										</div>
-										<div style={{textAlign: 'left', minWidth: '250px'}}>
-											<strong>Uma 2:</strong> Spurt Rate: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{staminaStats.uma2.fullSpurtRate.toFixed(1)}%</span>
-										</div>
-									</div>
-									<div style={{marginBottom: '2px', display: 'flex', justifyContent: 'center', gap: '40px'}}>
-										<div style={{textAlign: 'right', minWidth: '250px'}}>
-											<strong>Uma 1:</strong> Survival Rate: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{staminaStats.uma1.staminaSurvivalRate.toFixed(1)}%</span>
-										</div>
-										<div style={{textAlign: 'left', minWidth: '250px'}}>
-											<strong>Uma 2:</strong> Survival Rate: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{staminaStats.uma2.staminaSurvivalRate.toFixed(1)}%</span>
-										</div>
-									</div>
-								</>
-							)}
-						</div>
-					)}
-					
-					<Histogram width={500} height={333} data={results} />
-					{staminaStats && (
-						<div style={{marginTop: '20px', width: '500px', paddingBottom: '20px'}}>
-							<div class="umaTabsGroup" style={{marginBottom: '4px'}}>
-								<div 
-									class={`umaTab staminaTab ${hpDeathPositionTab == 0 ? 'selected' : ''}`} 
-									onClick={() => setHpDeathPositionTab(0)}
-								>
-									Uma 1
-								</div>
-								<div 
-									class={`umaTab staminaTab ${hpDeathPositionTab == 1 ? 'selected' : ''}`} 
-									onClick={() => setHpDeathPositionTab(1)}
-								>
-									Uma 2
-								</div>
-							</div>
-							{hpDeathPositionTab == 0 && (
-								<>
-									<StatsTable 
-										caption="Stamina Death Stats"
-										captionColor="#2a77c5"
-										rows={[
-											{ label: 'Full Spurt', stats: staminaStats.uma1.hpDiedPositionStatsFullSpurt },
-											{ label: 'Non-Full Spurt', stats: staminaStats.uma1.hpDiedPositionStatsNonFullSpurt }
-										]}
-									/>
-									{staminaStats.uma1.nonFullSpurtVelocityStats && staminaStats.uma1.nonFullSpurtDelayStats && (
-										<StatsTable 
-											caption="Non-Full Spurt Stats"
-											captionColor="#2a77c5"
-											rows={[
-												{ label: 'Velocity', stats: staminaStats.uma1.nonFullSpurtVelocityStats },
-												{ label: 'Delay', stats: staminaStats.uma1.nonFullSpurtDelayStats }
-											]}
-										/>
-									)}
-								</>
-							)}
-							{hpDeathPositionTab == 1 && (
-								<>
-									<StatsTable 
-										caption="Stamina Death Stats"
-										captionColor="#c52a2a"
-										rows={[
-											{ label: 'Full Spurt', stats: staminaStats.uma2.hpDiedPositionStatsFullSpurt },
-											{ label: 'Non-Full Spurt', stats: staminaStats.uma2.hpDiedPositionStatsNonFullSpurt }
-										]}
-									/>
-									{staminaStats.uma2.nonFullSpurtVelocityStats && staminaStats.uma2.nonFullSpurtDelayStats && (
-										<StatsTable 
-											caption="Non-Full Spurt Stats"
-											captionColor="#c52a2a"
-											rows={[
-												{ label: 'Velocity', stats: staminaStats.uma2.nonFullSpurtVelocityStats },
-												{ label: 'Delay', stats: staminaStats.uma2.nonFullSpurtDelayStats }
-											]}
-										/>
-									)}
-								</>
-							)}
-						</div>
-					)}
-				</div>
-				<div id="infoTables">
-					<ResultsTable caption="Uma 1" color="#2a77c5" chartData={chartData} idx={0} runData={runData} />
-					<ResultsTable caption="Uma 2" color="#c52a2a" chartData={chartData} idx={1} runData={runData} />
-				</div>
+				<ResultsPane
+					results={compareResults}
+					isRunning={isSimulationRunning}
+					displayRun={displayRun}
+					onDisplayRunChange={handleDisplayRunChange}
+				/>
 			</div>
 		);
 	} else if ((mode == Mode.Chart || mode == Mode.UniquesChart) && tableData.size > 0) {

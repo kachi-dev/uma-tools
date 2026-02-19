@@ -135,4 +135,4 @@
 .dark .distanceMarkerLine { stroke: #fff; }
 .dark .mouseoverLine { stroke: #fff; }
 .dark .mouseoverText { fill: #fff; stroke: #2a2a2a; }
-.dark .poskeep-label text { fill: #fff; stroke: #2a2a2a; }
+.dark .poskeep-label text { stroke: #141414; }
