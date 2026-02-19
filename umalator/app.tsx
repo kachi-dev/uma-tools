@@ -32,6 +32,8 @@ import {
     downloadHorseJson, importHorseJson, copyHorseToClipboard, pasteHorseFromClipboard,
 } from './storage';
 import { Dropdown } from './ui-components/Dropdown';
+import { UmasTab, UmasTabProps } from './components/UmasTab';
+import { decodeRoster, DecodedUma } from './rosterDecoder';
 
 import skilldata from '../uma-skill-tools/data/skill_data.json';
 import skillnames from '../uma-skill-tools/data/skillnames.json';
@@ -1494,10 +1496,110 @@ function umaStateToHorseState(uma: UmaState): HorseState {
     });
 }
 
+function decodedUmaToUmaState(uma: DecodedUma): UmaState {
+    const aptToLetter = (v: number): string =>
+        (['G', 'G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'S'] as const)[Math.max(0, Math.min(9, v))];
+
+    const strategies = [
+        { key: 'apt_nige'   as const, strat: 'Nige'    as const },
+        { key: 'apt_senko'  as const, strat: 'Senkou'  as const },
+        { key: 'apt_sashi'  as const, strat: 'Sasi'    as const },
+        { key: 'apt_oikomi' as const, strat: 'Oikomi'  as const },
+    ];
+    const bestStrat = strategies.reduce((best, curr) =>
+        uma[curr.key] >= uma[best.key] ? curr : best
+    );
+    const bestDistApt = Math.max(uma.apt_short, uma.apt_mile, uma.apt_middle, uma.apt_long);
+    const bestSurfApt = Math.max(uma.apt_turf, uma.apt_dirt);
+
+    return {
+        outfitId: String(uma.card_id),
+        speed:    uma.speed,
+        stamina:  uma.stamina,
+        power:    uma.power,
+        guts:     uma.guts,
+        wisdom:   uma.wisdom,
+        strategy: bestStrat.strat,
+        distanceAptitude: aptToLetter(bestDistApt),
+        surfaceAptitude:  aptToLetter(bestSurfApt),
+        strategyAptitude: aptToLetter(uma[bestStrat.key]),
+        mood: 2,
+        skills: uma.skills.map(s => String(s.id)),
+        forcedSkillPositions: {},
+    };
+}
+
+function ImportDialog({ onClose, onImport }: { onClose: () => void; onImport: (s: HorseState) => void }) {
+    const [b64Input, setB64Input] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    async function handleB64Import() {
+        if (!b64Input.trim()) return;
+        setError('');
+        setLoading(true);
+        try {
+            const umas = await decodeRoster(b64Input.trim());
+            if (!umas || umas.length === 0) {
+                setError('Could not decode — check the code and try again.');
+                return;
+            }
+            onImport(umaStateToHorseState(decodedUmaToUmaState(umas[0])));
+            onClose();
+        } catch (e: any) {
+            setError('Decode failed: ' + (e?.message ?? 'Unknown error'));
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function handleJsonFile() {
+        const uma = await importHorseJson();
+        if (uma) {
+            onImport(umaStateToHorseState({ ...uma, mood: 2 }));
+            onClose();
+        }
+    }
+
+    function handleKeyDown(e: KeyboardEvent) {
+        if (e.key === 'Escape') onClose();
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleB64Import();
+    }
+
+    return (
+        <div class="saveLoadOverlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+            <div class="saveLoadModal" style="width:420px;max-width:92vw" onKeyDown={handleKeyDown}>
+                <h3 class="saveLoadModalTitle">Import Uma</h3>
+                <p style="margin:4px 0 10px;font-size:13px;color:var(--muted,#6b7280)">
+                    Paste a single-uma export code from{' '}
+                    <a href="https://roster.uma.guide/" target="_blank" rel="noopener" style="color:hsl(215 70% 50%)">roster.uma.guide</a>
+                    , or browse for a JSON file.
+                </p>
+                <textarea
+                    style="width:100%;box-sizing:border-box;height:72px;padding:8px 10px;font-size:12px;font-family:monospace;resize:vertical;border:1px solid var(--border,#e5e7eb);border-radius:6px;background:var(--input-bg,#fff);color:var(--fg,#111827);outline:none"
+                    placeholder="e.g. ARlXmWBdob…"
+                    value={b64Input}
+                    onInput={(e) => { setB64Input((e.target as HTMLTextAreaElement).value); setError(''); }}
+                    autoFocus
+                />
+                {error && <p style="margin:6px 0 0;font-size:12px;color:hsl(0 70% 45%)">{error}</p>}
+                <div class="saveLoadModalActions" style="margin-top:14px">
+                    <button class="saveLoadBtnSecondary" onClick={onClose}>Cancel</button>
+                    <button class="saveLoadBtnSecondary" onClick={handleJsonFile}>Browse JSON…</button>
+                    <button class="saveLoadBtnPrimary" onClick={handleB64Import} disabled={loading || !b64Input.trim()}>
+                        {loading ? 'Importing…' : 'Import'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function HorseSaveLoadActions({ state, setState }: { state: HorseState; setState: (s: HorseState) => void }) {
     const [savedSlots, setSavedSlots] = useState(() => getSavedSlotNames());
     const [isOCRModalOpen, setIsOCRModalOpen] = useState(false);
     const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+    const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
     const [saveModalName, setSaveModalName] = useState('');
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [deleteSlotName, setDeleteSlotName] = useState('');
@@ -1538,9 +1640,8 @@ function HorseSaveLoadActions({ state, setState }: { state: HorseState; setState
         }
     }
 
-    async function handleImportJson() {
-        const uma = await importHorseJson();
-        if (uma) setState(umaStateToHorseState(uma));
+    function handleImportJson() {
+        setIsImportDialogOpen(true);
     }
 
     async function handlePasteFromClipboard() {
@@ -1574,7 +1675,7 @@ function HorseSaveLoadActions({ state, setState }: { state: HorseState; setState
     ];
 
     const loadMenuItems = [
-        { label: 'Import JSON file...', icon: h(Upload, { size: 14 }), onClick: handleImportJson },
+        { label: 'Import JSON/B64...', icon: h(Upload, { size: 14 }), onClick: handleImportJson },
         { label: 'Paste from clipboard', icon: h(Clipboard, { size: 14 }), onClick: handlePasteFromClipboard },
         { label: 'Import from screenshot (OCR)', icon: h(Camera, { size: 14 }), onClick: () => setIsOCRModalOpen(true) },
         ...(savedSlots.length > 0 ? [
@@ -1611,6 +1712,12 @@ function HorseSaveLoadActions({ state, setState }: { state: HorseState; setState
                 onClose={() => setIsOCRModalOpen(false)}
                 onConfirm={(uma) => setState(umaStateToHorseState(uma))}
             />
+            {isImportDialogOpen && (
+                <ImportDialog
+                    onClose={() => setIsImportDialogOpen(false)}
+                    onImport={(s) => setState(s)}
+                />
+            )}
             {isSaveModalOpen && (
                 <div class="saveLoadOverlay" onClick={(e) => { if (e.target === e.currentTarget) setIsSaveModalOpen(false); }}>
                     <div class="saveLoadModal">
@@ -1661,6 +1768,7 @@ function App(props) {
 		document.documentElement.classList.toggle('dark', darkMode);
 		localStorage.setItem('theme', darkMode ? 'dark' : 'light');
 	}, [darkMode]);
+	const [activeTab, setActiveTab] = useState<'umalator' | 'umas'>('umalator');
 	const [leftPanel, setLeftPanel] = useState<'uma' | 'settings'>('uma');
 	const isMobile = useMobile();
 	const [mobileDialogOpen, setMobileDialogOpen] = useState<null | 'uma' | 'settings'>(null);
@@ -2290,8 +2398,8 @@ function App(props) {
 	const mean = results.reduce((a,b) => a+b, 0) / results.length;
 
 	const colors = [
-		{stroke: '#2a77c5', fill: 'rgba(42, 119, 197, 0.3)'},
-		{stroke: '#c52a2a', fill: 'rgba(197, 42, 42, 0.3)'}
+		{stroke: '#2a77c5', fill: 'rgba(42, 119, 197, 0.5)'},
+		{stroke: '#c52a2a', fill: 'rgba(197, 42, 42, 0.5)'}
 	];
 	const skillActivations = chartData == null ? [] : chartData.sk.flatMap((a,i) => {
 		return Array.from(a.keys()).flatMap(id => {
@@ -2779,8 +2887,8 @@ function App(props) {
 			<IntlProvider definition={strings}>
 				<nav id="navBar">
 					<div id="navTabs">
-						<div class="navTab selected">Umalator</div>
-						<div class="navTab disabled">Umas</div>
+					<div class={`navTab ${activeTab === 'umalator' ? 'selected' : ''}`} onClick={() => setActiveTab('umalator')}>Umalator</div>
+					<div class={`navTab ${activeTab === 'umas' ? 'selected' : ''}`} onClick={() => setActiveTab('umas')}>Umas</div>
 					</div>
 					<button id="themeToggle" onClick={() => setDarkMode(d => !d)} title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
 						{darkMode
@@ -2788,9 +2896,15 @@ function App(props) {
 							: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
 						}
 					</button>
-				</nav>
-				{!isMobile && (
-					<div id="iconSidebar">
+			</nav>
+		<div id="umasPane" style={{ display: activeTab === 'umas' ? 'flex' : 'none' }}><UmasTab
+		onLoadUma1={(decoded) => { setUma1(umaStateToHorseState(decodedUmaToUmaState(decoded))); setActiveTab('umalator'); }}
+		onLoadUma2={(decoded) => { setUma2(umaStateToHorseState(decodedUmaToUmaState(decoded))); setActiveTab('umalator'); }}
+		onExport={(decoded) => { navigator.clipboard.writeText(JSON.stringify(decodedUmaToUmaState(decoded), null, 2)); }}
+	/></div>
+		{activeTab === 'umalator' && (<>
+			{!isMobile && (
+				<div id="iconSidebar">
 						<button class={`sidebarIcon ${leftPanel === 'uma' ? 'active' : ''}`} onClick={() => setLeftPanel('uma')} title="Uma">
 							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
 						</button>
@@ -2956,6 +3070,7 @@ function App(props) {
 						</div>
 					</div>
 				)}
+			</>)}
 			</IntlProvider>
 		</Language.Provider>
 	);

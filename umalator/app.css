@@ -21,6 +21,14 @@ body {
 	gap: 0;
 }
 
+#umasPane {
+	grid-column: 1 / -1;
+	grid-row: 2;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+}
+
 #iconSidebar {
 	grid-column: 1;
 	grid-row: 2 / -1;

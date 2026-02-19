@@ -1,7 +1,7 @@
 import { h } from 'preact';
-import { useMemo } from 'preact/hooks';
+import { useMemo, useContext } from 'preact/hooks';
+import { IntlContext } from 'preact-i18n';
 import { Clock, Zap, Heart, Swords, Flag, TrendingUp } from 'lucide-preact';
-import skillnames from '../../uma-skill-tools/data/skillnames.json';
 import './ResultsPane.css';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -118,9 +118,8 @@ function getMaxVelocity(snapshot: RaceSnapshot, umaIndex: 0 | 1): number {
     return Math.max(...snapshot.v[umaIndex]);
 }
 
-function getSkillName(skillId: string): string {
-    const names = (skillnames as Record<string, string[]>)[skillId];
-    return names?.[0] ?? skillId;
+function getSkillName(skillId: string, dict: Record<string, string>): string {
+    return dict[skillId] ?? skillId;
 }
 
 function skillEntries(sk: Map<string, number[][]> | Record<string, number[][]>): [string, number[][]][] {
@@ -261,6 +260,7 @@ interface UmaStatsCardProps {
 function UmaStatsCard({ snapshot, allruns, staminaStats, umaIndex }: UmaStatsCardProps) {
     const label = umaIndex === 0 ? 'Uma 1' : 'Uma 2';
     const cls = umaIndex === 0 ? 'uma1' : 'uma2';
+    const skillNameDict: Record<string, string> = (useContext(IntlContext as any) as any)?.intl?.dictionary?.skillnames ?? {};
 
     const finishTime = formatTime(getFinishTime(snapshot, umaIndex) * 1.18);
     const maxV = getMaxVelocity(snapshot, umaIndex).toFixed(2);
@@ -341,8 +341,8 @@ function UmaStatsCard({ snapshot, allruns, staminaStats, umaIndex }: UmaStatsCar
                             {skillEntries(skillMap).map(([skillId, activations]) =>
                                 activations.map((pos, i) => (
                                     <div key={`${skillId}-${i}`} class="skill-activation">
-                                        <span class="skill-name" title={getSkillName(skillId)}>
-                                            {getSkillName(skillId)}
+                                        <span class="skill-name" title={getSkillName(skillId, skillNameDict)}>
+                                            {getSkillName(skillId, skillNameDict)}
                                         </span>
                                         <span class="skill-pos">
                                             {pos[1] === -1
