@@ -86,6 +86,7 @@ export interface DecodedUma {
     card_id: number;
     talent_level?: number;
     rank_score?: number;
+    create_time?: string;
     speed: number;
     stamina: number;
     power: number;
@@ -160,6 +161,62 @@ function readV4Uma(bv: BitVector): DecodedUma | null {
     };
 }
 
+function formatCreateTime(sec: number): string {
+    const d = new Date(sec * 1000);
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    const h = String(d.getUTCHours()).padStart(2, '0');
+    const min = String(d.getUTCMinutes()).padStart(2, '0');
+    const s = String(d.getUTCSeconds()).padStart(2, '0');
+    return `${y}-${m}-${day} ${h}:${min}:${s}`;
+}
+
+function readV2Uma(bv: BitVector): DecodedUma | null {
+    if (bv.remaining() < 162) return null;
+
+    const card_id = bv.read(20);
+    const speed   = bv.read(11);
+    const stamina = bv.read(11);
+    const power   = bv.read(11);
+    const guts    = bv.read(11);
+    const wisdom  = bv.read(11);
+
+    const apt_short   = bv.read(4);
+    const apt_mile    = bv.read(4);
+    const apt_middle  = bv.read(4);
+    const apt_long    = bv.read(4);
+    const apt_turf    = bv.read(4);
+    const apt_dirt    = bv.read(4);
+    const apt_nige    = bv.read(4);
+    const apt_senko   = bv.read(4);
+    const apt_sashi   = bv.read(4);
+    const apt_oikomi  = bv.read(4);
+
+    const create_time = formatCreateTime(bv.read(32));
+    const has_rank = bv.read(1) === 1;
+    const rank_score = has_rank ? bv.read(15) : undefined;
+
+    const skill_count = bv.read(6);
+    const skills: Array<{ id: number; level: number }> = [];
+    for (let i = 0; i < skill_count && bv.remaining() >= 24; i++) {
+        const id = bv.read(20);
+        const level = bv.read(4) + 1;
+        skills.push({ id, level });
+    }
+
+    return {
+        card_id,
+        rank_score,
+        create_time,
+        speed, stamina, power, guts, wisdom,
+        apt_short, apt_mile, apt_middle, apt_long,
+        apt_turf, apt_dirt,
+        apt_nige, apt_senko, apt_sashi, apt_oikomi,
+        skills,
+    };
+}
+
 function readV1Uma(bv: BitVector): DecodedUma | null {
     if (bv.remaining() < 129) return null;
 
@@ -170,7 +227,6 @@ function readV1Uma(bv: BitVector): DecodedUma | null {
     const guts    = bv.read(11);
     const wisdom  = bv.read(11);
 
-    // Stored directly (0-9)
     const apt_short   = bv.read(4);
     const apt_mile    = bv.read(4);
     const apt_middle  = bv.read(4);
@@ -229,6 +285,11 @@ export async function decodeRoster(input: string): Promise<DecodedUma[]> {
             result.push(uma);
         }
         return result;
+    }
+
+    if (version === 2) {
+        const uma = readV2Uma(bv);
+        return uma ? [uma] : [];
     }
 
     if (version === 1) {

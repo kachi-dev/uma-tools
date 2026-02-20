@@ -544,6 +544,20 @@
     text-overflow: ellipsis;
 }
 
+.umaCardMeta {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    font-size: 11px;
+    color: var(--muted, #6b7280);
+}
+
+.umaCardMetaItem {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /* Stats */
 
 .umaCardStats {

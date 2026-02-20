@@ -9,6 +9,7 @@ import umas from '../../umas.json';
 import icons from '../../icons.json';
 import skillmeta from '../../skill_meta.json';
 import skilldata from '../../uma-skill-tools/data/skill_data.json';
+import { isPurpleSkill } from '../BasinnChart';
 const STORAGE_KEY = 'umas_tab_roster';
 
 const APT_LETTERS = ['?', 'G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', '★'];
@@ -66,6 +67,41 @@ function getCharInfo(card_id: number) {
 }
 
 
+export const skillGroups = Object.keys(skilldata)
+    .filter((id) => (skillmeta as Record<string, unknown>)[id])
+    .sort((a, b) =>
+        (isPurpleSkill(a) ? 1 : 0) - (isPurpleSkill(b) ? 1 : 0) ||
+        (skilldata as Record<string, { rarity: number }>)[a].rarity - (skilldata as Record<string, { rarity: number }>)[b].rarity ||
+        +b - +a
+    )
+    .reduce((groups, id) => {
+        const groupId = (skillmeta as Record<string, { groupId: string }>)[id].groupId;
+        if (groups.has(groupId)) {
+            groups.get(groupId)!.push(id);
+        } else {
+            groups.set(groupId, [id]);
+        }
+        return groups;
+    }, new Map<string, string[]>());
+
+function costForId(id: number, owned: Map<string, number>): number {
+    const meta = skillmeta as Record<string, { groupId: string; baseCost: number }>;
+    const idStr = String(id);
+    const m = meta[idStr];
+    if (!m) return 0;
+    const group = skillGroups.get(m.groupId);
+    if (!group) return meta[idStr]?.baseCost ?? 0;
+    const existing = owned.get(m.groupId);
+    let cost = 0;
+    for (let i = 0; i < group.length; ++i) {
+        if (Number(group[i]) !== existing) {
+            cost += (meta[group[i]]?.baseCost ?? 0);
+        }
+        if (group[i] === idStr) break;
+    }
+    return cost;
+}
+
 function skillOrder(a: string, b: string): number {
     const x = (skillmeta as any)[a]?.order ?? 0;
     const y = (skillmeta as any)[b]?.order ?? 0;
@@ -73,18 +109,39 @@ function skillOrder(a: string, b: string): number {
 }
 
 function calcTotalSP(skills: Array<{ id: number; level: number }>): number {
-    return skills.reduce((sum, s) => {
+    const data = skilldata as Record<string, { rarity: number }>;
+    const meta = skillmeta as Record<string, { groupId: string }>;
+    const countsTowardSP = (idStr: string) => {
+        const r = data[idStr]?.rarity ?? 1;
+        return r < 3 || r > 5;
+    };
+
+    const highestIndexByGroup = new Map<string, number>();
+    for (const s of skills) {
         const idStr = String(s.id);
-        const rarity: number = (skilldata as any)[idStr]?.rarity ?? 1;
-        if (rarity >= 3 && rarity <= 5) return sum;
-        return sum + ((skillmeta as any)[idStr]?.baseCost ?? 0);
-    }, 0);
+        if (!countsTowardSP(idStr)) continue;
+        const groupId = meta[idStr]?.groupId;
+        if (!groupId) continue;
+        const group = skillGroups.get(groupId);
+        const idx = group?.indexOf(idStr) ?? -1;
+        if (idx < 0) continue;
+        const best = highestIndexByGroup.get(groupId) ?? -1;
+        if (idx > best) highestIndexByGroup.set(groupId, idx);
+    }
+
+    let total = 0;
+    for (const [groupId, idx] of highestIndexByGroup) {
+        const skillId = Number(skillGroups.get(groupId)![idx]);
+        total += costForId(skillId, new Map());
+    }
+    return total;
 }
 
-type SortKey = 'sp';
+type SortKey = 'sp' | 'time' | 'rating';
 type SortDir = 'asc' | 'desc';
 interface SortState { key: SortKey; dir: SortDir; }
-const SORT_LABELS: Record<SortKey, string> = { sp: 'Total SP' };
+const SORT_LABELS: Record<SortKey, string> = { sp: 'Total SP', time: 'Created', rating: 'Rating' };
+const DEFAULT_SORT: SortState = { key: 'time', dir: 'desc' };
 
 // ── Filter logic ─────────────────────────────────────────────────────────────
 
@@ -312,31 +369,26 @@ function SortControl({ sort, onSortChange }: {
     const sortKeys = Object.keys(SORT_LABELS) as SortKey[];
 
     function handleKeyChange(e: Event) {
-        const val = (e.target as HTMLSelectElement).value;
-        if (!val) {
-            onSortChange(null);
-        } else {
-            onSortChange({ key: val as SortKey, dir: sort?.dir ?? 'asc' });
-        }
+        const val = (e.target as HTMLSelectElement).value as SortKey;
+        const s = sort ?? DEFAULT_SORT;
+        onSortChange({ key: val, dir: s.dir });
     }
 
     function toggleDir() {
-        if (!sort) return;
-        onSortChange({ ...sort, dir: sort.dir === 'asc' ? 'desc' : 'asc' });
+        const s = sort ?? DEFAULT_SORT;
+        onSortChange({ ...s, dir: s.dir === 'asc' ? 'desc' : 'asc' });
     }
 
     return (
         <div class="umasSortControl">
             <span class="umasSortLabel">Sort</span>
-            <select class="umasSortSelect" value={sort?.key ?? ''} onChange={handleKeyChange}>
-                <option value="">—</option>
+            <select class="umasSortSelect" value={(sort ?? DEFAULT_SORT).key} onChange={handleKeyChange}>
                 {sortKeys.map(k => <option key={k} value={k}>{SORT_LABELS[k]}</option>)}
             </select>
             <button
                 type="button"
-                class={`umasSortDirBtn${!sort ? ' umasSortDirBtn--disabled' : ''}`}
+                class="umasSortDirBtn"
                 onClick={toggleDir}
-                disabled={!sort}
                 title={sort?.dir === 'asc' ? 'Ascending' : 'Descending'}
             >
                 {sort?.dir === 'desc' ? '▼' : '▲'}
@@ -435,6 +487,12 @@ function UmaCard({ uma, actions }: { uma: DecodedUma; actions: UmaCardActions })
                 <div class="umaCardTitle">
                     <span class="umaCardName">{charName}</span>
                     {outfitName && <span class="umaCardOutfit">{outfitName}</span>}
+                    {(uma.rank_score != null || uma.create_time) && (
+                        <div class="umaCardMeta">
+                            {uma.rank_score != null && <span class="umaCardMetaItem">Rating {uma.rank_score.toLocaleString()}</span>}
+                            {uma.create_time && <span class="umaCardMetaItem">{uma.create_time}</span>}
+                        </div>
+                    )}
                 </div>
                 {(actions.onLoadUma1 || actions.onLoadUma2 || actions.onExport) && (
                     <div class="umaCardActions">
@@ -530,7 +588,7 @@ export function UmasTab({ onLoadUma1, onLoadUma2, onExport }: UmasTabProps = {})
     const [isImporting, setIsImporting] = useState(false);
     const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
     const [filtersOpen, setFiltersOpen] = useState(false);
-    const [sort, setSort] = useState<SortState | null>(null);
+    const [sort, setSort] = useState<SortState | null>(DEFAULT_SORT);
     const intlCtx = useContext(IntlContext as any) as any;
     const intlSkillNames: Record<string, string> = intlCtx?.intl?.dictionary?.skillnames ?? {};
 
@@ -575,11 +633,31 @@ export function UmasTab({ onLoadUma1, onLoadUma2, onExport }: UmasTabProps = {})
 
     const visible = useMemo(() => {
         const filtered = filterUmas(importedUmas, filters);
-        if (!sort) return filtered;
+        const effectiveSort = sort ?? DEFAULT_SORT;
         return [...filtered].sort((a, b) => {
-            let valA = 0, valB = 0;
-            if (sort.key === 'sp') { valA = calcTotalSP(a.skills); valB = calcTotalSP(b.skills); }
-            return sort.dir === 'asc' ? valA - valB : valB - valA;
+            if (effectiveSort.key === 'sp') {
+                const valA = calcTotalSP(a.skills);
+                const valB = calcTotalSP(b.skills);
+                return effectiveSort.dir === 'asc' ? valA - valB : valB - valA;
+            }
+            if (effectiveSort.key === 'time') {
+                const tA = a.create_time ?? '';
+                const tB = b.create_time ?? '';
+                if (!tA && !tB) return 0;
+                if (!tA) return 1;
+                if (!tB) return -1;
+                const cmp = tB.localeCompare(tA);
+                return effectiveSort.dir === 'asc' ? -cmp : cmp;
+            }
+            if (effectiveSort.key === 'rating') {
+                const rA = a.rank_score ?? -1;
+                const rB = b.rank_score ?? -1;
+                if (rA < 0 && rB < 0) return 0;
+                if (rA < 0) return 1;
+                if (rB < 0) return -1;
+                return effectiveSort.dir === 'asc' ? rA - rB : rB - rA;
+            }
+            return 0;
         });
     }, [importedUmas, filters, sort]);
 
