@@ -1,6 +1,9 @@
 .horseDef {
-	background: rgb(248, 248, 248);
-	border: 1px solid hsl(210 10% 85%);
+	--uma-brown: rgb(121, 64, 22);
+	--uma-brown-muted: rgba(121, 64, 22, 0.5);
+
+	background: var(--bg, #fff);
+	border: 1px solid var(--border, hsl(210 10% 85%));
 	border-radius: 0;
 	box-sizing: border-box;
 	display: flex;
@@ -9,9 +12,11 @@
 	width: 100%;
 }
 
+/* ── Header ──────────────────────────────────────────────────── */
+
 .horseDefHeader {
 	background: none;
-	border-bottom: 1px solid hsl(210 10% 85%);
+	border-bottom: 1px solid var(--border, hsl(210 10% 85%));
 	border-radius: 0;
 	color: hsl(215 20% 15%);
 	font-size: 2em;
@@ -19,6 +24,58 @@
 	padding: 6px 0;
 	text-align: center;
 }
+
+.dark .horseDefHeader {
+	border-bottom-color: var(--border);
+	color: var(--fg);
+}
+
+/* ── Header action buttons ───────────────────────────────────── */
+
+.umaSelectorActions {
+	position: absolute;
+	top: 8px;
+	right: 12px;
+	display: flex;
+	gap: 3px;
+	align-items: center;
+	z-index: 20;
+}
+
+.horseActionBtn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	background: var(--bg, white);
+	border: 1px solid hsl(210 10% 82%);
+	border-radius: 5px;
+	color: hsl(215 10% 50%);
+	cursor: pointer;
+	transition: background 0.15s, border-color 0.15s, color 0.15s;
+	font-size: 0;
+}
+
+.horseActionBtn:hover {
+	background: hsl(210 6% 93%);
+	border-color: hsl(215 10% 70%);
+	color: hsl(215 20% 20%);
+}
+
+.dark .horseActionBtn {
+	background: #1e1e1e;
+	border-color: var(--border);
+	color: hsl(215 10% 65%);
+}
+
+.dark .horseActionBtn:hover {
+	background: #2a2a2a;
+	border-color: hsl(215 10% 45%);
+	color: var(--fg);
+}
+
+/* ── Uma selector ────────────────────────────────────────────── */
 
 .umaSelector {
 	display: grid;
@@ -51,7 +108,7 @@
 }
 
 .umaEpithet > span {
-	color: rgb(121,64,22);
+	color: white;
 	font-size: 1.4em;
 	font-weight: bold;
 	margin: 0 auto;
@@ -67,7 +124,7 @@
 	background: none;
 	border: none;
 	box-sizing: border-box;
-	color: rgb(121,64,22);
+	color: white;
 	font-size: 1.4em;
 	font-weight: bold;
 	text-align: center;
@@ -118,93 +175,7 @@
 	vertical-align: middle;
 }
 
-.horseParams {
-	background: white;
-	border: 2px solid rgb(163, 221, 111);
-	border-radius: 8px;
-	display: grid;
-	grid-template-columns: repeat(5, 1fr);
-	margin: 10px 12px;
-}
-
-.horseParamHeader {
-	background: rgb(121, 216, 35);
-	border-left: 2px dotted rgb(93, 199, 24);
-	color: white;
-	font-weight: bold;
-	text-align: center;
-}
-
-.horseParamHeader:first-child {
-	border: none;
-	border-radius: 6px 0 0 0;
-}
-
-.horseParamHeader:last-of-type {
-	border-radius: 0 6px 0 0;
-}
-
-.horseParamHeader > img {
-	filter: drop-shadow(0 2px 0 rgb(103, 162, 58));
-	height: 1.2em;
-	margin-right: 2px;
-	vertical-align: middle;
-}
-
-.horseParamHeader > span {
-	display: inline-block;
-	height: 100%;
-	text-shadow: 0 2px 1px rgb(103, 162, 58);
-	vertical-align: middle;
-}
-
-.horseParam {
-	align-items: center;
-	border-left: 2px dotted rgb(121, 206, 72);
-	display: flex;
-	padding: 4px;
-}
-
-.horseParam:nth-child(6) {
-	border: none;
-}
-
-.horseParam > img {
-	width: 22px;
-}
-
-.horseParam > input {
-	background: inherit;
-	border: none;
-	color: rgb(121,64,22);
-	font-size: 1.1em;
-	font-weight: bold;
-	margin-left: 4px;
-	min-width: 0;
-	padding: 0;
-	width: 100%;
-}
-
-.horseAptitudes {
-	display: grid;
-	grid-template-columns: repeat(3, 1fr);
-	gap: 6px;
-	margin: 0 12px;
-	position: relative;
-}
-
-.horseAptitudes > div {
-	align-items: center;
-	border: 2px solid rgb(224, 214, 204);
-	border-radius: 6px;
-	background: white;
-	color: rgb(121, 64, 22);
-	display: flex;
-	font-weight: bold;
-	height: 1.8em;
-	padding: 0 8px;
-	position: relative;
-}
+/* ── Reset buttons ───────────────────────────────────────────── */
 
 .resetUmaButton {
 	background: linear-gradient(rgb(168, 227, 5), rgb(97, 174, 22)) padding-box, linear-gradient(rgb(173, 219, 60), rgb(85, 143, 24)) border-box;
@@ -235,60 +206,260 @@
 	z-index: 10;
 }
 
-
-.horseAptitudeSelect {
-	display: inline-block;
-	position: absolute;
-	right: 10px;
-	top: 4px;
+.dark .resetUmaButton {
+	box-shadow: 0px 2px 0 #444;
 }
 
-.horseAptitudeSelect > span::after {
-	border-bottom: 1px solid rgb(121,64,22);
-	border-right: 1px solid rgb(121,64,22);
-	content: "";
+.dark .resetUmaButton:hover {
+	box-shadow: 0px 3px 0 #444;
+}
+
+/* ── Stats ───────────────────────────────────────────────────── */
+
+.horseStats {
+	display: grid;
+	grid-template-columns: repeat(5, 1fr);
+	padding: 10px 12px 8px;
+	gap: 6px;
+	border-bottom: 1px solid var(--border, hsl(210 10% 85%));
+}
+
+.horseStat {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 3px;
+}
+
+.horseStatIcon {
+	width: 15px;
+	height: 15px;
+	object-fit: contain;
+}
+
+.horseStatLabel {
+	font-size: 9px;
+	font-weight: 600;
+	color: var(--muted, #6b7280);
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	line-height: 1;
+	margin-bottom: 1px;
+}
+
+.horseStatRank {
+	width: 22px;
+	height: 22px;
+	object-fit: contain;
+}
+
+.horseStat > input {
+	background: var(--input-bg, #fff);
+	border: 1px solid var(--border, hsl(210 10% 83%));
+	border-radius: 5px;
+	box-sizing: border-box;
+	color: var(--fg, #111827);
+	font-family: inherit;
+	font-size: 12px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	text-align: center;
+	width: 100%;
+	min-width: 0;
+	padding: 3px 2px;
+	outline: none;
+	transition: border-color 0.15s;
+}
+
+.horseStat > input:focus {
+	border-color: hsl(215 70% 55%);
+}
+
+/* Hide number spinners everywhere */
+.horseStat > input[type="number"]::-webkit-inner-spin-button,
+.horseStat > input[type="number"]::-webkit-outer-spin-button {
+	-webkit-appearance: none;
+	appearance: none;
+	margin: 0;
+}
+
+.horseStat > input[type="number"] {
+	-moz-appearance: textfield;
+	appearance: textfield;
+}
+
+.dark .horseStats {
+	border-bottom-color: var(--border);
+}
+
+.dark .horseStat > input {
+	background: var(--input-bg);
+	border-color: var(--input-border);
+	color: var(--fg);
+}
+
+.dark .horseStat > input:focus {
+	border-color: hsl(215 60% 55%);
+}
+
+/* ── Aptitudes ───────────────────────────────────────────────── */
+
+.horseApts {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 8px 16px;
+	border-bottom: 1px solid var(--border, hsl(210 10% 85%));
+	position: relative;
+	z-index: 5;
+}
+
+.horseAptCell {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 3px;
+	flex: 0 0 auto;
+}
+
+.horseAptCell--run {
+	flex: 1;
+	min-width: 0;
+}
+
+.horseAptCell--fixed {
+	flex: 0 0 auto;
+}
+
+.horseAptLabel {
+	font-size: 9px;
+	font-weight: 600;
+	color: var(--muted, #6b7280);
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	white-space: nowrap;
+}
+
+.dark .horseApts {
+	border-bottom-color: var(--border);
+}
+
+/* AptitudeSelect */
+
+.horseAptitudeSelect {
+	cursor: pointer;
+	display: inline-flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 3px;
+	position: relative;
+	background: var(--input-bg, #fff);
+	border: 1px solid var(--border, hsl(210 10% 83%));
+	border-radius: 5px;
+	padding: 3px 5px 3px 6px;
+	height: 28px;
+	box-sizing: border-box;
+	transition: border-color 0.12s;
+}
+
+.horseAptitudeSelect:hover {
+	border-color: hsl(215 50% 60%);
+}
+
+.horseAptitudeSelect::after {
+	content: '▾';
+	font-size: 8px;
+	color: var(--muted, #9ca3af);
+	line-height: 1;
+	flex-shrink: 0;
+}
+
+.horseAptitudeSelect > span > img {
 	display: block;
-	height: 4px;
-	margin-left: 1.6em;
-	margin-top: -1.2em;
-	transform: rotate(45deg);
-	width: 4px;
 }
 
 .horseAptitudeSelect > ul {
-	background: white;
-	border: 1px solid rgb(224, 214, 204);
-	list-style-type: none;
+	background: var(--bg, white);
+	border: 1px solid var(--border, hsl(210 10% 85%));
+	border-radius: 6px;
+	box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+	list-style: none;
+	padding: 4px 0;
 	position: absolute;
-	right: -12px;
-	top: 10px;
-	z-index: 10;
-	width: 20px;
+	top: calc(100% + 4px);
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 100;
+	min-width: 36px;
 }
 
-/* one day i'll actually learn CSS */
 .horseAptitudeSelect li {
-	margin-left: -22px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 3px 6px;
+}
+
+.horseAptitudeSelect li:hover {
+	background: hsl(215 50% 95%);
 }
 
 .horseAptitudeSelect img {
-	height: 1.2em;
+	height: 20px;
+	width: 20px;
+	object-fit: contain;
 }
 
+.dark .horseAptitudeSelect {
+	background: var(--input-bg);
+	border-color: var(--input-border);
+}
+
+.dark .horseAptitudeSelect > ul {
+	background: #222;
+	border-color: var(--border);
+	box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+.dark .horseAptitudeSelect li:hover {
+	background: hsl(215 20% 22%);
+}
+
+/* MoodSelect */
+
 .horseMoodSelect {
-	display: inline-block;
-	position: absolute;
-	right: 10px;
-	top: 4px;
-	width: 3em;
-	height: 1.2em;
 	cursor: pointer;
+	display: inline-flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 3px;
+	position: relative;
+	background: var(--input-bg, #fff);
+	border: 1px solid var(--border, hsl(210 10% 83%));
+	border-radius: 5px;
+	padding: 3px 5px 3px 6px;
+	height: 28px;
+	box-sizing: border-box;
+	transition: border-color 0.12s;
+}
+
+.horseMoodSelect:hover {
+	border-color: hsl(215 50% 60%);
+}
+
+.horseMoodSelect::after {
+	content: '▾';
+	font-size: 8px;
+	color: var(--muted, #9ca3af);
+	line-height: 1;
+	flex-shrink: 0;
 }
 
 .horseMoodSelect > span {
 	display: block;
-	width: 100%;
-	height: 100%;
+	width: 44px;
+	height: 18px;
 }
 
 .horseMoodSelect > span > img {
@@ -298,86 +469,291 @@
 }
 
 .horseMoodSelect > ul {
-	position: absolute;
-	top: 100%;
-	right: 0;
-	background: white;
-	border: 1px solid #ccc;
-	border-radius: 4px;
-	box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+	background: var(--bg, white);
+	border: 1px solid var(--border, hsl(210 10% 85%));
+	border-radius: 6px;
+	box-shadow: 0 4px 12px rgba(0,0,0,0.12);
 	list-style: none;
 	margin: 0;
 	padding: 4px 0;
-	min-width: 3.5em;
-	z-index: 1000;
+	position: absolute;
+	top: calc(100% + 4px);
+	left: 50%;
+	transform: translateX(-50%);
+	min-width: 52px;
+	z-index: 100;
 }
 
 .horseMoodSelect > ul > li {
-	padding: 4px 8px;
 	cursor: pointer;
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	padding: 4px 6px;
 }
 
 .horseMoodSelect > ul > li:hover {
-	background: #f0f0f0;
+	background: hsl(215 50% 95%);
 }
 
 .horseMoodSelect > ul > li > img {
-	width: 3em;
-	height: 1.2em;
+	width: 44px;
+	height: 18px;
 	object-fit: contain;
 }
 
-.horseStrategySelect {
-	background: inherit;
-	border: none;
-	color: inherit;
-	font-weight: inherit;
-	height: 100%;
-	position: absolute;
-	right: 4px;
-	text-align: right;
+.dark .horseMoodSelect {
+	background: var(--input-bg);
+	border-color: var(--input-border);
 }
 
-.horseSkillHeader {
-	background: linear-gradient(rgb(168, 227, 5), rgb(97, 174, 22)) padding-box, linear-gradient(rgb(173, 219, 60), rgb(85, 143, 24)) border-box;
-	border: 2px solid transparent;
-	border-radius: 36px;
-	box-shadow: 0px 3px 0 rgb(180,178,192);
-	box-sizing: border-box;
-	color: white;
-	font-size: 1.2em;
-	font-weight: bold;
-	margin: 16px 10px;
-	text-align: center;
+.dark .horseMoodSelect > ul {
+	background: #222;
+	border-color: var(--border);
+	box-shadow: 0 4px 16px rgba(0,0,0,0.4);
 }
+
+.dark .horseMoodSelect > ul > li:hover {
+	background: hsl(215 20% 22%);
+}
+
+/* StrategySelect */
+
+.horseStrategySelect {
+	background: var(--input-bg, #fff);
+	border: 1px solid var(--border, hsl(210 10% 83%));
+	border-radius: 5px;
+	color: var(--fg, #111827);
+	font-family: inherit;
+	font-size: 11px;
+	font-weight: 600;
+	text-align: center;
+	width: 100%;
+	height: 28px;
+	box-sizing: border-box;
+	cursor: pointer;
+	outline: none;
+	padding: 3px 4px;
+	transition: border-color 0.15s;
+}
+
+.horseStrategySelect:focus {
+	border-color: hsl(215 70% 55%);
+}
+
+.dark .horseStrategySelect {
+	background: var(--input-bg);
+	border-color: var(--input-border);
+	color: var(--fg);
+}
+
+/* ── Section label ───────────────────────────────────────────── */
+
+.horseSectionLabel {
+	padding: 10px 12px 4px;
+	font-size: 10px;
+	font-weight: 700;
+	color: var(--muted, #6b7280);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+
+/* ── Skill list (pills) ──────────────────────────────────────── */
 
 .horseSkillListWrapper {
-	background: rgb(242, 242, 242);
+	background: hsl(0 0% 96%);
 	border-radius: 4px;
 	height: 100%;
 	margin: 0 6px 6px 6px;
 	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
 }
 
-.horseSkillList {
-	display: grid;
-	gap: 16px 10px;
-	grid-template-columns: repeat(2, 1fr);
-	list-style-type: none;
+.horseSkillPills {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 5px;
+	list-style: none;
 	margin: 0;
-	padding: 12px;
+	padding: 8px 10px;
 }
 
-
-.horseSkillList .skill {
-	margin: 0;
+.horseSkillPills li {
+	position: relative;
 }
+
+/* Override .skill appearance inside the pills wrapper */
+
+.horseSkillPills .skill {
+	width: auto;
+	height: auto;
+	min-width: 0;
+	padding: 5px 9px 5px 7px;
+	border-radius: 6px;
+	border: 1px solid var(--border, hsl(210 10% 85%));
+	border-left-width: 3px;
+	box-shadow: none;
+	cursor: pointer;
+	font-size: 13px;
+	max-width: 240px;
+	transition: opacity 0.1s;
+}
+
+.horseSkillPills .skill:hover {
+	opacity: 0.85;
+}
+
+.horseSkillPills .skill-white {
+	background: hsl(220 10% 97%);
+	border-left-color: hsl(220 15% 65%);
+}
+
+.horseSkillPills .skill-gold {
+	background: hsl(44 90% 98%);
+	border-left-color: hsl(43 90% 50%);
+}
+
+.horseSkillPills .skill-pink {
+	background: hsl(320 60% 98%);
+	border-left-color: hsl(320 70% 60%);
+}
+
+.horseSkillPills .skill-unique {
+	background: hsl(270 60% 98%);
+	border-left-color: hsl(270 65% 65%);
+}
+
+.horseSkillPills .skillIcon {
+	width: 22px;
+	height: 22px;
+	margin: 0 6px 0 0;
+	flex-shrink: 0;
+}
+
+.horseSkillPills .skillName {
+	color: var(--fg, #111827);
+	font-size: 13px;
+	font-weight: 500;
+	text-stroke: none;
+	-webkit-text-stroke: 0;
+	text-shadow: none;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 170px;
+}
+
+.horseSkillPills .skillDismiss {
+	color: var(--muted, #9ca3af);
+	font-size: 11px;
+	padding: 0 0 0 5px;
+	flex-shrink: 0;
+}
+
+.horseSkillPills .skillDismiss:hover {
+	color: hsl(0 70% 50%);
+}
+
+/* Expanded skill takes full row width */
+
+.horseSkillPills .horseExpandedSkill,
+.horseExpandedSkill {
+	flex: 1 0 100%;
+	width: 100%;
+}
+
+/* Add skill button */
+
+.horseAddSkillBtn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	margin: 0 10px 8px;
+	padding: 6px 0;
+	border-radius: 5px;
+	border: 1px dashed var(--border, hsl(210 10% 80%));
+	background: none;
+	color: var(--muted, #6b7280);
+	font-family: inherit;
+	font-size: 11px;
+	font-weight: 500;
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.horseAddSkillBtn:hover {
+	border-color: hsl(215 50% 55%);
+	color: hsl(215 60% 40%);
+	background: hsl(215 70% 98%);
+}
+
+/* ── Forced position ─────────────────────────────────────────── */
+
+.forcedPositionInput {
+	border: 1px solid var(--uma-brown-muted, rgba(121, 64, 22, 0.4));
+	border-radius: 4px;
+	box-sizing: border-box;
+	font-size: 0.9em;
+	padding: 6px 8px;
+	width: 80px;
+	background: rgba(255, 255, 255, 0.3);
+	color: var(--uma-brown, rgb(121, 64, 22));
+	transition: all 0.2s ease;
+	backdrop-filter: blur(2px);
+}
+
+.forcedPositionInput:focus {
+	outline: none;
+	border-color: var(--uma-brown, rgb(121, 64, 22));
+	background: rgba(255, 255, 255, 0.5);
+	box-shadow: 0 0 0 2px rgba(121, 64, 22, 0.2);
+}
+
+.forcedPositionInput:hover {
+	border-color: var(--uma-brown-muted, rgba(121, 64, 22, 0.6));
+	background: rgba(255, 255, 255, 0.4);
+}
+
+.forcedPositionInput.inline {
+	margin-left: 8px;
+	vertical-align: middle;
+}
+
+.forcedPositionLabel {
+	color: var(--uma-brown, rgb(121, 64, 22));
+	font-size: 0.9em;
+	font-weight: bold;
+}
+
+.skillDetailsSection:has(.forcedPositionLabel) {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+}
+
+.forcedPositionLabel.inline {
+	position: absolute;
+	right: 4px;
+	bottom: -10px;
+	color: var(--uma-brown, rgb(121, 64, 22));
+	font-size: 0.75em;
+	font-weight: normal;
+	background: rgba(121, 64, 22, 0.1);
+	padding: 1px 5px;
+	border-radius: 3px;
+	pointer-events: none;
+	z-index: 10;
+	white-space: nowrap;
+}
+
+/* ── Skill picker overlay ────────────────────────────────────── */
 
 .horseSkillPickerWrapper {
-	background: white;
+	background: var(--bg, white);
 	bottom: 0;
 	display: none;
 	left: 10%;
@@ -409,87 +785,7 @@
 	display: block;
 }
 
-.addSkillButton {
-	align-items: center;
-	background: white;
-	border: 1px solid rgb(224, 214, 204);
-	color: rgb(121, 64, 22);
-}
-
-.addSkillButton > span {
-	font-size: 2em;
-	margin: 0 6px;
-}
-
-/* Forced position input styles */
-.forcedPositionInput {
-	border: 1px solid rgba(121, 64, 22, 0.4);
-	border-radius: 4px;
-	box-sizing: border-box;
-	font-size: 0.9em;
-	padding: 6px 8px;
-	width: 80px;
-	background: rgba(255, 255, 255, 0.3);
-	color: rgb(121, 64, 22);
-	transition: all 0.2s ease;
-	backdrop-filter: blur(2px);
-}
-
-.forcedPositionInput:focus {
-	outline: none;
-	border-color: rgb(121, 64, 22);
-	background: rgba(255, 255, 255, 0.5);
-	box-shadow: 0 0 0 2px rgba(121, 64, 22, 0.2);
-}
-
-.forcedPositionInput:hover {
-	border-color: rgba(121, 64, 22, 0.6);
-	background: rgba(255, 255, 255, 0.4);
-}
-
-.forcedPositionInput.inline {
-	margin-left: 8px;
-	vertical-align: middle;
-}
-
-
-.forcedPositionLabel {
-	color: rgb(121, 64, 22);
-	font-size: 0.9em;
-	font-weight: bold;
-}
-
-.skillDetailsSection:has(.forcedPositionLabel) {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 12px;
-}
-
-.horseSkillList li {
-	position: relative;
-}
-
-.horseSkillList li .skill {
-	position: static;
-}
-
-.forcedPositionLabel.inline {
-	position: absolute;
-	right: 12px;
-	bottom: -12px;
-	color: rgb(121, 64, 22);
-	font-size: 0.8em;
-	font-weight: normal;
-	background: rgba(121, 64, 22, 0.1);
-	padding: 2px 6px;
-	border-radius: 3px;
-	pointer-events: none;
-	z-index: 10;
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-
+/* ── Skill proc data dialog ──────────────────────────────────── */
 
 .skillProcDataOverlay {
 	background: rgba(25, 25, 25, 0.6);
@@ -503,7 +799,7 @@
 }
 
 .skillProcDataDialog {
-	background: white;
+	background: var(--bg, white);
 	border: 2px solid rgb(170, 221, 154);
 	border-radius: 12px;
 	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
@@ -566,112 +862,119 @@
 	position: relative;
 }
 
-/* --- Dark mode --- */
+/* ── Dark mode ───────────────────────────────────────────────── */
+
 .dark .horseDef {
 	background: var(--surface, #1e1e1e);
 	border-color: var(--border, #2e2e2e);
 }
-.dark .horseDefHeader {
-	border-bottom-color: var(--border, #2e2e2e);
-	color: var(--fg, #e4e4e7);
-}
+
 .dark .umaEpithet > span {
-	color: var(--theme-brown, #d4a574);
+	color: white;
 }
+
 .dark .umaSelectInput {
-	color: var(--theme-brown, #d4a574);
+	color: white;
 }
+
 .dark .umaSuggestions {
 	border-color: var(--border, #2e2e2e);
 }
+
 .dark .umaSuggestion {
 	background: #222;
 }
+
 .dark .umaSuggestion:nth-child(even) {
 	background: #1a1a1a;
 }
+
 .dark .umaSuggestion.selected,
 .dark .umaSuggestion:hover {
 	background: #3a3a3a;
 }
-.dark .horseParams {
-	background: #1a1a1a;
-	border-color: #3d6e1e;
-}
-.dark .horseParamHeader {
-	border-left-color: #3d6e1e;
-}
-.dark .horseParam {
-	border-left-color: #3d6e1e;
-}
-.dark .horseParam > input {
-	color: var(--theme-brown, #d4a574);
-}
-.dark .horseAptitudes > div {
-	background: #222;
-	border-color: var(--border, #2e2e2e);
-	color: var(--theme-brown, #d4a574);
-}
-.dark .horseAptitudeSelect > span::after {
-	border-bottom-color: var(--theme-brown, #d4a574);
-	border-right-color: var(--theme-brown, #d4a574);
-}
-.dark .horseAptitudeSelect > ul {
-	background: #222;
-	border-color: var(--border, #2e2e2e);
-}
-.dark .horseMoodSelect > ul {
-	background: #222;
-	border-color: var(--border, #2e2e2e);
-	box-shadow: 0 2px 4px rgba(0,0,0,0.4);
-}
-.dark .horseMoodSelect > ul > li:hover {
-	background: #333;
-}
+
 .dark .horseSkillListWrapper {
-	background: var(--surface, #1e1e1e);
+	background: hsl(0 0% 9%);
 }
+
 .dark .horseSkillPickerWrapper {
 	background: #1a1a1a;
 }
-.dark .addSkillButton {
-	background: #222;
-	border-color: var(--border, #2e2e2e);
-	color: var(--theme-brown, #d4a574);
+
+.dark .horseAddSkillBtn:hover {
+	border-color: hsl(215 40% 45%);
+	color: hsl(215 60% 75%);
+	background: hsl(215 25% 15%);
 }
+
+.dark .horseSkillPills .skill-white {
+	background: hsl(220 10% 14%);
+	border-left-color: hsl(220 15% 50%);
+	border-top-color: var(--border);
+	border-right-color: var(--border);
+	border-bottom-color: var(--border);
+}
+
+.dark .horseSkillPills .skill-gold {
+	background: hsl(44 30% 14%);
+	border-left-color: hsl(43 70% 45%);
+	border-top-color: var(--border);
+	border-right-color: var(--border);
+	border-bottom-color: var(--border);
+}
+
+.dark .horseSkillPills .skill-pink {
+	background: hsl(320 20% 14%);
+	border-left-color: hsl(320 60% 55%);
+	border-top-color: var(--border);
+	border-right-color: var(--border);
+	border-bottom-color: var(--border);
+}
+
+.dark .horseSkillPills .skill-unique {
+	background: hsl(270 20% 14%);
+	border-left-color: hsl(270 55% 60%);
+	border-top-color: var(--border);
+	border-right-color: var(--border);
+	border-bottom-color: var(--border);
+}
+
+.dark .horseSkillPills .skillName {
+	color: var(--fg);
+}
+
 .dark .forcedPositionInput {
 	background: rgba(30, 30, 30, 0.5);
 	border-color: var(--theme-brown, #d4a574);
 	color: var(--theme-brown, #d4a574);
 }
+
 .dark .forcedPositionInput:focus {
 	background: rgba(40, 40, 40, 0.7);
 	border-color: var(--theme-brown, #d4a574);
 	box-shadow: 0 0 0 2px rgba(212, 165, 116, 0.2);
 }
+
 .dark .forcedPositionLabel {
 	color: var(--theme-brown, #d4a574);
 }
+
 .dark .forcedPositionLabel.inline {
 	color: var(--theme-brown, #d4a574);
 	background: rgba(212, 165, 116, 0.15);
 }
+
 .dark .skillProcDataDialog {
 	background: #1a1a1a;
 	border-color: #3d6e1e;
 }
+
 .dark .skillProcDataHeader {
 	border-bottom-color: #3d6e1e;
 }
+
 .dark .skillProcDataContent {
 	color: var(--fg, #e4e4e7);
 }
-.dark .resetUmaButton {
-	box-shadow: 0px 2px 0 #444;
-}
-.dark .resetUmaButton:hover {
-	box-shadow: 0px 3px 0 #444;
-}
-.dark .horseSkillHeader {
-	box-shadow: 0px 3px 0 #444;
-}
+

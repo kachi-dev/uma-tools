@@ -1,8 +1,13 @@
 import { h, Fragment, render } from 'preact';
 import { useState, useReducer, useMemo, useEffect, useRef, useId, useCallback } from 'preact/hooks';
 import { Text, IntlProvider } from 'preact-i18n';
+<<<<<<< HEAD
 import { Settings } from 'lucide-preact';
 import { Record, Map as ImmMap } from 'immutable';
+=======
+import { Settings, Save, Upload, Download, Copy, Clipboard, Trash2, Camera, RotateCcw } from 'lucide-preact';
+import { Record, Set as ImmSet, Map as ImmMap } from 'immutable';
+>>>>>>> master
 import * as d3 from 'd3';
 import { computePosition, flip } from '@floating-ui/dom';
 
@@ -19,20 +24,47 @@ import { HorseDef, horseDefTabs, isGeneralSkill } from '../components/HorseDef';
 import { TRACKNAMES_ja, TRACKNAMES_en } from '../strings/common';
 import { RaceState } from '../uma-skill-tools/RaceSolver';
 
-import { getActivateableSkills, isPurpleSkill, getNullRow, BasinnChart } from './BasinnChart';
+import { getActivateableSkills, isPurpleSkill, isHpOnlySkill, getNullRow, BasinnChart } from './BasinnChart';
 
 import { initTelemetry, postEvent } from './telemetry';
 
 import { IntroText } from './IntroText';
+import { ResultsPane, type CompareResults } from './components/ResultsPane';
+import { OCRModal } from './components/OCRModal';
+import {
+    UmaState,
+    getSavedSlotNames, saveHorseSlot, loadHorseSlot, deleteHorseSlot,
+    downloadHorseJson, importHorseJson, copyHorseToClipboard, pasteHorseFromClipboard,
+} from './storage';
+import { Dropdown } from './ui-components/Dropdown';
+import { UmasTab, UmasTabProps } from './components/UmasTab';
+import { decodeRoster, DecodedUma } from './rosterDecoder';
 
 import skilldata from '../uma-skill-tools/data/skill_data.json';
 import skillnames from '../uma-skill-tools/data/skillnames.json';
 import skillmeta from '../skill_meta.json';
+import umas from '../umas.json';
 
 import './app.css';
+import './components/OCRModal.css';
 
 const DEFAULT_SAMPLES = 500;
 const DEFAULT_SEED = 2615953739;
+
+const MOBILE_BREAKPOINT = 768;
+
+function useMobile() {
+	const [isMobile, setIsMobile] = useState(() =>
+		typeof window !== 'undefined' && window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches
+	);
+	useEffect(() => {
+		const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
+		const handler = () => setIsMobile(mq.matches);
+		mq.addEventListener('change', handler);
+		return () => mq.removeEventListener('change', handler);
+	}, []);
+	return isMobile;
+}
 
 
 
@@ -1433,6 +1465,303 @@ function StatsTable({ caption, captionColor, rows }) {
 	);
 }
 
+function horseStateToUmaState(state: HorseState): UmaState {
+    return {
+        outfitId: state.outfitId,
+        speed: state.speed,
+        stamina: state.stamina,
+        power: state.power,
+        guts: state.guts,
+        wisdom: state.wisdom,
+        strategy: state.strategy,
+        distanceAptitude: state.distanceAptitude,
+        surfaceAptitude: state.surfaceAptitude,
+        strategyAptitude: state.strategyAptitude,
+        mood: state.mood,
+        skills: Array.from(state.skills.values()),
+        forcedSkillPositions: state.forcedSkillPositions.toJS() as { [key: string]: number },
+    };
+}
+
+function umaStateToHorseState(uma: UmaState): HorseState {
+    return new HorseState({
+        outfitId: uma.outfitId,
+        speed: uma.speed,
+        stamina: uma.stamina,
+        power: uma.power,
+        guts: uma.guts,
+        wisdom: uma.wisdom,
+        strategy: uma.strategy,
+        distanceAptitude: uma.distanceAptitude,
+        surfaceAptitude: uma.surfaceAptitude,
+        strategyAptitude: uma.strategyAptitude,
+        mood: uma.mood as Mood,
+        skills: SkillSet(uma.skills),
+        forcedSkillPositions: ImmMap(uma.forcedSkillPositions),
+    });
+}
+
+function decodedUmaToUmaState(uma: DecodedUma): UmaState {
+    const aptToLetter = (v: number): string =>
+        (['G', 'G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'S'] as const)[Math.max(0, Math.min(9, v))];
+
+    const strategies = [
+        { key: 'apt_nige'   as const, strat: 'Nige'    as const },
+        { key: 'apt_senko'  as const, strat: 'Senkou'  as const },
+        { key: 'apt_sashi'  as const, strat: 'Sasi'    as const },
+        { key: 'apt_oikomi' as const, strat: 'Oikomi'  as const },
+    ];
+    const bestStrat = strategies.reduce((best, curr) =>
+        uma[curr.key] >= uma[best.key] ? curr : best
+    );
+    const bestDistApt = Math.max(uma.apt_short, uma.apt_mile, uma.apt_middle, uma.apt_long);
+    const bestSurfApt = Math.max(uma.apt_turf, uma.apt_dirt);
+
+    return {
+        outfitId: String(uma.card_id),
+        speed:    uma.speed,
+        stamina:  uma.stamina,
+        power:    uma.power,
+        guts:     uma.guts,
+        wisdom:   uma.wisdom,
+        strategy: bestStrat.strat,
+        distanceAptitude: aptToLetter(bestDistApt),
+        surfaceAptitude:  aptToLetter(bestSurfApt),
+        strategyAptitude: aptToLetter(uma[bestStrat.key]),
+        mood: 2,
+        skills: uma.skills.map(s => String(s.id)),
+        forcedSkillPositions: {},
+    };
+}
+
+function ImportDialog({ onClose, onImport }: { onClose: () => void; onImport: (s: HorseState) => void }) {
+    const [b64Input, setB64Input] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    async function handleB64Import() {
+        if (!b64Input.trim()) return;
+        setError('');
+        setLoading(true);
+        try {
+            const umas = await decodeRoster(b64Input.trim());
+            if (!umas || umas.length === 0) {
+                setError('Could not decode — check the code and try again.');
+                return;
+            }
+            onImport(umaStateToHorseState(decodedUmaToUmaState(umas[0])));
+            onClose();
+        } catch (e: any) {
+            setError('Decode failed: ' + (e?.message ?? 'Unknown error'));
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function handleJsonFile() {
+        const uma = await importHorseJson();
+        if (uma) {
+            onImport(umaStateToHorseState({ ...uma, mood: 2 }));
+            onClose();
+        }
+    }
+
+    function handleKeyDown(e: KeyboardEvent) {
+        if (e.key === 'Escape') onClose();
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleB64Import();
+    }
+
+    return (
+        <div class="saveLoadOverlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+            <div class="saveLoadModal" style="width:420px;max-width:92vw" onKeyDown={handleKeyDown}>
+                <h3 class="saveLoadModalTitle">Import Uma</h3>
+                <p style="margin:4px 0 10px;font-size:13px;color:var(--muted,#6b7280)">
+                    Paste a single-uma export code from{' '}
+                    <a href="https://roster.uma.guide/" target="_blank" rel="noopener" style="color:hsl(215 70% 50%)">roster.uma.guide</a>
+                    , or browse for a JSON file.
+                </p>
+                <textarea
+                    style="width:100%;box-sizing:border-box;height:72px;padding:8px 10px;font-size:12px;font-family:monospace;resize:vertical;border:1px solid var(--border,#e5e7eb);border-radius:6px;background:var(--input-bg,#fff);color:var(--fg,#111827);outline:none"
+                    placeholder="e.g. ARlXmWBdob…"
+                    value={b64Input}
+                    onInput={(e) => { setB64Input((e.target as HTMLTextAreaElement).value); setError(''); }}
+                    autoFocus
+                />
+                {error && <p style="margin:6px 0 0;font-size:12px;color:hsl(0 70% 45%)">{error}</p>}
+                <div class="saveLoadModalActions" style="margin-top:14px">
+                    <button class="saveLoadBtnSecondary" onClick={onClose}>Cancel</button>
+                    <button class="saveLoadBtnSecondary" onClick={handleJsonFile}>Browse JSON…</button>
+                    <button class="saveLoadBtnPrimary" onClick={handleB64Import} disabled={loading || !b64Input.trim()}>
+                        {loading ? 'Importing…' : 'Import'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function HorseSaveLoadActions({ state, setState, onReset }: { state: HorseState; setState: (s: HorseState) => void; onReset?: () => void }) {
+    const [savedSlots, setSavedSlots] = useState(() => getSavedSlotNames());
+    const [isOCRModalOpen, setIsOCRModalOpen] = useState(false);
+    const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+    const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+    const [saveModalName, setSaveModalName] = useState('');
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [deleteSlotName, setDeleteSlotName] = useState('');
+    const [copyFeedback, setCopyFeedback] = useState(false);
+
+    function refreshSlots() {
+        setSavedSlots(getSavedSlotNames());
+    }
+
+    function handleSaveNew() {
+        const uma = state.outfitId ? (umas as any)[state.outfitId.slice(0, 4)]?.name?.[1] : null;
+        setSaveModalName(uma || 'Horse');
+        setIsSaveModalOpen(true);
+    }
+
+    function handleSaveConfirm() {
+        const name = saveModalName.trim();
+        if (!name) return;
+        saveHorseSlot(name, horseStateToUmaState(state));
+        refreshSlots();
+        setIsSaveModalOpen(false);
+    }
+
+    function handleSaveOverwrite(name: string) {
+        saveHorseSlot(name, horseStateToUmaState(state));
+        refreshSlots();
+    }
+
+    async function handleDownloadJson() {
+        downloadHorseJson(horseStateToUmaState(state));
+    }
+
+    async function handleCopyToClipboard() {
+        const ok = await copyHorseToClipboard(horseStateToUmaState(state));
+        if (ok) {
+            setCopyFeedback(true);
+            setTimeout(() => setCopyFeedback(false), 1500);
+        }
+    }
+
+    function handleImportJson() {
+        setIsImportDialogOpen(true);
+    }
+
+    async function handlePasteFromClipboard() {
+        const uma = await pasteHorseFromClipboard();
+        if (uma) setState(umaStateToHorseState(uma));
+    }
+
+    function handleDeleteSlot(name: string) {
+        setDeleteSlotName(name);
+        setIsDeleteModalOpen(true);
+    }
+
+    function handleDeleteConfirm() {
+        deleteHorseSlot(deleteSlotName);
+        refreshSlots();
+        setIsDeleteModalOpen(false);
+    }
+
+    const saveMenuItems = [
+        { label: 'Save as new...', icon: h(Save, { size: 14 }), onClick: handleSaveNew },
+        { label: 'Download JSON', icon: h(Download, { size: 14 }), onClick: handleDownloadJson },
+        { label: copyFeedback ? 'Copied!' : 'Copy to clipboard', icon: h(Copy, { size: 14 }), onClick: handleCopyToClipboard },
+        ...(savedSlots.length > 0 ? [
+            { divider: true },
+            { label: 'Overwrite existing:', disabled: true },
+            ...savedSlots.slice(0, 5).map(name => ({
+                label: name,
+                onClick: () => handleSaveOverwrite(name),
+            })),
+        ] : []),
+    ];
+
+    const loadMenuItems = [
+        { label: 'Import JSON/B64...', icon: h(Upload, { size: 14 }), onClick: handleImportJson },
+        { label: 'Paste from clipboard', icon: h(Clipboard, { size: 14 }), onClick: handlePasteFromClipboard },
+        { label: 'Import from screenshot (OCR)', icon: h(Camera, { size: 14 }), onClick: () => setIsOCRModalOpen(true) },
+        ...(savedSlots.length > 0 ? [
+            { divider: true },
+            { label: 'Saved builds:', disabled: true },
+            ...savedSlots.map(name => ({
+                label: name,
+                onClick: () => {
+                    const uma = loadHorseSlot(name);
+                    if (uma) setState(umaStateToHorseState(uma));
+                },
+                suffix: h('button', {
+                    class: 'dropdownDeleteBtn',
+                    title: 'Delete',
+                    onMouseDown: (e: MouseEvent) => e.stopPropagation(),
+                    onClick: (e: MouseEvent) => { e.stopPropagation(); handleDeleteSlot(name); },
+                }, h(Trash2, { size: 12 })),
+            })),
+        ] : []),
+    ];
+
+    return (
+        <>
+            <Dropdown
+                trigger={h('button', { class: 'horseActionBtn', title: 'Save' }, h(Save, { size: 16 }))}
+                items={saveMenuItems}
+            />
+            <Dropdown
+                trigger={h('button', { class: 'horseActionBtn', title: 'Load' }, h(Upload, { size: 16 }))}
+                items={loadMenuItems}
+            />
+            {onReset && <button class="horseActionBtn" title="Reset this uma" onClick={onReset}>{h(RotateCcw, { size: 16 })}</button>}
+            <OCRModal
+                isOpen={isOCRModalOpen}
+                onClose={() => setIsOCRModalOpen(false)}
+                onConfirm={(uma) => setState(umaStateToHorseState(uma))}
+            />
+            {isImportDialogOpen && (
+                <ImportDialog
+                    onClose={() => setIsImportDialogOpen(false)}
+                    onImport={(s) => setState(s)}
+                />
+            )}
+            {isSaveModalOpen && (
+                <div class="saveLoadOverlay" onClick={(e) => { if (e.target === e.currentTarget) setIsSaveModalOpen(false); }}>
+                    <div class="saveLoadModal">
+                        <h2 class="saveLoadModalTitle">Save Build</h2>
+                        <label class="saveLoadInputLabel">Build Name</label>
+                        <input
+                            type="text"
+                            class="saveLoadInput"
+                            value={saveModalName}
+                            onInput={(e) => setSaveModalName(e.currentTarget.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSaveConfirm()}
+                            autoFocus
+                        />
+                        <div class="saveLoadModalActions">
+                            <button class="saveLoadBtnSecondary" onClick={() => setIsSaveModalOpen(false)}>Cancel</button>
+                            <button class="saveLoadBtnPrimary" onClick={handleSaveConfirm}>Save</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {isDeleteModalOpen && (
+                <div class="saveLoadOverlay" onClick={(e) => { if (e.target === e.currentTarget) setIsDeleteModalOpen(false); }}>
+                    <div class="saveLoadModal">
+                        <h2 class="saveLoadModalTitle">Delete Build</h2>
+                        <p class="saveLoadDeleteText">
+                            Are you sure you want to delete "<strong>{deleteSlotName}</strong>"?
+                        </p>
+                        <div class="saveLoadModalActions">
+                            <button class="saveLoadBtnSecondary" onClick={() => setIsDeleteModalOpen(false)}>Cancel</button>
+                            <button class="saveLoadBtnDanger" onClick={handleDeleteConfirm}>Delete</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
+    );
+}
+
 function App(props) {
 	//const [language, setLanguage] = useLanguageSelect(); 
 	const [darkMode, setDarkMode] = useState(() => {
@@ -1445,13 +1774,17 @@ function App(props) {
 		document.documentElement.classList.toggle('dark', darkMode);
 		localStorage.setItem('theme', darkMode ? 'dark' : 'light');
 	}, [darkMode]);
+	const [activeTab, setActiveTab] = useState<'umalator' | 'umas'>('umalator');
 	const [leftPanel, setLeftPanel] = useState<'uma' | 'settings'>('uma');
+	const isMobile = useMobile();
+	const [mobileDialogOpen, setMobileDialogOpen] = useState<null | 'uma' | 'settings'>(null);
 	const [skillsOpen, setSkillsOpen] = useState(false);
 	const [racedef, setRaceDef] = useState(() => DEFAULT_PRESET.racedef);
 	const [nsamples, setSamples] = useState(DEFAULT_SAMPLES);
 	const [seed, setSeed] = useState(DEFAULT_SEED);
 	const [runOnceCounter, setRunOnceCounter] = useState(0);
 	const [isSimulationRunning, setIsSimulationRunning] = useState(false);
+	const [displayRun, setDisplayRun] = useState<'mean' | 'median' | 'min' | 'max'>('median');
 	const [simulationProgress, setSimulationProgress] = useState<{round: number, total: number} | null>(null);
 	const chartWorkersCompletedRef = useRef(0);
 	const [posKeepMode, setPosKeepModeRaw] = useState(PosKeepMode.Approximate);
@@ -1900,6 +2233,8 @@ function App(props) {
 
 			uma = uma1.toJS();
 		}
+
+		skills = skills.filter(id => !isPurpleSkill(id) && !isHpOnlySkill(id));
 		
 		const filler = new Map();
 		skills.forEach(id => filler.set(id, getNullRow(id)));
@@ -1953,7 +2288,7 @@ function App(props) {
 
 	function basinnChartSelection(skillId) {
 		const r = tableData.get(skillId);
-		if (r.runData != null) {
+		if (r?.runData != null) {
 			setResults(r);
 			setSelectedSkillId(skillId);
 		} else {
@@ -2077,8 +2412,8 @@ function App(props) {
 	const mean = results.reduce((a,b) => a+b, 0) / results.length;
 
 	const colors = [
-		{stroke: 'rgb(42, 119, 197)', fill: 'rgba(42, 119, 197, 0.7)'},
-		{stroke: 'rgb(197, 42, 42)', fill: 'rgba(197, 42, 42, 0.7)'}
+		{stroke: '#2a77c5', fill: 'rgba(42, 119, 197, 0.5)'},
+		{stroke: '#c52a2a', fill: 'rgba(197, 42, 42, 0.5)'}
 	];
 	const skillActivations = chartData == null ? [] : chartData.sk.flatMap((a,i) => {
 		return Array.from(a.keys()).flatMap(id => {
@@ -2262,7 +2597,7 @@ function App(props) {
 				<div class={`umaTabItem ${currentIdx == 0 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx0)}>Uma 1</div>
 				{mode == Mode.Compare && <div class={`umaTabItem ${currentIdx == 1 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx1)}>Uma 2</div>}
 				{posKeepMode == PosKeepMode.Virtual && mode == Mode.Compare && <div class={`umaTabItem ${currentIdx == 2 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx2)}>Pacemaker</div>}
-				{mode == Mode.Compare && <div id="expandBtn" title="Expand panel" onClick={toggleExpand} />}
+				{mode == Mode.Compare && <button class="horseActionBtn" title="Reset all umas" onClick={resetAllUmas}>{h(Trash2, { size: 16 })}</button>}
 			</div>
 		</Fragment>
 	);
@@ -2357,139 +2692,32 @@ function App(props) {
 		);
 	}, [displaying, loadingAdditionalSamples, isSimulationRunning, runAdditionalSamplesForSkill, currentIdx, mode]);
 
+	const compareResults: CompareResults | null = (results.length > 0 && runData && staminaStats && firstUmaStats)
+		? { results, runData, staminaStats, firstUmaStats }
+		: null;
+
+	function handleDisplayRunChange(run: 'mean' | 'median' | 'min' | 'max') {
+		setDisplayRun(run);
+		setChartData(`${run}run`);
+	}
+
 	let resultsPane;
-	if (mode == Mode.Compare && results.length > 0) {
+	if (mode == Mode.Compare) {
+		const showIntroOnCompare = compareResults === null && !isSimulationRunning;
 		resultsPane = (
 			<div id="resultsPaneWrapper">
-				<div id="resultsPane" class="mode-compare">
-					<table id="resultsSummary">
-						<tfoot>
-							<tr>
-								{Object.entries({
-									minrun: ['Minimum', 'Set chart display to the run with minimum bashin difference'],
-									maxrun: ['Maximum', 'Set chart display to the run with maximum bashin difference'],
-									meanrun: ['Mean', 'Set chart display to a run representative of the mean bashin difference'],
-									medianrun: ['Median', 'Set chart display to a run representative of the median bashin difference']
-								}).map(([k,label]) =>
-									<th scope="col" class={displaying == k ? 'selected' : ''} title={label[1]} onClick={() => setChartData(k)}>{label[0]}</th>
-								)}
-							</tr>
-						</tfoot>
-						<tbody>
-							<tr>
-								<td onClick={() => setChartData('minrun')}>{results[0].toFixed(2)}<span class="unit-basinn">{CC_GLOBAL?'lengths':'バ身'}</span></td>
-								<td onClick={() => setChartData('maxrun')}>{results[results.length-1].toFixed(2)}<span class="unit-basinn">{CC_GLOBAL?'lengths':'バ身'}</span></td>
-								<td onClick={() => setChartData('meanrun')}>{mean.toFixed(2)}<span class="unit-basinn">{CC_GLOBAL?'lengths':'バ身'}</span></td>
-								<td onClick={() => setChartData('medianrun')}>{median.toFixed(2)}<span class="unit-basinn">{CC_GLOBAL?'lengths':'バ身'}</span></td>
-							</tr>
-						</tbody>
-					</table>
-					<div id="resultsHelp">Negative numbers mean <strong style="color:#2a77c5">Umamusume 1</strong> is faster, positive numbers mean <strong style="color:#c52a2a">Umamusume 2</strong> is faster.</div>
-					
-					
-					{(firstUmaStats || staminaStats) && (
-						<div style={{marginTop: '15px', marginBottom: '10px', textAlign: 'center'}}>
-							{firstUmaStats && (
-								<div style={{marginBottom: '2px', display: 'flex', justifyContent: 'center', gap: '40px'}}>
-									<div style={{textAlign: 'right', minWidth: '250px'}}>
-										<strong>Uma 1:</strong> Final leg 1st place: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{firstUmaStats.uma1.firstPlaceRate.toFixed(1)}%</span>
-									</div>
-									<div style={{textAlign: 'left', minWidth: '250px'}}>
-										<strong>Uma 2:</strong> Final leg 1st place: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{firstUmaStats.uma2.firstPlaceRate.toFixed(1)}%</span>
-									</div>
-								</div>
-							)}
-							{staminaStats && (
-								<>
-									<div style={{marginBottom: '2px', display: 'flex', justifyContent: 'center', gap: '40px'}}>
-										<div style={{textAlign: 'right', minWidth: '250px'}}>
-											<strong>Uma 1:</strong> Spurt Rate: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{staminaStats.uma1.fullSpurtRate.toFixed(1)}%</span>
-										</div>
-										<div style={{textAlign: 'left', minWidth: '250px'}}>
-											<strong>Uma 2:</strong> Spurt Rate: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{staminaStats.uma2.fullSpurtRate.toFixed(1)}%</span>
-										</div>
-									</div>
-									<div style={{marginBottom: '2px', display: 'flex', justifyContent: 'center', gap: '40px'}}>
-										<div style={{textAlign: 'right', minWidth: '250px'}}>
-											<strong>Uma 1:</strong> Survival Rate: <span style={{color: '#2a77c5', fontWeight: 'bold'}}>{staminaStats.uma1.staminaSurvivalRate.toFixed(1)}%</span>
-										</div>
-										<div style={{textAlign: 'left', minWidth: '250px'}}>
-											<strong>Uma 2:</strong> Survival Rate: <span style={{color: '#c52a2a', fontWeight: 'bold'}}>{staminaStats.uma2.staminaSurvivalRate.toFixed(1)}%</span>
-										</div>
-									</div>
-								</>
-							)}
-						</div>
-					)}
-					
-					<Histogram width={500} height={333} data={results} />
-					{staminaStats && (
-						<div style={{marginTop: '20px', width: '500px', paddingBottom: '20px'}}>
-							<div class="umaTabsGroup" style={{marginBottom: '4px'}}>
-								<div 
-									class={`umaTab staminaTab ${hpDeathPositionTab == 0 ? 'selected' : ''}`} 
-									onClick={() => setHpDeathPositionTab(0)}
-								>
-									Uma 1
-								</div>
-								<div 
-									class={`umaTab staminaTab ${hpDeathPositionTab == 1 ? 'selected' : ''}`} 
-									onClick={() => setHpDeathPositionTab(1)}
-								>
-									Uma 2
-								</div>
-							</div>
-							{hpDeathPositionTab == 0 && (
-								<>
-									<StatsTable 
-										caption="Stamina Death Stats"
-										captionColor="#2a77c5"
-										rows={[
-											{ label: 'Full Spurt', stats: staminaStats.uma1.hpDiedPositionStatsFullSpurt },
-											{ label: 'Non-Full Spurt', stats: staminaStats.uma1.hpDiedPositionStatsNonFullSpurt }
-										]}
-									/>
-									{staminaStats.uma1.nonFullSpurtVelocityStats && staminaStats.uma1.nonFullSpurtDelayStats && (
-										<StatsTable 
-											caption="Non-Full Spurt Stats"
-											captionColor="#2a77c5"
-											rows={[
-												{ label: 'Velocity', stats: staminaStats.uma1.nonFullSpurtVelocityStats },
-												{ label: 'Delay', stats: staminaStats.uma1.nonFullSpurtDelayStats }
-											]}
-										/>
-									)}
-								</>
-							)}
-							{hpDeathPositionTab == 1 && (
-								<>
-									<StatsTable 
-										caption="Stamina Death Stats"
-										captionColor="#c52a2a"
-										rows={[
-											{ label: 'Full Spurt', stats: staminaStats.uma2.hpDiedPositionStatsFullSpurt },
-											{ label: 'Non-Full Spurt', stats: staminaStats.uma2.hpDiedPositionStatsNonFullSpurt }
-										]}
-									/>
-									{staminaStats.uma2.nonFullSpurtVelocityStats && staminaStats.uma2.nonFullSpurtDelayStats && (
-										<StatsTable 
-											caption="Non-Full Spurt Stats"
-											captionColor="#c52a2a"
-											rows={[
-												{ label: 'Velocity', stats: staminaStats.uma2.nonFullSpurtVelocityStats },
-												{ label: 'Delay', stats: staminaStats.uma2.nonFullSpurtDelayStats }
-											]}
-										/>
-									)}
-								</>
-							)}
-						</div>
-					)}
-				</div>
-				<div id="infoTables">
-					<ResultsTable caption="Uma 1" color="#2a77c5" chartData={chartData} idx={0} runData={runData} />
-					<ResultsTable caption="Uma 2" color="#c52a2a" chartData={chartData} idx={1} runData={runData} />
-				</div>
+				{showIntroOnCompare ? (
+					<div id="resultsPane">
+						<IntroText />
+					</div>
+				) : (
+					<ResultsPane
+						results={compareResults}
+						isRunning={isSimulationRunning}
+						displayRun={displayRun}
+						onDisplayRunChange={handleDisplayRunChange}
+					/>
+				)}
 			</div>
 		);
 	} else if ((mode == Mode.Chart || mode == Mode.UniquesChart) && tableData.size > 0) {
@@ -2530,13 +2758,160 @@ function App(props) {
 		resultsPane = null;
 	}
 
+	const umaPaneInner = (
+		<>
+			<div class={!expanded && currentIdx == 0 ? 'selected' : ''}>
+				<HorseDef key={uma1.outfitId} state={uma1} setState={setUma1} courseDistance={course.distance} tabstart={() => 4} onResetAll={resetAllUmas} runData={mode == Mode.Compare ? runData : null} umaIndex={mode == Mode.Compare ? 0 : null}
+				headerActions={<HorseSaveLoadActions state={uma1} setState={setUma1} onReset={() => setUma1(new HorseState())} />}>
+				{expanded ? 'Uma 1' : umaTabs}
+			</HorseDef>
+			</div>
+			{expanded &&
+				<div id="copyUmaButtons">
+					<div id="copyUmaToRight" title="Copy uma 1 to uma 2" onClick={copyUmaToRight} />
+					<div id="copyUmaToLeft" title="Copy uma 2 to uma 1" onClick={copyUmaToLeft} />
+					<div id="swapUmas" title="Swap umas" onClick={swapUmas}>⮂</div>
+				</div>}
+			{mode == Mode.Compare && <div class={!expanded && currentIdx == 1 ? 'selected' : ''}>
+				<HorseDef key={uma2.outfitId} state={uma2} setState={setUma2} courseDistance={course.distance} tabstart={() => 4 + horseDefTabs()} onResetAll={resetAllUmas} runData={runData} umaIndex={1}
+				headerActions={<HorseSaveLoadActions state={uma2} setState={setUma2} onReset={() => setUma2(new HorseState())} />}>
+				{expanded ? 'Uma 2' : umaTabs}
+			</HorseDef>
+			</div>}
+			{posKeepMode == PosKeepMode.Virtual && mode == Mode.Compare && <div class={!expanded && currentIdx == 2 ? 'selected' : ''}>
+				<HorseDef key={pacer.outfitId} state={pacer} setState={setPacer} courseDistance={course.distance} tabstart={() => 4 + (mode == Mode.Compare ? 2 : 1) * horseDefTabs()} onResetAll={resetAllUmas}
+				headerActions={<HorseSaveLoadActions state={pacer} setState={setPacer} onReset={() => setPacer(new HorseState({strategy: 'Nige'}))} />}>
+				{expanded ? 'Pacemaker' : umaTabs}
+				</HorseDef>
+			</div>}
+			{expanded && <div id="closeUmaOverlay" title="Close panel" onClick={toggleExpand}>✕</div>}
+		</>
+	);
+
+	const settingsPaneInner = (
+		<>
+			<h3>Settings</h3>
+			{mode == Mode.Compare && (
+				<div class="settingsCard">
+					<h4>Position Keep</h4>
+					<select id="poskeepmode" value={posKeepMode} onInput={(e) => setPosKeepMode(+e.currentTarget.value)}>
+						<option value={PosKeepMode.None}>None</option>
+						<option value={PosKeepMode.Approximate}>Approximate</option>
+						<option value={PosKeepMode.Virtual}>Virtual Pacemaker</option>
+					</select>
+					{posKeepMode == PosKeepMode.Approximate && (
+						<div id="pacemakerIndicator">
+							<span>Using default pacemaker</span>
+						</div>
+					)}
+					{posKeepMode == PosKeepMode.Virtual && (
+						<div id="pacemakerIndicator">
+							<div>
+								<label>Show Pacemakers:</label>
+								<div className="pacemaker-combobox">
+									<button
+										className="pacemaker-combobox-button"
+										onClick={() => setIsPacemakerDropdownOpen(!isPacemakerDropdownOpen)}
+									>
+										{selectedPacemakerIndices.length === 0
+											? 'None'
+											: selectedPacemakerIndices.length === 1
+												? `Pacemaker ${selectedPacemakerIndices[0] + 1}`
+												: selectedPacemakerIndices.length === pacemakerCount
+													? 'All Pacemakers'
+													: `${selectedPacemakerIndices.length} Pacemakers`
+										}
+										<span className="pacemaker-combobox-arrow">▼</span>
+									</button>
+									{isPacemakerDropdownOpen && (
+										<div className="pacemaker-combobox-dropdown">
+											{[...Array(pacemakerCount)].map((_, index) => (
+												<label key={index} className="pacemaker-combobox-option">
+													<input
+														type="checkbox"
+														checked={selectedPacemakerIndices.includes(index)}
+														onChange={() => togglePacemakerSelection(index)}
+													/>
+													<span style={{ color: index === 0 ? '#22c55e' : index === 1 ? '#a855f7' : '#ec4899' }}>
+														Pacemaker {index + 1}
+													</span>
+												</label>
+											))}
+										</div>
+									)}
+								</div>
+							</div>
+							<div id="pacemakerCountControl">
+								<label for="pacemakercount">Number of pacemakers: {pacemakerCount}</label>
+								<input
+									type="range"
+									id="pacemakercount"
+									min="1"
+									max="3"
+									value={pacemakerCount}
+									onInput={(e) => handlePacemakerCountChange(+e.currentTarget.value)}
+								/>
+							</div>
+						</div>
+					)}
+				</div>
+			)}
+			{mode == Mode.Compare && (
+				<div class="settingsCard">
+					<h4>Simulation</h4>
+					<div class="settingsToggleRow">
+						<span>Sync RNG</span>
+						<label class="toggleSwitch">
+							<input type="checkbox" checked={syncRng} onClick={handleSyncRngToggle} />
+							<span class="toggleTrack"></span>
+						</label>
+					</div>
+					<div class="settingsToggleRow">
+						<span>Skill Wit Check</span>
+						<label class="toggleSwitch">
+							<input type="checkbox" checked={skillWisdomCheck} onClick={handleSkillWisdomCheckToggle} />
+							<span class="toggleTrack"></span>
+						</label>
+					</div>
+					<div class="settingsToggleRow">
+						<span>Rushed / Kakari</span>
+						<label class="toggleSwitch">
+							<input type="checkbox" checked={rushedKakari} onClick={handleRushedKakariToggle} />
+							<span class="toggleTrack"></span>
+						</label>
+					</div>
+					<div class="settingsToggleRow">
+						<span>Spot Struggle</span>
+						<label class="toggleSwitch">
+							<input type="checkbox" checked={leadCompetition} onClick={() => setLeadCompetition(!leadCompetition)} />
+							<span class="toggleTrack"></span>
+						</label>
+					</div>
+					<div class="settingsToggleRow">
+						<span>Dueling</span>
+						<div style="display:flex;align-items:center;gap:8px;">
+							<label class="toggleSwitch">
+								<input type="checkbox" checked={competeFight} onClick={() => setCompeteFight(!competeFight)} />
+								<span class="toggleTrack"></span>
+							</label>
+							<button type="button" onClick={() => setDuelingConfigOpen(true)} class="settingsSmallBtn" title="Configure dueling rates">
+								<Settings size={14} />
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+			<button class="settingsCopyBtn" onClick={copyStateUrl}>Copy Link</button>
+		</>
+	);
+
 	return (
 		<Language.Provider value={props.lang}>
 			<IntlProvider definition={strings}>
 				<nav id="navBar">
 					<div id="navTabs">
-						<div class="navTab selected">Umalator</div>
-						<div class="navTab disabled">Umas</div>
+					<div class={`navTab ${activeTab === 'umalator' ? 'selected' : ''}`} onClick={() => setActiveTab('umalator')}>Umalator</div>
+					<div class={`navTab ${activeTab === 'umas' ? 'selected' : ''}`} onClick={() => setActiveTab('umas')}>Umas</div>
 					</div>
 					<button id="themeToggle" onClick={() => setDarkMode(d => !d)} title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
 						{darkMode
@@ -2544,15 +2919,23 @@ function App(props) {
 							: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
 						}
 					</button>
-				</nav>
+			</nav>
+		<div id="umasPane" style={{ display: activeTab === 'umas' ? 'flex' : 'none' }}><UmasTab
+		onLoadUma1={(decoded) => { setUma1(umaStateToHorseState(decodedUmaToUmaState(decoded))); setActiveTab('umalator'); }}
+		onLoadUma2={(decoded) => { setUma2(umaStateToHorseState(decodedUmaToUmaState(decoded))); setActiveTab('umalator'); }}
+		onExport={(decoded) => { navigator.clipboard.writeText(JSON.stringify(decodedUmaToUmaState(decoded), null, 2)); }}
+	/></div>
+		{activeTab === 'umalator' && (<>
+			{!isMobile && (
 				<div id="iconSidebar">
-					<button class={`sidebarIcon ${leftPanel === 'uma' ? 'active' : ''}`} onClick={() => setLeftPanel('uma')} title="Uma">
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-					</button>
-					<button class={`sidebarIcon ${leftPanel === 'settings' ? 'active' : ''}`} onClick={() => setLeftPanel('settings')} title="Settings">
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-					</button>
-				</div>
+						<button class={`sidebarIcon ${leftPanel === 'uma' ? 'active' : ''}`} onClick={() => setLeftPanel('uma')} title="Uma">
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+						</button>
+						<button class={`sidebarIcon ${leftPanel === 'settings' ? 'active' : ''}`} onClick={() => setLeftPanel('settings')} title="Settings">
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+						</button>
+					</div>
+				)}
 				<div id="mainContent">
 				<div id="topPane" class={chartData ? 'hasResults' : ''}>
 					<div id="modeTabs">
@@ -2581,8 +2964,30 @@ function App(props) {
 							</div>
 						</div>
 					</div>
-					{mode == Mode.Compare && <div class="racetrackRow">
-					<RaceTrack courseid={courseId} width={960} height={240} xOffset={20} yOffset={15} yExtra={20} mouseMove={rtMouseMove} mouseLeave={rtMouseLeave} onSkillDrag={handleSkillDrag} regions={[...skillActivations, ...rushedIndicators]} posKeepLabels={showLabels ? posKeepLabels : []} uma1={uma1} uma2={uma2} pacer={pacer}>
+					<div class="racetrackRow">
+					<RaceTrack
+						courseid={courseId}
+						width={960}
+						height={240}
+						xOffset={20}
+						yOffset={15}
+						yExtra={20}
+						mouseMove={rtMouseMove}
+						mouseLeave={rtMouseLeave}
+						onSkillDrag={handleSkillDrag}
+						regions={[...skillActivations, ...rushedIndicators]}
+						posKeepLabels={showLabels ? posKeepLabels : []}
+						uma1={uma1}
+						uma2={uma2}
+						pacer={pacer}
+						controls={
+							<div class="racetrackControls">
+								<label><input type="checkbox" checked={showHp} onClick={toggleShowHp} /> Show HP</label>
+								<label><input type="checkbox" checked={showPoskeepGap} onClick={toggleShowPoskeepGap} /> Show Poskeep Gap</label>
+								<label><input type="checkbox" checked={showLabels} onClick={toggleShowLabels} /> Show Labels</label>
+							</div>
+						}
+					>
 						<VelocityLines data={chartData} courseDistance={course.distance} width={960} height={250} xOffset={20} showHp={showHp} showPoskeepGap={showPoskeepGap} showLanes={mode == Mode.Compare ? showLanes : false} horseLane={course.horseLane} showVirtualPacemaker={showVirtualPacemakerOnGraph && posKeepMode === PosKeepMode.Virtual} selectedPacemakers={getSelectedPacemakers()} />
 						
 						<g id="rtMouseOverBox" style="display:none">
@@ -2593,12 +2998,7 @@ function App(props) {
 							<text id="pd2" x="25" y="20" fill="#c52a2a" font-size="10px"></text>
 						</g>
 					</RaceTrack>
-					<div class="racetrackControls">
-						<label><input type="checkbox" checked={showHp} onClick={toggleShowHp} /> Show HP</label>
-						<label><input type="checkbox" checked={showPoskeepGap} onClick={toggleShowPoskeepGap} /> Show Poskeep Gap</label>
-						<label><input type="checkbox" checked={showLabels} onClick={toggleShowLabels} /> Show Labels</label>
-					</div>
-				</div>}
+				</div>
 					<div class="controlPanel">
 						<div class="controlPanelFields">
 							<div class="controlPanelField">
@@ -2630,145 +3030,33 @@ function App(props) {
 				</div>
 				{resultsPane}
 				</div>
-				{expanded && <div id="umaPane" />}
-				{leftPanel === 'uma' && <div id={expanded ? 'umaOverlay' : 'umaPane'}>
-					<div class={!expanded && currentIdx == 0 ? 'selected' : ''}>
-						<HorseDef key={uma1.outfitId} state={uma1} setState={setUma1} courseDistance={course.distance} tabstart={() => 4} onResetAll={resetAllUmas} runData={mode == Mode.Compare ? runData : null} umaIndex={mode == Mode.Compare ? 0 : null}>
-							{expanded ? 'Uma 1' : umaTabs}
-						</HorseDef>
-					</div>
-					{expanded &&
-						<div id="copyUmaButtons">
-							<div id="copyUmaToRight" title="Copy uma 1 to uma 2" onClick={copyUmaToRight} />
-							<div id="copyUmaToLeft" title="Copy uma 2 to uma 1" onClick={copyUmaToLeft} />
-							<div id="swapUmas" title="Swap umas" onClick={swapUmas}>⮂</div>
-						</div>}
-					{mode == Mode.Compare && <div class={!expanded && currentIdx == 1 ? 'selected' : ''}>
-						<HorseDef key={uma2.outfitId} state={uma2} setState={setUma2} courseDistance={course.distance} tabstart={() => 4 + horseDefTabs()} onResetAll={resetAllUmas} runData={runData} umaIndex={1}>
-							{expanded ? 'Uma 2' : umaTabs}
-						</HorseDef>
-					</div>}
-					{posKeepMode == PosKeepMode.Virtual && mode == Mode.Compare && <div class={!expanded && currentIdx == 2 ? 'selected' : ''}>
-						<HorseDef key={pacer.outfitId} state={pacer} setState={setPacer} courseDistance={course.distance} tabstart={() => 4 + (mode == Mode.Compare ? 2 : 1) * horseDefTabs()} onResetAll={resetAllUmas}>
-							{expanded ? 'Pacemaker' : umaTabs}
-						</HorseDef>
-					</div>}
-					{expanded && <div id="closeUmaOverlay" title="Close panel" onClick={toggleExpand}>✕</div>}
-				</div>}
-				{leftPanel === 'settings' && <div id="settingsPane">
-					<h3>Settings</h3>
-					{mode == Mode.Compare && (
-						<div class="settingsCard">
-							<h4>Position Keep</h4>
-							<select id="poskeepmode" value={posKeepMode} onInput={(e) => setPosKeepMode(+e.currentTarget.value)}>
-								<option value={PosKeepMode.None}>None</option>
-								<option value={PosKeepMode.Approximate}>Approximate</option>
-								<option value={PosKeepMode.Virtual}>Virtual Pacemaker</option>
-							</select>
-							{posKeepMode == PosKeepMode.Approximate && (
-								<div id="pacemakerIndicator">
-									<span>Using default pacemaker</span>
-								</div>
-							)}
-							{posKeepMode == PosKeepMode.Virtual && (
-								<div id="pacemakerIndicator">
-									<div>
-										<label>Show Pacemakers:</label>
-										<div className="pacemaker-combobox">
-											<button 
-												className="pacemaker-combobox-button"
-												onClick={() => setIsPacemakerDropdownOpen(!isPacemakerDropdownOpen)}
-											>
-												{selectedPacemakerIndices.length === 0
-													? 'None'
-													: selectedPacemakerIndices.length === 1 
-													? `Pacemaker ${selectedPacemakerIndices[0] + 1}`
-													: selectedPacemakerIndices.length === pacemakerCount
-													? 'All Pacemakers'
-													: `${selectedPacemakerIndices.length} Pacemakers`
-												}
-												<span className="pacemaker-combobox-arrow">▼</span>
-											</button>
-											{isPacemakerDropdownOpen && (
-												<div className="pacemaker-combobox-dropdown">
-													{[...Array(pacemakerCount)].map((_, index) => (
-														<label key={index} className="pacemaker-combobox-option">
-															<input 
-																type="checkbox" 
-																checked={selectedPacemakerIndices.includes(index)}
-																onChange={() => togglePacemakerSelection(index)}
-															/>
-															<span style={{color: index === 0 ? '#22c55e' : index === 1 ? '#a855f7' : '#ec4899'}}>
-																Pacemaker {index + 1}
-															</span>
-														</label>
-													))}
-												</div>
-											)}
-										</div>
-									</div>
-									<div id="pacemakerCountControl">
-										<label for="pacemakercount">Number of pacemakers: {pacemakerCount}</label>
-										<input 
-											type="range" 
-											id="pacemakercount" 
-											min="1" 
-											max="3" 
-											value={pacemakerCount} 
-											onInput={(e) => handlePacemakerCountChange(+e.currentTarget.value)} 
-										/>
+				{expanded && !isMobile && <div id="umaPane" />}
+				{!isMobile && leftPanel === 'uma' && <div id={expanded ? 'umaOverlay' : 'umaPane'}>{umaPaneInner}</div>}
+				{!isMobile && leftPanel === 'settings' && <div id="settingsPane">{settingsPaneInner}</div>}
+				{isMobile && (
+					<>
+						<div id="mobileBottomBar">
+							<button type="button" class={`mobileBottomBarBtn ${mobileDialogOpen === 'uma' ? 'active' : ''}`} onClick={() => setMobileDialogOpen(mobileDialogOpen === 'uma' ? null : 'uma')} title="Umas">
+								<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+								<span>Umas</span>
+							</button>
+							<button type="button" class={`mobileBottomBarBtn ${mobileDialogOpen === 'settings' ? 'active' : ''}`} onClick={() => setMobileDialogOpen(mobileDialogOpen === 'settings' ? null : 'settings')} title="Settings">
+								<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+								<span>Settings</span>
+							</button>
+						</div>
+						{(mobileDialogOpen === 'uma' || mobileDialogOpen === 'settings') && (
+							<div class="mobileDialogOverlay" onClick={() => setMobileDialogOpen(null)}>
+								<div class="mobileDialog" onClick={(e: MouseEvent) => e.stopPropagation()}>
+									<button type="button" class="mobileDialogClose" onClick={() => setMobileDialogOpen(null)} title="Close">✕</button>
+									<div class={`mobileDialogContent ${mobileDialogOpen === 'uma' ? 'mobileDialogContent--uma' : ''}`}>
+										{mobileDialogOpen === 'uma' ? umaPaneInner : settingsPaneInner}
 									</div>
 								</div>
-							)}
-						</div>
-					)}
-					{mode == Mode.Compare && (
-						<div class="settingsCard">
-							<h4>Simulation</h4>
-							<div class="settingsToggleRow">
-								<span>Sync RNG</span>
-								<label class="toggleSwitch">
-									<input type="checkbox" checked={syncRng} onClick={handleSyncRngToggle} />
-									<span class="toggleTrack"></span>
-								</label>
 							</div>
-							<div class="settingsToggleRow">
-								<span>Skill Wit Check</span>
-								<label class="toggleSwitch">
-									<input type="checkbox" checked={skillWisdomCheck} onClick={handleSkillWisdomCheckToggle} />
-									<span class="toggleTrack"></span>
-								</label>
-							</div>
-							<div class="settingsToggleRow">
-								<span>Rushed / Kakari</span>
-								<label class="toggleSwitch">
-									<input type="checkbox" checked={rushedKakari} onClick={handleRushedKakariToggle} />
-									<span class="toggleTrack"></span>
-								</label>
-							</div>
-							<div class="settingsToggleRow">
-								<span>Spot Struggle</span>
-								<label class="toggleSwitch">
-									<input type="checkbox" checked={leadCompetition} onClick={() => setLeadCompetition(!leadCompetition)} />
-									<span class="toggleTrack"></span>
-								</label>
-							</div>
-							<div class="settingsToggleRow">
-								<span>Dueling</span>
-								<div style="display:flex;align-items:center;gap:8px;">
-									<label class="toggleSwitch">
-										<input type="checkbox" checked={competeFight} onClick={() => setCompeteFight(!competeFight)} />
-										<span class="toggleTrack"></span>
-									</label>
-									<button type="button" onClick={() => setDuelingConfigOpen(true)} class="settingsSmallBtn" title="Configure dueling rates">
-										<Settings size={14} />
-									</button>
-								</div>
-							</div>
-						</div>
-					)}
-					<button class="settingsCopyBtn" onClick={copyStateUrl}>Copy Link</button>
-				</div>}
+						)}
+					</>
+				)}
 				{popoverSkill && <BasinnChartPopover skillid={popoverSkill} results={tableData.get(popoverSkill).results} courseDistance={course.distance} />}
 				{duelingConfigOpen && (
 					<div class="duelingOverlay" onClick={(e) => { if (e.target === e.currentTarget) setDuelingConfigOpen(false); }}>
@@ -2805,6 +3093,7 @@ function App(props) {
 						</div>
 					</div>
 				)}
+			</>)}
 			</IntlProvider>
 		</Language.Provider>
 	);

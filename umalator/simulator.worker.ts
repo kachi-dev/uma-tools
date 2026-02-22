@@ -107,6 +107,9 @@ function run1Round(nsamples: number, skills: string[], course: CourseData, raced
 }
 
 function runChart({skills, course, racedef, uma, pacer, options}) {
+	const startTime = performance.now();
+	const totalSkills = skills.length;
+
 	const uma_ = new HorseState(uma)
 		.set('skills', fromJS(uma.skills))
 		.set('forcedSkillPositions', ImmMap(uma.forcedSkillPositions || {}));
@@ -116,18 +119,23 @@ function runChart({skills, course, racedef, uma, pacer, options}) {
 	postMessage({type: 'chart-progress', round: 1, total: 3});
 	let results = run1Round(25, skills, course, racedef, uma_, pacer_, options);
 	postMessage({type: 'chart', results});
+	console.log(`[chart r1] ${skills.length} skills x25 — ${(performance.now() - startTime).toFixed(0)}ms`);
 
 	skills = skills.filter(id => results.get(id).max > 0.1);
 	postMessage({type: 'chart-progress', round: 2, total: 3});
 	let update = run1Round(50, skills, course, racedef, uma_, pacer_, options);
 	mergeResultSets(results, update);
 	postMessage({type: 'chart', results});
+	console.log(`[chart r2] ${skills.length} skills x50 — ${(performance.now() - startTime).toFixed(0)}ms`);
 
 	skills = skills.filter(id => Math.abs(results.get(id).max - results.get(id).min) > 0.1);
 	postMessage({type: 'chart-progress', round: 3, total: 3});
 	update = run1Round(125, skills, course, racedef, uma_, pacer_, options);
 	mergeResultSets(results, update);
 	postMessage({type: 'chart', results});
+
+	const elapsed = performance.now() - startTime;
+	console.log(`[chart r3] ${skills.length} skills x125 — ${elapsed.toFixed(0)}ms total (${totalSkills} skills in)`);
 
 	postMessage({type: 'chart-complete'});
 }

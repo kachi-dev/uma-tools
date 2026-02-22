@@ -1,0 +1,320 @@
+/* ── Non-color tokens (spacing / typography / radii) ─────────────────────── */
+:root {
+    --font-xs:   0.6875rem;
+    --font-sm:   0.75rem;
+    --font-base: 0.8125rem;
+    --font-lg:   0.9375rem;
+    --font-2xl:  1.0625rem;
+
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+
+    --transition-fast: 0.15s cubic-bezier(0.4,0,0.2,1);
+}
+/* Color aliases — map onto the app's existing light/dark theme variables */
+:root {
+    --rp-surface:        var(--card);
+    --rp-surface-raised: var(--surface);
+    --rp-border:         var(--border);
+    --rp-text:           var(--fg);
+    --rp-text-secondary: var(--muted);
+    --rp-accent:         var(--theme-brown);
+    --rp-accent-bg:      var(--theme-brown-light);
+    --rp-accent-text:    var(--bg);
+}
+
+/* ── Outer pane ──────────────────────────────────────────────────────────── */
+.results-pane {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    background: var(--rp-surface);
+    border: 1px solid var(--rp-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md);
+    flex: 1;
+    min-width: 0;
+    box-sizing: border-box;
+}
+.results-pane--empty {
+    align-items: center;
+    justify-content: center;
+    min-height: 150px;
+}
+
+/* ── Loading state ───────────────────────────────────────────────────────── */
+.results-running {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    color: var(--rp-text-secondary);
+}
+.results-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--rp-border);
+    border-top-color: var(--rp-accent);
+    border-radius: 50%;
+    animation: results-spin 0.8s linear infinite;
+}
+@keyframes results-spin { to { transform: rotate(360deg); } }
+
+/* ── Summary stats row ───────────────────────────────────────────────────── */
+.results-summary {
+    display: flex;
+    gap: var(--space-md);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.results-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--rp-surface-raised);
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    min-width: 70px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+.results-stat.highlight {
+    background: var(--rp-accent-bg);
+    border-color: var(--rp-accent);
+}
+.results-stat.muted {
+    opacity: 0.6;
+    cursor: default;
+}
+.results-stat-label {
+    font-size: var(--font-sm);
+    color: var(--rp-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.results-stat-value {
+    font-size: var(--font-2xl);
+    font-weight: 700;
+    font-family: "JetBrains Mono", monospace;
+}
+.results-stat-value.uma1 { color: #4a9eff; }
+.results-stat-value.uma2 { color: #ff6b6b; }
+
+/* ── Histogram ───────────────────────────────────────────────────────────── */
+.results-histogram {
+    display: flex;
+    justify-content: center;
+    overflow: hidden;
+    width: 100%;
+}
+.histogram-svg {
+    background: var(--rp-surface-raised);
+    border-radius: var(--radius-sm);
+    max-width: 100%;
+    height: auto;
+}
+.histogram-svg .bar-uma1 { fill: #4a9eff; opacity: 0.8; }
+.histogram-svg .bar-uma2 { fill: #ff6b6b; opacity: 0.8; }
+.histogram-svg .histogram-zero-line {
+    stroke: var(--rp-text-secondary);
+    stroke-width: 1;
+    stroke-dasharray: 4 2;
+}
+.histogram-svg .histogram-marker-line {
+    stroke: var(--rp-accent);
+    stroke-width: 2;
+}
+.histogram-svg .histogram-axis-label {
+    font-size: var(--font-xs);
+    fill: var(--rp-text-secondary);
+}
+.histogram-empty {
+    padding: var(--space-lg);
+    text-align: center;
+    color: var(--rp-text-secondary);
+}
+
+/* ── Run selector ────────────────────────────────────────────────────────── */
+.run-selector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+}
+.run-selector-label {
+    font-size: var(--font-base);
+    color: var(--rp-text-secondary);
+    margin-right: var(--space-xs);
+}
+.run-selector button {
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--rp-surface-raised);
+    border: 1px solid var(--rp-border);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-base);
+    color: var(--rp-text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+.run-selector button:hover {
+    background: var(--rp-accent-bg);
+    color: var(--rp-text);
+}
+.run-selector button.active {
+    background: var(--rp-accent);
+    color: var(--rp-accent-text);
+    border-color: var(--rp-accent);
+}
+
+/* ── Uma stats container ─────────────────────────────────────────────────── */
+.uma-stats-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+}
+
+/* ── Uma stats card ──────────────────────────────────────────────────────── */
+.uma-stats-card {
+    background: var(--rp-surface-raised);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--rp-border);
+    overflow: hidden;
+}
+.uma-stats-card.uma1 { border-left: 3px solid #4a9eff; }
+.uma-stats-card.uma2 { border-left: 3px solid #ff6b6b; }
+
+.uma-stats-header {
+    padding: var(--space-xs) var(--space-md);
+    border-bottom: 1px solid var(--rp-border);
+}
+.uma-stats-label {
+    font-weight: 600;
+    font-size: var(--font-base);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--rp-text-secondary);
+}
+.uma-stats-details {
+    padding: var(--space-sm) var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+/* ── Primary stats ───────────────────────────────────────────────────────── */
+.stats-primary {
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--rp-border);
+}
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+.stat-item svg { color: var(--rp-text-secondary); opacity: 0.7; }
+.stat-item .value {
+    font-family: "JetBrains Mono", monospace;
+    font-size: var(--font-lg);
+    font-weight: 600;
+    color: var(--rp-text);
+}
+.stat-item .label {
+    font-size: var(--font-xs);
+    color: var(--rp-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* ── Secondary stats ─────────────────────────────────────────────────────── */
+.stats-secondary {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2px 0;
+    font-size: var(--font-base);
+}
+.stat-row .label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--rp-text-secondary);
+}
+.stat-row .label svg { opacity: 0.6; }
+.stat-row .value {
+    font-family: "JetBrains Mono", monospace;
+    color: var(--rp-text);
+}
+.stat-row .value .stat-subtext {
+    font-size: var(--font-sm);
+    color: var(--rp-text-secondary);
+    opacity: 0.75;
+}
+
+/* ── Race mechanics + skills + misc ─────────────────────────────────────── */
+.mechanics-section,
+.skills-section,
+.misc-section {
+    padding-top: var(--space-xs);
+    border-top: 1px solid var(--rp-border);
+}
+.mechanics-section h4,
+.skills-section h4,
+.misc-section h4 {
+    font-size: var(--font-sm);
+    font-weight: 600;
+    color: var(--rp-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 var(--space-sm) 0;
+}
+.skill-activations {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+}
+.skill-activation {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    background: var(--rp-surface);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-sm);
+}
+.skill-activation .skill-name {
+    color: var(--rp-text-secondary);
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.skill-activation .skill-pos {
+    font-family: "JetBrains Mono", monospace;
+    color: var(--rp-text-secondary);
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .uma-stats-container { grid-template-columns: 1fr; }
+    .results-summary { gap: var(--space-sm); }
+    .results-stat { padding: var(--space-xs) var(--space-sm); min-width: 60px; }
+    .results-stat-value { font-size: var(--font-lg); }
+}
+@media (max-width: 480px) {
+    .results-pane { padding: var(--space-sm); }
+}

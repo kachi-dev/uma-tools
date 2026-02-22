@@ -1,0 +1,102 @@
+.dropdown {
+    position: relative;
+    display: inline-flex;
+}
+
+.dropdownTrigger {
+    display: inline-flex;
+}
+
+.dropdownMenu {
+    min-width: 180px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.dark .dropdownMenu {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.dropdownItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--fg);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.1s;
+    white-space: nowrap;
+}
+
+.dropdownItem:hover:not(.dropdownItemDisabled) {
+    background: var(--surface);
+}
+
+.dropdownItemDisabled {
+    color: var(--muted);
+    cursor: default;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 4px 10px 2px;
+}
+
+.dropdownItemIcon {
+    display: flex;
+    align-items: center;
+    color: var(--muted);
+    flex-shrink: 0;
+}
+
+.dropdownItemLabel {
+    flex: 1;
+}
+
+.dropdownItemSuffix {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+}
+
+.dropdownDivider {
+    height: 1px;
+    background: var(--border);
+    margin: 3px 0;
+}
+
+.dropdownDeleteBtn {
+    display: flex;
+    align-items: center;
+    padding: 3px;
+    background: transparent;
+    border: none;
+    border-radius: 3px;
+    color: var(--muted);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.1s, background 0.1s, color 0.1s;
+}
+
+.dropdownItem:hover .dropdownDeleteBtn {
+    opacity: 1;
+}
+
+.dropdownDeleteBtn:hover {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+.dark .dropdownDeleteBtn:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+}

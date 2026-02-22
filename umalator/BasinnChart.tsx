@@ -36,6 +36,13 @@ export function isPurpleSkill(id) {
 	return iconId[iconId.length-1] == '4';
 }
 
+export function isHpOnlySkill(id: string): boolean {
+	const skill = skilldata[id];
+	if (!skill) return false;
+	// Recovery = type 9; keep skills that have any non-Recovery effect (e.g. TargetSpeed)
+	return skill.alternatives.every((alt: any) => alt.effects.every((ef: any) => ef.type === 9));
+}
+
 function umaForUniqueSkill(skillId: string): string | null {
 	const sid = parseInt(skillId);
 	if (sid < 100000 || sid >= 200000) return null;

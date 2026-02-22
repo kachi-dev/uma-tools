@@ -164,27 +164,27 @@ export function RaceTrack(props) {
 
 	function doMouseMove(e) {
 		const svg = e.currentTarget;
+		const rect = svg.getBoundingClientRect();
 		if (e.offsetX < xOffset) return;
 		const line = svg.querySelector('.mouseoverLine');
 		const text = svg.querySelector('.mouseoverText');
-		const w = svg.getBoundingClientRect().width - xOffset;
-		const x = e.offsetX - xOffset;
-		const y = e.offsetY - yOffset;
-		line.setAttribute('x1', x);
-		line.setAttribute('x2', x);
-		text.setAttribute('x', x > w - 45 ? x - 45 : x + 5);
-		text.setAttribute('y', y);
-		text.textContent = Math.round(x / w * courses[svg.dataset.courseid].distance) + 'm';
-		props.mouseMove && props.mouseMove(x / w);
-		
-		//dragging handler
+		const w = rect.width - xOffset;
+		const h = rect.height - yOffset;
+		const xScreen = e.offsetX - xOffset;
+		const yScreen = e.offsetY - yOffset;
+		const fracX = xScreen / w;
+		const innerX = fracX * props.width;
+		const innerY = h > 0 ? (yScreen / h) * props.height : yScreen;
+		line.setAttribute('x1', innerX);
+		line.setAttribute('x2', innerX);
+		text.setAttribute('x', innerX > props.width - 45 ? innerX - 45 : innerX + 5);
+		text.setAttribute('y', innerY);
+		text.textContent = Math.round(fracX * courses[svg.dataset.courseid].distance) + 'm';
+		props.mouseMove && props.mouseMove(fracX);
+
 		if (draggedSkill) {
-			// Use the same coordinate calculation as the mouse down handler
-			const rect = svg.getBoundingClientRect();
-			const w = rect.width - xOffset;
 			const x = e.clientX - rect.left - xOffset;
-			
-			const newStart = Math.round(Math.max(0, Math.min(course.distance, x / w * course.distance - dragOffset.x)));
+			const newStart = Math.round(Math.max(0, Math.min(course.distance, (x / w) * course.distance - dragOffset.x)));
 			const skillLength = Math.max(50, draggedSkill.originalEnd - draggedSkill.originalStart); // Ensure minimum length of 50m
 			const newEnd = Math.round(Math.max(newStart + skillLength, Math.min(course.distance, newStart + skillLength)));
 			
@@ -482,11 +482,16 @@ export function RaceTrack(props) {
 	const {joiner} = useText('ui.joiner');
 	const statThresholds = course.courseSetStatus.map(s => statStrings[s]).join(joiner);
 
+	const totalWidth = props.width + xOffset + xExtra;
+	const totalHeight = props.height + yOffset + yExtra;
+
 	return (
 		<IntlProvider definition={lang == 'ja' ? STRINGS_ja : STRINGS_en}>
-			<div class="racetrackWrapper" style={`width:${props.width + xOffset + xExtra}px`}>
+			<>
 				{trackNameHeader}
-				<svg version="1.1" width={props.width + xOffset + xExtra} height={props.height + yOffset + yExtra} xmlns="http://www.w3.org/2000/svg" class="racetrackView" data-courseid={props.courseid} onMouseMove={doMouseMove} onMouseLeave={doMouseLeave} 				onMouseUp={() => setDraggedSkill(null)}>
+				{props.controls && <div class="racetrackControlsSlot">{props.controls}</div>}
+				<div class="racetrackWrapper" style={{ '--track-width': `${totalWidth}px`, '--track-height': `${totalHeight}px` }}>
+				<svg version="1.1" viewBox={`0 0 ${totalWidth} ${totalHeight}`} xmlns="http://www.w3.org/2000/svg" class="racetrackView" data-courseid={props.courseid} onMouseMove={doMouseMove} onMouseLeave={doMouseLeave} onMouseUp={() => setDraggedSkill(null)}>
 					<svg x={props.xOffset} y={props.yOffset} width={props.width} height={props.height}>
 						{almostEverything}
 						{regions}
@@ -519,7 +524,8 @@ export function RaceTrack(props) {
 					{props.children}
 				</svg>
 				{course.courseSetStatus.length > 0 && <div class="racetrackStatThresholds"><Text id="racetrack.thresholds" />{statThresholds}</div>}
-			</div>
+				</div>
+			</>
 		</IntlProvider>
 	);
 }

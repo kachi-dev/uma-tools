@@ -1,0 +1,961 @@
+#umasTab {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+    background: var(--bg, #fff);
+    overflow-y: auto;
+}
+
+/* ── Import bar ──────────────────────────────────────────────── */
+
+.umasImportBar {
+    padding: 16px 24px 14px;
+    border-bottom: 1px solid var(--border, #e5e7eb);
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.umasImportInputRow {
+    display: flex;
+    gap: 8px;
+}
+
+.umasImportInput {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    background: var(--input-bg, #fff);
+    border: 1px solid var(--input-border, hsl(210 14% 83%));
+    border-radius: 7px;
+    color: var(--fg, #111827);
+    outline: none;
+    transition: border-color 0.15s;
+    min-width: 0;
+}
+
+.umasImportInput:focus {
+    border-color: hsl(215 70% 55%);
+}
+
+.umasImportInput:disabled {
+    opacity: 0.6;
+}
+
+.umasImportBtn {
+    padding: 8px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    background: hsl(215 70% 50%);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+}
+
+.umasImportBtn:hover:not(:disabled) {
+    background: hsl(215 70% 42%);
+}
+
+.umasImportBtn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.umasClearAllBtn {
+    padding: 8px 14px;
+    font-size: 14px;
+    font-family: inherit;
+    border-radius: 7px;
+    border: 1px solid hsl(0 60% 80%);
+    background: var(--input-bg, #fff);
+    color: hsl(0 60% 50%);
+    cursor: pointer;
+    transition: all 0.12s;
+    white-space: nowrap;
+}
+
+.umasClearAllBtn:hover {
+    background: hsl(0 80% 97%);
+    border-color: hsl(0 60% 60%);
+}
+
+.umasImportError {
+    margin: 0;
+    font-size: 13px;
+    color: hsl(0 70% 45%);
+}
+
+.umasImportHint {
+    margin: 0;
+    font-size: 12px;
+    color: var(--muted, #6b7280);
+}
+
+.umasImportHint a {
+    color: hsl(215 70% 50%);
+    text-decoration: none;
+}
+
+.umasImportHint a:hover {
+    text-decoration: underline;
+}
+
+.umasLoadedCount {
+    font-weight: 500;
+    color: hsl(215 50% 50%);
+}
+
+/* ── Search & filter bar ─────────────────────────────────────── */
+
+.umasSearchSection {
+    border-bottom: 1px solid var(--border, #e5e7eb);
+}
+
+.umasSearchBar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 24px;
+}
+
+.umasSearchInput {
+    flex: 1;
+    padding: 7px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    background: var(--input-bg, #fff);
+    border: 1px solid var(--input-border, hsl(210 14% 83%));
+    border-radius: 7px;
+    color: var(--fg, #111827);
+    outline: none;
+    transition: border-color 0.15s;
+    min-width: 0;
+}
+
+.umasSearchInput:focus {
+    border-color: hsl(215 70% 55%);
+}
+
+.umasFiltersToggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    background: var(--input-bg, #fff);
+    border: 1px solid var(--input-border, hsl(210 14% 83%));
+    border-radius: 7px;
+    color: var(--fg, #111827);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.umasFiltersToggle:hover {
+    border-color: hsl(215 70% 55%);
+}
+
+.umasFiltersToggle--open {
+    border-color: hsl(215 70% 55%);
+    background: hsl(215 70% 97%);
+}
+
+.umasFilterBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    font-size: 11px;
+    font-weight: 700;
+    background: hsl(215 70% 50%);
+    color: #fff;
+    line-height: 1;
+}
+
+.umasFiltersChevron {
+    font-size: 10px;
+    color: var(--muted, #6b7280);
+}
+
+/* Sort control */
+
+.umasSortControl {
+    display: flex;
+    align-items: stretch;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.umasSortLabel {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted, #6b7280);
+    align-self: center;
+}
+
+.umasSortSelect {
+    padding: 7px 8px;
+    font-size: 14px;
+    font-family: inherit;
+    background: var(--input-bg, #fff);
+    border: 1px solid var(--input-border, hsl(210 14% 83%));
+    border-radius: 6px 0 0 6px;
+    color: var(--fg, #111827);
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.12s;
+    line-height: 1;
+}
+
+.umasSortSelect:focus {
+    border-color: hsl(215 70% 55%);
+    z-index: 1;
+    position: relative;
+}
+
+.umasSortDirBtn {
+    padding: 0 8px;
+    font-size: 13px;
+    font-family: inherit;
+    background: var(--input-bg, #fff);
+    border: 1px solid var(--input-border, hsl(210 14% 83%));
+    border-left: none;
+    border-radius: 0 6px 6px 0;
+    color: var(--fg, #111827);
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+}
+
+.umasSortDirBtn:hover:not(:disabled) {
+    background: hsl(215 50% 95%);
+    border-color: hsl(215 70% 55%);
+    z-index: 1;
+    position: relative;
+}
+
+.umasSortDirBtn--disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+/* Filter panel */
+
+.umasFilterPanel {
+    padding: 12px 24px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--bg-subtle, hsl(220 14% 98%));
+    border-top: 1px solid var(--border, #e5e7eb);
+}
+
+.umasAptFilter {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.umasAptFilterRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.umasAptFilterCell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    cursor: default;
+}
+
+.umasAptSelect {
+    padding: 2px 4px;
+    font-size: 12px;
+    font-family: inherit;
+    background: var(--input-bg, #fff);
+    border: 1px solid var(--input-border, hsl(210 14% 83%));
+    border-radius: 5px;
+    color: var(--fg, #111827);
+    cursor: pointer;
+    outline: none;
+    width: 44px;
+    text-align: center;
+    transition: border-color 0.12s;
+}
+
+.umasAptSelect:focus {
+    border-color: hsl(215 70% 55%);
+}
+
+/* Skill filter row */
+
+.umasSkillFilterRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.umasSkillFilterRow > .umasAptRowLabel {
+    padding-top: 8px;
+    flex-shrink: 0;
+}
+
+.umasSkillPicker {
+    flex: 1;
+    min-width: 0;
+}
+
+.umasSkillPickerChips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.umasSkillChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 4px 3px 6px;
+    border-radius: 5px;
+    border: 1px solid var(--border, #e5e7eb);
+    border-left-width: 3px;
+    background: hsl(220 10% 97%);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--fg, #111827);
+    white-space: nowrap;
+}
+
+.umasSkillChipIcon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.umasSkillChipName {
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.umasSkillChipRemove {
+    background: none;
+    border: none;
+    padding: 0 2px;
+    font-size: 14px;
+    line-height: 1;
+    color: var(--muted, #6b7280);
+    cursor: pointer;
+    border-radius: 3px;
+    transition: color 0.1s, background 0.1s;
+    font-family: inherit;
+}
+
+.umasSkillChipRemove:hover {
+    color: hsl(0 70% 50%);
+    background: hsl(0 80% 95%);
+}
+
+.umasSkillSearchWrap {
+    position: relative;
+    flex: 1;
+    min-width: 180px;
+}
+
+.umasSkillSearch {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-family: inherit;
+    background: var(--input-bg, #fff);
+    border: 1px solid var(--input-border, hsl(210 14% 83%));
+    border-radius: 6px;
+    color: var(--fg, #111827);
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.umasSkillSearch:focus {
+    border-color: hsl(215 70% 55%);
+}
+
+.umasSkillDropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--bg, #fff);
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 7px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    overflow: hidden;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.umasSkillDropdownItem {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 10px 7px 8px;
+    font-size: 13px;
+    color: var(--fg, #111827);
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: background 0.08s;
+}
+
+.umasSkillDropdownItem:hover {
+    background: hsl(215 50% 96%);
+}
+
+.umasFilterClearBtn {
+    align-self: flex-start;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-family: inherit;
+    background: none;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 6px;
+    color: var(--muted, #6b7280);
+    cursor: pointer;
+    transition: color 0.1s, border-color 0.1s, background 0.1s;
+}
+
+.umasFilterClearBtn:hover {
+    color: hsl(0 70% 50%);
+    border-color: hsl(0 60% 75%);
+    background: hsl(0 80% 98%);
+}
+
+/* Result count */
+
+.umasResultCount {
+    margin: 0;
+    padding: 8px 24px 0;
+    font-size: 12px;
+    color: var(--muted, #6b7280);
+}
+
+.umasResultCount strong {
+    color: var(--fg, #111827);
+}
+
+/* ── Grid ────────────────────────────────────────────────────── */
+
+.umasGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+    padding: 16px 24px 24px;
+    align-items: start;
+}
+
+.umasEmpty {
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--muted, #6b7280);
+    font-size: 14px;
+}
+
+.umasEmpty p {
+    margin: 0;
+}
+
+/* ── Card ────────────────────────────────────────────────────── */
+
+.umaCard {
+    background: var(--bg, #fff);
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow 0.15s;
+}
+
+.umaCard:hover {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Header */
+
+.umaCardHeader {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 7px 8px 6px 12px;
+    border-bottom: 1px solid var(--border, #e5e7eb);
+}
+
+.umaCardPortrait {
+    width: 52px;
+    height: 52px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: hsl(215 20% 95%);
+}
+
+.umaCardTitle {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    align-self: center;
+}
+
+.umaCardName {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--fg, #111827);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.umaCardOutfit {
+    font-size: 11px;
+    color: var(--muted, #6b7280);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.umaCardMeta {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    font-size: 11px;
+    color: var(--muted, #6b7280);
+}
+
+.umaCardMetaItem {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Stats */
+
+.umaCardStats {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    padding: 8px 12px;
+    gap: 2px;
+    border-bottom: 1px solid var(--border, #e5e7eb);
+}
+
+.umaCardStat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.umaStatCatIcon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+}
+
+.umaStatRankIcon {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+}
+
+.umaStatValue {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--fg, #111827);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Aptitudes */
+
+.umaCardApts {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border, #e5e7eb);
+}
+
+.umasAptRow {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.umasAptRowLabel {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--muted, #6b7280);
+    width: 28px;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.umasAptCell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    min-width: 32px;
+}
+
+.umasAptCellLabel {
+    font-size: 9px;
+    color: var(--muted, #6b7280);
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.umasAptIcon {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+}
+
+.umasAptEmpty {
+    font-size: 11px;
+    color: var(--muted, #6b7280);
+    line-height: 20px;
+}
+
+/* Skills */
+
+.umasSkillSection {
+    display: flex;
+    flex-direction: column;
+}
+
+.umasSkillGrid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px 12px;
+}
+
+.umasSkillSpTotal {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    padding: 5px 12px 7px;
+    border-top: 1px solid var(--border, #e5e7eb);
+}
+
+.umasSkillSpTotalLabel {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted, #6b7280);
+}
+
+.umasSkillSpTotalValue {
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--fg, #111827);
+}
+
+.umasSkillPill {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 6px 3px 4px;
+    border-radius: 4px;
+    border: 1px solid var(--border, #e5e7eb);
+    border-left-width: 3px;
+    background: hsl(220 10% 97%);
+    cursor: default;
+}
+
+.umasSkillPillIcon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.umasSkillPillName {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--fg, #111827);
+    white-space: nowrap;
+    line-height: 1.2;
+}
+
+.umasRarity-white  { border-left-color: hsl(220 15% 65%); }
+.umasRarity-gold   { border-left-color: hsl(43 90% 50%); }
+.umasRarity-unique { border-left-color: hsl(270 65% 65%); }
+.umasRarity-pink   { border-left-color: hsl(320 70% 60%); }
+
+.dark .umasSkillPill {
+    background: hsl(220 10% 14%);
+    border-top-color: var(--border);
+    border-right-color: var(--border);
+    border-bottom-color: var(--border);
+}
+
+.dark .umasSkillSpTotal {
+    border-top-color: var(--border);
+}
+
+.dark .umasSortSelect {
+    background: var(--input-bg);
+    border-color: var(--input-border);
+    color: var(--fg);
+}
+
+.dark .umasSortSelect:focus {
+    border-color: hsl(215 60% 55%);
+}
+
+.dark .umasSortDirBtn {
+    background: var(--input-bg);
+    border-color: var(--input-border);
+    color: var(--fg);
+}
+
+.dark .umasSortDirBtn:hover:not(:disabled) {
+    background: hsl(215 20% 20%);
+    border-color: hsl(215 60% 55%);
+}
+
+/* ── Card actions ────────────────────────────────────────────── */
+
+.umaCardActions {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+    flex-shrink: 0;
+    align-items: flex-start;
+}
+
+.umaCardActionBtn {
+    height: 22px;
+    padding: 0 7px;
+    font-size: 11px;
+    font-weight: 500;
+    font-family: inherit;
+    border-radius: 5px;
+    border: 1px solid var(--border, #e5e7eb);
+    background: var(--input-bg, #fff);
+    color: var(--muted, #6b7280);
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.umaCardActionBtn:hover {
+    background: hsl(215 50% 95%);
+    border-color: hsl(215 50% 75%);
+    color: hsl(215 60% 35%);
+}
+
+.umaCardActionBtn--export {
+    padding: 0 6px;
+}
+
+.umaCardActionBtn--export:hover {
+    background: hsl(215 50% 95%);
+    border-color: hsl(215 50% 75%);
+    color: hsl(215 60% 35%);
+}
+
+.umaCardActionBtn--copied {
+    background: hsl(140 50% 93%);
+    border-color: hsl(140 50% 60%);
+    color: hsl(140 50% 30%);
+}
+
+.dark .umaCardActionBtn {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--muted);
+}
+
+.dark .umaCardActionBtn:hover {
+    background: hsl(215 25% 22%);
+    border-color: hsl(215 40% 45%);
+    color: hsl(215 60% 75%);
+}
+
+.dark .umaCardActionBtn--export:hover {
+    background: hsl(215 25% 22%);
+    border-color: hsl(215 40% 45%);
+    color: hsl(215 60% 75%);
+}
+
+.dark .umaCardActionBtn--copied {
+    background: hsl(140 20% 18%);
+    border-color: hsl(140 35% 40%);
+    color: hsl(140 50% 65%);
+}
+
+/* ── Dark mode ───────────────────────────────────────────────── */
+
+.dark .umasImportInput {
+    background: var(--input-bg);
+    border-color: var(--input-border);
+    color: var(--fg);
+}
+
+.dark .umasImportInput:focus {
+    border-color: hsl(215 60% 55%);
+}
+
+.dark .umasClearAllBtn {
+    background: var(--input-bg);
+    border-color: hsl(0 50% 40%);
+    color: hsl(0 60% 65%);
+}
+
+.dark .umasClearAllBtn:hover {
+    background: hsl(0 30% 18%);
+}
+
+.dark .umaCard {
+    background: hsl(210 10% 11%);
+    border-color: var(--border);
+}
+
+.dark .umaCard:hover {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+
+.dark .umaCardPortrait {
+    background: hsl(215 15% 18%);
+}
+
+.dark .umaCardHeader,
+.dark .umaCardStats,
+.dark .umaCardApts {
+    border-bottom-color: var(--border);
+}
+
+.dark .umasImportBar {
+    border-bottom-color: var(--border);
+}
+
+.dark .umasSearchSection {
+    border-bottom-color: var(--border);
+}
+
+.dark .umasSearchInput {
+    background: var(--input-bg);
+    border-color: var(--input-border);
+    color: var(--fg);
+}
+
+.dark .umasSearchInput:focus {
+    border-color: hsl(215 60% 55%);
+}
+
+.dark .umasFiltersToggle {
+    background: var(--input-bg);
+    border-color: var(--input-border);
+    color: var(--fg);
+}
+
+.dark .umasFiltersToggle--open {
+    border-color: hsl(215 55% 55%);
+    background: hsl(215 25% 18%);
+}
+
+.dark .umasFilterPanel {
+    background: hsl(220 10% 10%);
+    border-top-color: var(--border);
+}
+
+.dark .umasAptSelect {
+    background: var(--input-bg);
+    border-color: var(--input-border);
+    color: var(--fg);
+}
+
+.dark .umasAptSelect:focus {
+    border-color: hsl(215 60% 55%);
+}
+
+.dark .umasSkillChip {
+    background: hsl(220 10% 14%);
+    border-top-color: var(--border);
+    border-right-color: var(--border);
+    border-bottom-color: var(--border);
+    color: var(--fg);
+}
+
+.dark .umasSkillChipRemove:hover {
+    background: hsl(0 30% 18%);
+    color: hsl(0 70% 65%);
+}
+
+.dark .umasSkillSearch {
+    background: var(--input-bg);
+    border-color: var(--input-border);
+    color: var(--fg);
+}
+
+.dark .umasSkillSearch:focus {
+    border-color: hsl(215 60% 55%);
+}
+
+.dark .umasSkillDropdown {
+    background: hsl(220 10% 13%);
+    border-color: var(--border);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.dark .umasSkillDropdownItem {
+    color: var(--fg);
+}
+
+.dark .umasSkillDropdownItem:hover {
+    background: hsl(215 20% 20%);
+}
+
+.dark .umasFilterClearBtn {
+    border-color: var(--border);
+    color: var(--muted);
+}
+
+.dark .umasFilterClearBtn:hover {
+    color: hsl(0 60% 65%);
+    border-color: hsl(0 40% 35%);
+    background: hsl(0 20% 15%);
+}
+
+.dark .umasResultCount strong {
+    color: var(--fg);
+}

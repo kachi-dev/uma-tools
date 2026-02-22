@@ -21,6 +21,14 @@ body {
 	gap: 0;
 }
 
+#umasPane {
+	grid-column: 1 / -1;
+	grid-row: 2;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+}
+
 #iconSidebar {
 	grid-column: 1;
 	grid-row: 2 / -1;
@@ -888,25 +896,22 @@ body {
 
 .racetrackRow {
 	position: relative;
-	width: fit-content;
+	width: 100%;
+	max-width: 100%;
 	margin: 0 auto;
+	margin-bottom: 12px;
 }
 
-.racetrackWrapper {
-	width: auto !important;
-}
 
 .racetrackControls {
-	position: absolute;
-	left: calc(100% + 5px);
-	top: 0;
 	display: flex;
-	flex-direction: column;
-	gap: 8px;
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 12px 16px;
+	justify-content: center;
 	padding: 8px 0;
 	font-family: Inter, "Noto Sans JP", sans-serif;
 	font-size: 12px;
-	white-space: nowrap;
 }
 
 .racetrackControls label {
@@ -1158,7 +1163,8 @@ body {
 	border-bottom-color: hsl(215 70% 50%);
 }
 
-.umaTabBar #expandBtn {
+.umaTabBar #expandBtn,
+.umaTabBar .horseActionBtn:last-child {
 	margin-left: auto;
 	align-self: center;
 	margin-right: 8px;
@@ -1735,3 +1741,302 @@ body {
 }
 
 body { background: var(--bg); color: var(--fg); }
+
+@media (max-width: 768px) {
+	#app {
+		grid-template-columns: 1fr;
+	}
+	#mainContent {
+		grid-column: 1;
+		padding-bottom: 72px;
+	}
+	#resultsPaneWrapper:has(.mode-chart) {
+		min-height: 40vh;
+	}
+	#resultsPane.mode-chart {
+		min-height: 0;
+	}
+	.racetrackRow {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+	#mobileBottomBar {
+		position: fixed;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		height: 56px;
+		padding-bottom: env(safe-area-inset-bottom, 0);
+		display: flex;
+		align-items: stretch;
+		justify-content: center;
+		gap: 0;
+		background: var(--bg, #fff);
+		border-top: 1px solid hsl(210 10% 85%);
+		z-index: 100;
+	}
+	.mobileBottomBarBtn {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 2px;
+		padding: 8px;
+		border: none;
+		background: transparent;
+		color: hsl(215 16% 50%);
+		cursor: pointer;
+		font-size: 11px;
+		font-weight: 500;
+		transition: all 0.15s ease;
+	}
+	.mobileBottomBarBtn:hover {
+		background: hsl(210 6% 93%);
+		color: hsl(215 20% 30%);
+	}
+	.mobileBottomBarBtn.active {
+		background: hsl(215 95% 95%);
+		color: hsl(215 70% 50%);
+	}
+	.mobileDialogOverlay {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.5);
+		z-index: 1000;
+		display: flex;
+		align-items: flex-end;
+		justify-content: center;
+	}
+	.mobileDialog {
+		position: relative;
+		width: 100%;
+		max-width: 100%;
+		max-height: 85vh;
+		background: var(--bg, #fff);
+		border-radius: 12px 12px 0 0;
+		box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+	.mobileDialogContent {
+		overflow-y: auto;
+		flex: 1;
+		min-height: 0;
+		padding: 16px 16px 24px;
+		padding-bottom: calc(24px + env(safe-area-inset-bottom, 0));
+	}
+	.mobileDialogContent--uma {
+		padding-top: 48px;
+	}
+	.mobileDialogContent--uma > div {
+		display: none;
+	}
+	.mobileDialogContent--uma > div.selected {
+		display: block;
+	}
+	.mobileDialogClose {
+		position: absolute;
+		top: 12px;
+		right: 12px;
+		width: 36px;
+		height: 36px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border: none;
+		background: transparent;
+		color: hsl(215 16% 50%);
+		font-size: 1.25rem;
+		cursor: pointer;
+		z-index: 1;
+		border-radius: 8px;
+		transition: all 0.15s ease;
+	}
+	.mobileDialogClose:hover {
+		background: hsl(210 6% 93%);
+		color: hsl(215 20% 30%);
+	}
+}
+
+.dark #mobileBottomBar {
+	background: var(--bg);
+	border-top-color: var(--border);
+}
+.dark .mobileBottomBarBtn {
+	color: var(--muted);
+}
+.dark .mobileBottomBarBtn:hover {
+	background: hsl(210 10% 20%);
+	color: var(--fg);
+}
+.dark .mobileBottomBarBtn.active {
+	background: hsl(215 95% 20%);
+	color: hsl(215 70% 70%);
+}
+.dark .mobileDialog {
+	background: var(--bg);
+}
+.dark .mobileDialogClose {
+	color: var(--muted);
+}
+.dark .mobileDialogClose:hover {
+	background: hsl(210 10% 20%);
+	color: var(--fg);
+}
+
+/* --- Save / Load modals --- */
+.saveLoadOverlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.5);
+	z-index: 1000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.saveLoadModal {
+	background: white;
+	border-radius: 10px;
+	box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
+	padding: 20px 24px;
+	min-width: 280px;
+	max-width: 400px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.dark .saveLoadModal {
+	background: #1e1e1e;
+	box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+}
+
+.saveLoadModalTitle {
+	margin: 0;
+	font-size: 15px;
+	font-weight: 600;
+	color: hsl(215 20% 15%);
+}
+
+.dark .saveLoadModalTitle {
+	color: var(--fg);
+}
+
+.saveLoadInputLabel {
+	display: block;
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--muted);
+	margin-bottom: -6px;
+}
+
+.saveLoadInput {
+	width: 100%;
+	box-sizing: border-box;
+	padding: 7px 12px;
+	font-size: 14px;
+	font-family: inherit;
+	background: var(--input-bg);
+	border: 1px solid var(--input-border);
+	border-radius: 6px;
+	color: var(--fg);
+	outline: none;
+	transition: border-color 0.15s;
+}
+.saveLoadInput:focus {
+	border-color: var(--input-border-hover);
+}
+.saveLoadInput::placeholder {
+	color: var(--muted);
+}
+
+.saveLoadDeleteText {
+	margin: 0;
+	font-size: 14px;
+	color: hsl(215 20% 20%);
+	line-height: 1.5;
+}
+.dark .saveLoadDeleteText {
+	color: var(--fg);
+}
+.saveLoadDeleteText strong {
+	font-weight: 600;
+}
+
+.saveLoadModalActions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+}
+
+.saveLoadBtnSecondary {
+	padding: 6px 14px;
+	background: white;
+	border: 1px solid hsl(210 10% 85%);
+	border-radius: 6px;
+	color: hsl(215 20% 35%);
+	font-size: 13px;
+	font-family: inherit;
+	cursor: pointer;
+	transition: background 0.15s, border-color 0.15s;
+}
+.saveLoadBtnSecondary:hover {
+	background: hsl(210 6% 95%);
+	border-color: hsl(210 10% 78%);
+}
+
+.dark .saveLoadBtnSecondary {
+	background: #1e1e1e;
+	border-color: var(--border);
+	color: var(--fg);
+}
+.dark .saveLoadBtnSecondary:hover {
+	background: #2a2a2a;
+}
+
+.saveLoadBtnPrimary {
+	padding: 6px 14px;
+	background: rgb(148, 150, 189);
+	border: none;
+	border-radius: 6px;
+	color: white;
+	font-size: 13px;
+	font-family: inherit;
+	cursor: pointer;
+	transition: background 0.15s;
+}
+.saveLoadBtnPrimary:hover {
+	background: rgb(128, 130, 172);
+}
+
+.dark .saveLoadBtnPrimary {
+	background: rgb(120, 122, 168);
+}
+.dark .saveLoadBtnPrimary:hover {
+	background: rgb(140, 142, 188);
+}
+
+.saveLoadBtnDanger {
+	padding: 6px 14px;
+	background: #dc2626;
+	border: none;
+	border-radius: 6px;
+	color: white;
+	font-size: 13px;
+	font-family: inherit;
+	cursor: pointer;
+	transition: background 0.15s;
+}
+.saveLoadBtnDanger:hover {
+	background: #b91c1c;
+}
+
+.dark .saveLoadBtnDanger {
+	background: #991b1b;
+}
+.dark .saveLoadBtnDanger:hover {
+	background: #b91c1c;
+}

@@ -352,6 +352,18 @@ const FormatParser = getParser<ConditionFormatter,OpFormatter>(conditionFormatte
 	gte: CmpFormatter('>=')
 });
 
+export function FormattedCondition({ condition }: { condition: string }) {
+	const lang = useLanguage();
+	if (!condition || condition.length === 0) return null;
+	return (
+		<IntlProvider definition={lang == 'ja' ? STRINGS_ja : STRINGS_en}>
+			<div class="skillConditions">
+				{FormatParser.parse(FormatParser.tokenize(condition)).format()}
+			</div>
+		</IntlProvider>
+	);
+}
+
 function forceSign(n: number) {
 	return n <= 0 ? n.toString() : '+' + n;
 }

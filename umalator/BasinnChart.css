@@ -319,3 +319,18 @@
 .dark .basinnChartRefreshText {
 	color: rgb(180, 120, 50);
 }
+
+@media (max-width: 768px) {
+	.basinnChartWrapperWrapper {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+	.basinnChartWrapper {
+		overflow-x: auto;
+		min-width: min-content;
+		-webkit-overflow-scrolling: touch;
+	}
+	.basinnChart {
+		min-width: min-content;
+	}
+}
