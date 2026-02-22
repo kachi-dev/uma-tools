@@ -367,7 +367,7 @@ export function HorseDef(props) {
 	}, [expanded]);
 
 	useEffect(function () {
-		const currentSkillIds = state.skills.keySeq().toSet();
+		const currentSkillIds = state.skills.valueSeq().toSet();
 		const forcedPositionSkillIds = state.forcedSkillPositions.keySeq().toSet();
 		const orphanedSkillIds = forcedPositionSkillIds.subtract(currentSkillIds);
 		if (orphanedSkillIds.size > 0) {
