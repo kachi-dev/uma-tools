@@ -1,13 +1,8 @@
 import { h, Fragment, render } from 'preact';
 import { useState, useReducer, useMemo, useEffect, useRef, useId, useCallback } from 'preact/hooks';
 import { Text, IntlProvider } from 'preact-i18n';
-<<<<<<< HEAD
-import { Settings } from 'lucide-preact';
-import { Record, Map as ImmMap } from 'immutable';
-=======
 import { Settings, Save, Upload, Download, Copy, Clipboard, Trash2, Camera, RotateCcw } from 'lucide-preact';
 import { Record, Set as ImmSet, Map as ImmMap } from 'immutable';
->>>>>>> master
 import * as d3 from 'd3';
 import { computePosition, flip } from '@floating-ui/dom';
 
