@@ -11,7 +11,7 @@ use DBI;
 use DBD::SQLite::Constants qw(:file_open);
 use JSON::PP;
 
-use Encoding qw(encode decode);
+use Encode qw(encode decode);
 # NONE OF THIS SHIT WORKS
 # I HAVE TRIED EVERY COMBINATION OF binmode(), use open qw(:std :utf8), OutputCP(), etc etc
 # PROBABLY IT WORKS ON NORMAL WINDOWS BUT MY LOCALE IS SET TO JAPAN
