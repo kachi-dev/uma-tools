@@ -571,8 +571,8 @@
 }
 
 .horseSkillPills {
-	display: flex;
-	flex-wrap: wrap;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
 	gap: 5px;
 	list-style: none;
 	margin: 0;
@@ -581,14 +581,19 @@
 
 .horseSkillPills li {
 	position: relative;
+	min-width: 0;
+	width: 100%;
 }
 
 /* Override .skill appearance inside the pills wrapper */
 
 .horseSkillPills .skill {
-	width: auto;
+	display: flex;
+	align-items: center;
+	width: 100%;
 	height: auto;
 	min-width: 0;
+	overflow: hidden;
 	padding: 5px 9px 5px 7px;
 	border-radius: 6px;
 	border: 1px solid var(--border, hsl(210 10% 85%));
@@ -596,7 +601,6 @@
 	box-shadow: none;
 	cursor: pointer;
 	font-size: 13px;
-	max-width: 240px;
 	transition: opacity 0.1s;
 }
 
@@ -632,6 +636,8 @@
 }
 
 .horseSkillPills .skillName {
+	display: block;
+	flex: 1 1 0;
 	color: var(--fg, #111827);
 	font-size: 13px;
 	font-weight: 500;
@@ -641,25 +647,29 @@
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	max-width: 170px;
+	min-width: 0;
 }
 
 .horseSkillPills .skillDismiss {
+	flex: 0 0 auto;
 	color: var(--muted, #9ca3af);
 	font-size: 11px;
-	padding: 0 0 0 5px;
-	flex-shrink: 0;
+	padding: 3px 6px;
+	background: rgba(156, 163, 175, 0.1);
+	transition: background 0.2s ease;
+
+	border-radius: 50%;
 }
 
 .horseSkillPills .skillDismiss:hover {
-	color: hsl(0 70% 50%);
+	background: rgba(156, 163, 175, 0.3);
+	color: var(--muted, #6b7280);
 }
 
 /* Expanded skill takes full row width */
 
-.horseSkillPills .horseExpandedSkill,
-.horseExpandedSkill {
-	flex: 1 0 100%;
+.horseSkillPills .horseExpandedSkill {
+	grid-column: 1 / -1;
 	width: 100%;
 }
 
