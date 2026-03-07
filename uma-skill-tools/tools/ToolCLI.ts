@@ -169,7 +169,8 @@ export function buildHorseParameters(horseDesc, course: CourseData, mood: Mood, 
 		distanceAptitude: parseAptitude(horseDesc.distanceAptitude, 'distance'),
 		surfaceAptitude: parseAptitude(horseDesc.surfaceAptitude, 'surface'),
 		strategyAptitude: parseAptitude(horseDesc.strategyAptitude, 'strategy'),
-		rawStamina: horseDesc.stamina * motivCoef
+		rawStamina: horseDesc.stamina * motivCoef,
+		rawWisdom: adjustOvercap(horseDesc.wisdom) * motivCoef
 	});
 }
 

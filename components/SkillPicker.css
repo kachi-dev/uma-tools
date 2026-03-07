@@ -53,7 +53,7 @@
 }
 .skill-picker-modal {
 	width: 90%;
-	max-width: 480px;
+	max-width: 1080px;
 	max-height: 75vh;
 	background: var(--sp-bg);
 	border: 1px solid var(--sp-border-strong);
@@ -225,14 +225,45 @@
 .skill-filter-btn.surface.active  { background: linear-gradient(135deg, #365314, #1a2e05); border-color: #84cc16; box-shadow: 0 0 8px rgba(132,204,22,0.4); color: #bef264; }
 .skill-filter-btn.location.active { background: linear-gradient(135deg, #7c2d12, #431407); border-color: #f97316; box-shadow: 0 0 8px rgba(249,115,22,0.4); color: #fdba74; }
 
+/* Icon type filter row */
+.filter-chips.icontype { gap: 4px; flex-wrap: wrap; }
+
+.icon-filter-btn {
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	background-color: var(--sp-overlay);
+	background-size: 22px 22px;
+	background-position: center;
+	background-repeat: no-repeat;
+	border: 1px solid var(--sp-border);
+	border-radius: 6px;
+	cursor: pointer;
+	opacity: 0.45;
+	transition: opacity 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
+}
+.icon-filter-btn:hover {
+	background-color: var(--sp-surface);
+	border-color: var(--sp-border-strong);
+	opacity: 0.75;
+}
+.icon-filter-btn.active {
+	background-color: var(--sp-elevated);
+	border-color: var(--sp-primary);
+	box-shadow: 0 0 6px var(--sp-primary-glow);
+	opacity: 1;
+}
+
 /* ── Skill list ───────────────────────────────────────────────────────────── */
 .skill-picker-list {
 	flex: 1;
+	min-height: 0;
 	overflow-y: auto;
 	padding: 6px;
-	display: flex;
-	flex-direction: column;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
 	gap: 2px;
+	align-content: start;
 }
 .skill-picker-item {
 	width: 100%;
@@ -271,6 +302,7 @@
 .skill-picker-item.skill-pink   { border-left: 3px solid #ec4899; }
 
 .skill-picker-empty {
+	grid-column: 1 / -1;
 	padding: 32px;
 	text-align: center;
 	color: var(--sp-text-muted);

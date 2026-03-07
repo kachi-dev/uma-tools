@@ -166,6 +166,21 @@
     border-radius: 6px;
 }
 
+.ocrInfoNote {
+    background: hsl(210 80% 96%);
+    border: 1px solid hsl(210 70% 80%);
+    border-radius: 6px;
+    color: hsl(210 60% 35%);
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+.dark .ocrInfoNote {
+    background: hsl(210 30% 18%);
+    border-color: hsl(210 30% 30%);
+    color: hsl(210 60% 75%);
+}
+
 .ocrError {
     background: #fee;
     border: 1px solid #fcc;

@@ -1340,7 +1340,7 @@ export class RaceSolver {
 		let rngRoll = this.wisdomRollRng.random();
 		const wisdom = skill.perspective === Perspective.Other && skill.originWisdom !== undefined 
 			? skill.originWisdom 
-			: this.horse.wisdom;
+			: this.horse.rawWisdom;
 		let wisdomCheck = Math.max(100-9000/wisdom,20) * 0.01;
 		return rngRoll <= wisdomCheck;
 	}

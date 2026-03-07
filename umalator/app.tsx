@@ -1389,6 +1389,36 @@ function RacePresets(props) {
 const baseSkillsToTest = Object.keys(skilldata).filter(id => isGeneralSkill(id));
 
 const enum Mode { Compare, Chart, UniquesChart }
+
+const CHART_ICON_TYPE_FILTERS = ['1001','1002','1003','1004','1005','1006','4001','2002','2001','2004','2005','2006','2009','3001','3002','3004','3005','3007'] as const;
+
+const CHART_ICON_ID_PREFIXES: { [key: string]: string[] } = {
+	'1001': ['1001'],
+	'1002': ['1002', '2018'],
+	'1003': ['1003'],
+	'1004': ['1004'],
+	'1005': ['1005'],
+	'1006': ['1006'],
+	'2002': ['2002', '2011', '2028'],
+	'2001': ['2001', '2010', '2014', '2015', '2016', '2019', '2021', '2022', '2024', '2026', '2029', '2031', '2032', '2033'],
+	'2004': ['2004', '2012', '2017', '2020', '2025', '2027', '2030'],
+	'2005': ['2005', '2013'],
+	'2006': ['2006'],
+	'2009': ['2009'],
+	'3001': ['3001'],
+	'3002': ['3002'],
+	'3004': ['3004'],
+	'3005': ['3005'],
+	'3007': ['3007'],
+	'4001': ['4001'],
+};
+
+function matchChartIconType(skillId: string, iconType: string): boolean {
+	const meta = (skillmeta as any)[skillId];
+	if (!meta?.iconId) return false;
+	return CHART_ICON_ID_PREFIXES[iconType]?.some((p: string) => meta.iconId.startsWith(p)) ?? false;
+}
+
 const enum UiStateMsg { SetModeCompare, SetModeChart, SetModeUniquesChart, SetCurrentIdx0, SetCurrentIdx1, SetCurrentIdx2, ToggleExpand }
 
 const DEFAULT_UI_STATE = {mode: Mode.Compare, currentIdx: 0, expanded: false};
@@ -1795,6 +1825,32 @@ function App(props) {
 		if (mode !== PosKeepMode.Virtual && currentIdx === 2) {
 			updateUiState(UiStateMsg.SetCurrentIdx0);
 		}
+	}
+
+	const [activeChartIconTypes, setActiveChartIconTypes] = useState<Set<string>>(() => {
+		try {
+			const saved = localStorage.getItem('chartIconFilter');
+			if (saved) {
+				const parsed: string[] = JSON.parse(saved);
+				const valid = parsed.filter(t => (CHART_ICON_TYPE_FILTERS as readonly string[]).includes(t));
+				if (valid.length > 0) return new Set(valid);
+			}
+		} catch {}
+		return new Set(CHART_ICON_TYPE_FILTERS.filter(t => t !== '2002' && t !== '2005'));
+	});
+
+	useEffect(() => {
+		localStorage.setItem('chartIconFilter', JSON.stringify(Array.from(activeChartIconTypes)));
+	}, [activeChartIconTypes]);
+	const [lastRunChartIconTypes, setLastRunChartIconTypes] = useState<Set<string>>(new Set());
+
+	function toggleChartIconType(iconType: string) {
+		setActiveChartIconTypes(prev => {
+			if (prev.has(iconType) && prev.size === 1) return prev;
+			const next = new Set(prev);
+			if (next.has(iconType)) { next.delete(iconType); } else { next.add(iconType); }
+			return next;
+		});
 	}
 
 	const [syncRng, toggleSyncRng] = useReducer((b,_) => !b, false);
@@ -2224,7 +2280,14 @@ function App(props) {
 		}
 
 		skills = skills.filter(id => !isPurpleSkill(id) && !isHpOnlySkill(id));
-		
+
+		if (mode === Mode.Chart && activeChartIconTypes.size < CHART_ICON_TYPE_FILTERS.length) {
+			skills = skills.filter(id =>
+				CHART_ICON_TYPE_FILTERS.some(t => activeChartIconTypes.has(t) && matchChartIconType(id, t))
+			);
+		}
+		setLastRunChartIconTypes(new Set(activeChartIconTypes));
+
 		const filler = new Map();
 		skills.forEach(id => filler.set(id, getNullRow(id)));
 		const quarter = Math.floor(skills.length/4);
@@ -2710,7 +2773,15 @@ function App(props) {
 			</div>
 		);
 	} else if ((mode == Mode.Chart || mode == Mode.UniquesChart) && tableData.size > 0) {
-		const dirty = !uma1.equals(lastRunChartUma) || courseId !== lastRunChartCourseId;
+		const iconTypesDirty = mode == Mode.Chart && CHART_ICON_TYPE_FILTERS.some(
+			t => activeChartIconTypes.has(t) && !lastRunChartIconTypes.has(t)
+		);
+		const dirty = !uma1.equals(lastRunChartUma) || courseId !== lastRunChartCourseId || iconTypesDirty;
+		const hiddenByIconFilter = mode == Mode.Chart && activeChartIconTypes.size < CHART_ICON_TYPE_FILTERS.length
+			? new Set(Array.from(tableData.keys()).filter(id =>
+				!CHART_ICON_TYPE_FILTERS.some(t => activeChartIconTypes.has(t) && matchChartIconType(id, t))
+			))
+			: new Set<string>();
 		resultsPane = (
 			<div id="resultsPaneWrapper">
 				<div id="resultsPane" class="mode-chart">
@@ -2718,7 +2789,7 @@ function App(props) {
 						<BasinnChart 
 							data={Array.from(tableData.values())} 
 							dirty={dirty}
-							hidden={mode == Mode.Chart ? uma1.skills : new Set()}
+							hidden={mode == Mode.Chart ? new Set([...uma1.skills, ...hiddenByIconFilter]) : new Set()}
 							onSelectionChange={basinnChartSelection}
 							onRunTypeChange={setChartData}
 							onDblClickRow={addSkillFromTable}
@@ -2730,14 +2801,6 @@ function App(props) {
 						<button class={`basinnChartRefresh${dirty ? '' : ' hidden'}`} onClick={doBasinnChart} disabled={isSimulationRunning || loadingAdditionalSamples.size > 0}>⟲</button>
 						<div class={`basinnChartRefreshText${dirty ? '' : ' hidden'}`}>Uma skills have changed, refresh is required</div>
 					</div>
-				</div>
-			</div>
-		);
-	} else if (CC_GLOBAL) {
-		resultsPane = (
-			<div id="resultsPaneWrapper">
-				<div id="resultsPane">
-					<IntroText />
 				</div>
 			</div>
 		);
@@ -2930,7 +2993,7 @@ function App(props) {
 						<div class={`modeTab ${mode == Mode.Chart ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetModeChart)}>Skill Chart</div>
 						<div class={`modeTab ${mode == Mode.UniquesChart ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetModeUniquesChart)}>Uma Chart</div>
 					</div>
-					<div id="runBar">
+						<div id="runBar">
 						{
 							mode == Mode.Compare
 							? <button id="run" onClick={doComparison} tabindex={1} disabled={isSimulationRunning || loadingAdditionalSamples.size > 0}>COMPARE</button>
@@ -3013,10 +3076,24 @@ function App(props) {
 								<SeasonSelect value={racedef.season} set={racesetter('season')} />
 							</div>
 						</div>
-					</div>
 				</div>
-				{resultsPane}
+			</div>
+			{mode == Mode.Chart && (
+				<div id="chartIconFilter">
+					{CHART_ICON_TYPE_FILTERS.map(iconType => (
+						<button
+							key={iconType}
+							class={`chart-icon-filter-btn${activeChartIconTypes.has(iconType) ? ' active' : ''}`}
+							type="button"
+							style={{ backgroundImage: `url(/uma-tools/icons/${iconType}1.png)` }}
+							onClick={() => toggleChartIconType(iconType)}
+							disabled={isSimulationRunning}
+						/>
+					))}
 				</div>
+			)}
+			{resultsPane}
+			</div>
 				{expanded && !isMobile && <div id="umaPane" />}
 				{!isMobile && leftPanel === 'uma' && <div id={expanded ? 'umaOverlay' : 'umaPane'}>{umaPaneInner}</div>}
 				{!isMobile && leftPanel === 'settings' && <div id="settingsPane">{settingsPaneInner}</div>}

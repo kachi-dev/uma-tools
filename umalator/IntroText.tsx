@@ -69,6 +69,14 @@ export function IntroText(props) {
 			<details open={true}>
 				<summary>Changelog</summary>
 				<section>
+					<h2>2026-03-07</h2>
+					<ul>
+						<li>Fixed style aptitude applying to skill wit check.</li>
+						<li>Improved skill picker UI.</li>
+						<li>Added skill type filtering for skill chart.</li>
+					</ul>
+				</section>
+				<section>
 					<h2>2026-02-19</h2>
 					<ul>
 						<li>Merged UI changes from fork https://github.com/TheCing/uma-tools</li>

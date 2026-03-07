@@ -95,6 +95,40 @@ function matchConditionFilter(id: string, filterKey: string): boolean {
 	return ops.some(op => conditions.some(alt => Matcher.treeMatch(op, alt)));
 }
 
+// ── Icon type filter ──────────────────────────────────────────────────────────
+
+const ICON_TYPE_FILTERS = ['1001','1002','1003','1004','1005','1006','4001','2002','2001','2004','2005','2006','2009','3001','3002','3004','3005','3007'] as const;
+
+const ICON_ID_PREFIXES: Record<string, string[]> = {
+	'1001': ['1001'],
+	'1002': ['1002', '2018'],
+	'1003': ['1003'],
+	'1004': ['1004'],
+	'1005': ['1005'],
+	'1006': ['1006'],
+	'2002': ['2002', '2011', '2028'],
+	'2001': ['2001', '2010', '2014', '2015', '2016', '2019', '2021', '2022', '2024', '2026', '2029', '2031', '2032', '2033'],
+	'2004': ['2004', '2012', '2017', '2020', '2025', '2027', '2030'],
+	'2005': ['2005', '2013'],
+	'2006': ['2006'],
+	'2009': ['2009'],
+	'3001': ['3001'],
+	'3002': ['3002'],
+	'3004': ['3004'],
+	'3005': ['3005'],
+	'3007': ['3007'],
+	'4001': ['4001'],
+};
+
+function matchIconType(skillId: string, iconType: string): boolean {
+	const meta = skillmeta[skillId];
+	if (!meta?.iconId) return false;
+	const prefixes = ICON_ID_PREFIXES[iconType];
+	return prefixes?.some(p => meta.iconId.startsWith(p)) ?? false;
+}
+
+const ALL_ICON_TYPES = new Set(ICON_TYPE_FILTERS);
+
 // ── Sort ──────────────────────────────────────────────────────────────────────
 
 type SortOption = 'rarity' | 'alpha' | 'game';
@@ -192,15 +226,28 @@ export function SkillPickerModal({ isOpen, onClose, onSelect, selectedSkills, av
 	const [searchQuery, setSearchQuery] = useState('');
 	const [sortOption, setSortOption] = useState<SortOption>('rarity');
 	const [activeFilters, setActiveFilters] = useState<FilterState>(EMPTY_FILTERS);
+	const [activeIconTypes, setActiveIconTypes] = useState<Set<string>>(ALL_ICON_TYPES);
 	const [activeIdx, setActiveIdx] = useState(-1);
 	const searchInputRef = useRef<HTMLInputElement>(null);
 	const listRef = useRef<HTMLDivElement>(null);
+
+	function toggleIconType(iconType: string) {
+		setActiveIconTypes(prev => {
+			if (prev.size === ICON_TYPE_FILTERS.length) {
+				return new Set([iconType]);
+			}
+			const next = new Set(prev);
+			if (next.has(iconType)) { next.delete(iconType); } else { next.add(iconType); }
+			return next.size === 0 ? ALL_ICON_TYPES : next;
+		});
+	}
 
 	useEffect(() => {
 		if (!isOpen) {
 			setSearchQuery('');
 			setSortOption('rarity');
 			setActiveFilters(EMPTY_FILTERS);
+			setActiveIconTypes(ALL_ICON_TYPES);
 			setActiveIdx(-1);
 		} else {
 			const t = setTimeout(() => searchInputRef.current?.focus(), 10);
@@ -212,6 +259,7 @@ export function SkillPickerModal({ isOpen, onClose, onSelect, selectedSkills, av
 
 	const filteredIds = useMemo(() => {
 		const query = searchQuery.toUpperCase();
+		const iconFiltered = activeIconTypes.size < ICON_TYPE_FILTERS.length;
 		const filtered = availableSkillIds.filter(id => {
 			if (query && (!skillSearchIndex[id] || skillSearchIndex[id].indexOf(query) === -1)) return false;
 			const { rarity, strategy, distance, surface, location } = activeFilters;
@@ -220,10 +268,11 @@ export function SkillPickerModal({ isOpen, onClose, onSelect, selectedSkills, av
 			if (distance && !matchConditionFilter(id, distance)) return false;
 			if (surface && !matchConditionFilter(id, surface)) return false;
 			if (location && !matchConditionFilter(id, location)) return false;
+			if (iconFiltered && !ICON_TYPE_FILTERS.some(t => activeIconTypes.has(t) && matchIconType(id, t))) return false;
 			return true;
 		});
 		return sortSkills(filtered, sortOption);
-	}, [searchQuery, activeFilters, sortOption, availableSkillIds]);
+	}, [searchQuery, activeFilters, activeIconTypes, sortOption, availableSkillIds]);
 
 	useEffect(() => {
 		if (!isOpen) return;
@@ -343,6 +392,22 @@ export function SkillPickerModal({ isOpen, onClose, onSelect, selectedSkills, av
 								</div>
 							</Fragment>
 						))}
+					</div>
+					<div class="filter-row">
+						<div class="filter-group icontype">
+							<div class="filter-label">Effect Type</div>
+							<div class="filter-chips icontype">
+								{ICON_TYPE_FILTERS.map(iconType => (
+									<button
+										key={iconType}
+										class={`icon-filter-btn${activeIconTypes.has(iconType) ? ' active' : ''}`}
+										type="button"
+										style={{ backgroundImage: `url(/uma-tools/icons/${iconType}1.png)` }}
+										onClick={() => toggleIconType(iconType)}
+									/>
+								))}
+							</div>
+						</div>
 					</div>
 				</div>
 

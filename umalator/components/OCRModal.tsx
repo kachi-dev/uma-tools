@@ -221,6 +221,10 @@ export function OCRModal({ isOpen, onClose, onConfirm }: OCRModalProps) {
                             />
                         </div>
 
+                        <div class="ocrInfoNote">
+                            <strong>Tip:</strong> If you play on PC, you can import all your umas at once from the <strong>Umas tab</strong>!
+                        </div>
+
                         {error && <div class="ocrError">{error}</div>}
 
                         <div class="ocrModalFooter">

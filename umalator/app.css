@@ -487,6 +487,58 @@ body {
 	margin: 0;
 }
 
+#chartIconFilter {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 8px 20px 4px;
+	flex-wrap: wrap;
+}
+
+.chart-icon-filter-btn {
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	background-color: #e8e8e8;
+	background-size: 22px 22px;
+	background-position: center;
+	background-repeat: no-repeat;
+	border: 1px solid #d1d5db;
+	border-radius: 6px;
+	cursor: pointer;
+	opacity: 0.45;
+	transition: opacity 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
+}
+.chart-icon-filter-btn:hover:not(:disabled) {
+	background-color: #f2f2f2;
+	border-color: #9ca3af;
+	opacity: 0.8;
+}
+.chart-icon-filter-btn:disabled {
+	cursor: not-allowed;
+	pointer-events: none;
+	opacity: 0.35 !important;
+}
+.chart-icon-filter-btn.active {
+	background-color: #f2f2f2;
+	border-color: #3b82f6;
+	box-shadow: 0 0 6px rgba(59, 130, 246, 0.3);
+	opacity: 1;
+}
+.dark .chart-icon-filter-btn {
+	background-color: #2a2a2a;
+	border-color: #444;
+}
+.dark .chart-icon-filter-btn:hover:not(:disabled) {
+	background-color: #333;
+	border-color: #666;
+}
+.dark .chart-icon-filter-btn.active {
+	background-color: #1e1e1e;
+	border-color: #60a5fa;
+	box-shadow: 0 0 6px rgba(96, 165, 250, 0.3);
+}
+
 #settingsPane {
 	grid-row: 2 / -1;
 	grid-column: 2;

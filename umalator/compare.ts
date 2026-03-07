@@ -79,12 +79,12 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 	const uma1Horse = uma1.toJS();
 	const uma1BaseStats = buildBaseStats(uma1Horse, uma1Horse.mood);
 	const uma1AdjustedStats = buildAdjustedStats(uma1BaseStats, course, racedef.groundCondition);
-	const uma1Wisdom = uma1AdjustedStats.wisdom;
+	const uma1Wisdom = uma1AdjustedStats.rawWisdom;
 	
 	const uma2Horse = uma2.toJS();
 	const uma2BaseStats = buildBaseStats(uma2Horse, uma2Horse.mood);
 	const uma2AdjustedStats = buildAdjustedStats(uma2BaseStats, course, racedef.groundCondition);
-	const uma2Wisdom = uma2AdjustedStats.wisdom;
+	const uma2Wisdom = uma2AdjustedStats.rawWisdom;
 	
 	uma1_.skills.sort(sort).forEach(id => {
 		const forcedPos = uma1.forcedSkillPositions.get(id);
