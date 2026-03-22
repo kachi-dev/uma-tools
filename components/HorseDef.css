@@ -108,7 +108,7 @@
 }
 
 .umaEpithet > span {
-	color: white;
+	color: black;
 	font-size: 1.4em;
 	font-weight: bold;
 	margin: 0 auto;
@@ -124,7 +124,7 @@
 	background: none;
 	border: none;
 	box-sizing: border-box;
-	color: white;
+	color: black;
 	font-size: 1.4em;
 	font-weight: bold;
 	text-align: center;
