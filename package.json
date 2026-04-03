@@ -3,12 +3,25 @@
   "version": "0.0.1",
   "description": "",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "db:fetch": "tsx scripts/fetch-master-db.ts",
+    "extract:all": "tsx scripts/extract-all.ts",
+    "extract:skills": "tsx scripts/extract-skill-data.ts",
+    "extract:meta": "tsx scripts/extract-skill-meta.ts",
+    "extract:skillnames": "tsx scripts/extract-skillnames.ts",
+    "extract:courses": "tsx scripts/extract-course-data.ts",
+    "extract:umas": "tsx scripts/extract-uma-info.ts"
+  },
   "author": "pecan",
   "license": "GPL-3.0-or-later",
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^20.0.0",
+    "better-sqlite3": "^9.6.0",
     "commander": "^13.1.0",
-    "esbuild": "^0.19.5"
+    "esbuild": "^0.19.5",
+    "lz4js": "^0.2.0",
+    "tsx": "^4.19.0"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.7.2",

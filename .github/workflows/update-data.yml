@@ -1,0 +1,106 @@
+name: Update Game Data
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Optional resource version override (defaults to latest current.resource_version from https://uma.moe/api/ver)'
+        required: false
+        type: string
+
+jobs:
+  update-data:
+    name: Fetch and Update Data
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.DATA_UPDATE_PAT }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Resolve target version
+        id: version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION='${{ inputs.version }}'
+          else
+            VERSION=$(node -e "fetch('https://uma.moe/api/ver').then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then(d => { if (!d?.current?.resource_version) throw new Error('Missing current.resource_version'); process.stdout.write(String(d.current.resource_version)); })")
+          fi
+          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Resolved resource version: $VERSION"
+
+      - name: Fetch master.mdb
+        run: npm run db:fetch -- ${{ steps.version.outputs.value }}
+
+      - name: Extract game data
+        run: npm run extract:all
+
+      - name: Check for changes
+        id: changes
+        run: |
+          DATA_FILES=(
+            umalator-global/skill_data.json
+            umalator-global/skill_meta.json
+            umalator-global/skillnames.json
+            umalator-global/umas.json
+            umalator-global/course_data.json
+          )
+          if git diff --quiet -- "${DATA_FILES[@]}"; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "No data changes detected for version ${{ steps.version.outputs.value }}."
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            echo "Data changes detected."
+            git diff --stat -- "${DATA_FILES[@]}"
+          fi
+
+      - name: Create branch and commit
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b chore/update-data-v${{ steps.version.outputs.value }}
+          git add \
+            umalator-global/skill_data.json \
+            umalator-global/skill_meta.json \
+            umalator-global/skillnames.json \
+            umalator-global/umas.json \
+            umalator-global/course_data.json
+          git commit -m "chore: update game data to version ${{ steps.version.outputs.value }}"
+          git push -u origin chore/update-data-v${{ steps.version.outputs.value }}
+
+      - name: Create Pull Request
+        if: steps.changes.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.DATA_UPDATE_PAT }}
+        run: |
+          gh pr create \
+            --title "chore: update game data to v${{ steps.version.outputs.value }}" \
+            --body "$(cat <<'EOF'
+          Automated data update to game version \`${{ steps.version.outputs.value }}\`.
+
+          **Updated files:**
+          - \`umalator-global/skill_data.json\`
+          - \`umalator-global/skill_meta.json\`
+          - \`umalator-global/skillnames.json\`
+          - \`umalator-global/umas.json\`
+          - \`umalator-global/course_data.json\`
+
+          Triggered by: @${{ github.actor }} via workflow_dispatch
+          EOF
+          )" \
+            --base master
+
+      - name: No changes
+        if: steps.changes.outputs.has_changes == 'false'
+        run: echo "✓ Data is already up to date for version ${{ steps.version.outputs.value }}. No PR needed."
