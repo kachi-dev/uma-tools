@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "version:current": "tsx scripts/get-current-resource-version.ts",
     "db:fetch": "tsx scripts/fetch-master-db.ts",
     "extract:all": "tsx scripts/extract-all.ts",
     "extract:skills": "tsx scripts/extract-skill-data.ts",

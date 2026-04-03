@@ -1,5 +1,9 @@
 name: Update Game Data
 
+permissions:
+  contents: write
+  pull-requests: write
+
 on:
   workflow_dispatch:
     inputs:
@@ -17,7 +21,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.DATA_UPDATE_PAT }}
+          token: ${{ github.token }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -34,7 +38,7 @@ jobs:
           if [ -n "${{ inputs.version }}" ]; then
             VERSION='${{ inputs.version }}'
           else
-            VERSION=$(node -e "fetch('https://uma.moe/api/ver').then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then(d => { if (!d?.current?.resource_version) throw new Error('Missing current.resource_version'); process.stdout.write(String(d.current.resource_version)); })")
+            VERSION=$(npm run --silent version:current)
           fi
           echo "value=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Resolved resource version: $VERSION"
@@ -82,7 +86,7 @@ jobs:
       - name: Create Pull Request
         if: steps.changes.outputs.has_changes == 'true'
         env:
-          GH_TOKEN: ${{ secrets.DATA_UPDATE_PAT }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           gh pr create \
             --title "chore: update game data to v${{ steps.version.outputs.value }}" \
