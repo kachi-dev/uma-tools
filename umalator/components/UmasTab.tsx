@@ -727,8 +727,8 @@ export function UmasTab({ onLoadUma1, onLoadUma2, onExport }: UmasTabProps = {})
                     )}
                     {visible.length > 0 ? (
                         <div class="umasGrid">
-                            {visible.map(uma => (
-                                <UmaCard key={uma.card_id} uma={uma} actions={{ onLoadUma1, onLoadUma2, onExport }} />
+                            {visible.map((uma, i) => (
+                                <UmaCard key={`${uma.card_id}-${i}`} uma={uma} actions={{ onLoadUma1, onLoadUma2, onExport }} />
                             ))}
                         </div>
                     ) : (

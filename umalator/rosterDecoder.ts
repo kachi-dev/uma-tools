@@ -1,7 +1,7 @@
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
 class BitVector {
-    private bits: number[];
+    private readonly bits: number[];
     private pos: number;
 
     constructor(bits: number[] = []) {
@@ -23,8 +23,8 @@ class BitVector {
 
     static fromBase64(str: string): BitVector {
         const bits: number[] = [];
-        for (let i = 0; i < str.length; i++) {
-            const v = B64.indexOf(str[i]);
+        for (const element of str) {
+            const v = B64.indexOf(element);
             if (v < 0) continue;
             for (let j = 5; j >= 0; j--) bits.push((v >> j) & 1);
         }
@@ -46,11 +46,10 @@ function b64ToBytes(str: string): Uint8Array {
     return new Uint8Array(result);
 }
 
-async function gunzip(data: Uint8Array): Promise<string> {
-    const ds = new (window as any).DecompressionStream('gzip');
+async function gunzip(data: Uint8Array): Promise<Uint8Array> {
+    const ds = new globalThis.DecompressionStream('gzip');
     const stream = (new Blob([data as any]).stream() as any).pipeThrough(ds);
-    const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
-    return new TextDecoder().decode(bytes);
+    return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
 function bytesToB64(bytes: Uint8Array): string {
@@ -66,7 +65,7 @@ function bytesToB64(bytes: Uint8Array): string {
 }
 
 async function gzip(text: string): Promise<Uint8Array> {
-    const cs = new (window as any).CompressionStream('gzip');
+    const cs = new globalThis.CompressionStream('gzip');
     const stream = (new Blob([text]).stream() as any).pipeThrough(cs);
     return new Uint8Array(await new Response(stream).arrayBuffer());
 }
@@ -78,7 +77,8 @@ export async function saveRoster(umas: DecodedUma[]): Promise<string> {
 
 export async function loadRoster(stored: string): Promise<DecodedUma[]> {
     const bytes = b64ToBytes(stored);
-    const json = await gunzip(bytes);
+    const decompressed = await gunzip(bytes);
+    const json = new TextDecoder().decode(decompressed);
     return JSON.parse(json);
 }
 
@@ -267,8 +267,9 @@ export async function decodeRoster(input: string): Promise<DecodedUma[]> {
 
     if (encoded.startsWith('z')) {
         try {
-            const bytes = b64ToBytes(encoded.slice(1));
-            encoded = await gunzip(bytes);
+            const compressedBytes = b64ToBytes(encoded.slice(1));
+            const decompressedBytes = await gunzip(compressedBytes);
+            encoded = bytesToB64(decompressedBytes);
         } catch {
             return [];
         }
@@ -279,11 +280,13 @@ export async function decodeRoster(input: string): Promise<DecodedUma[]> {
 
     if (version === 4) {
         const result: DecodedUma[] = [];
+
         while (bv.remaining() >= 109) {
             const uma = readV4Uma(bv);
             if (!uma) break;
             result.push(uma);
         }
+
         return result;
     }
 
