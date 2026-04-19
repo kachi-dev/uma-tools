@@ -1,1 +1,4 @@
 node_modules/
+
+# Fetched game data / manifests
+/db/
