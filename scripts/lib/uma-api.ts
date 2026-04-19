@@ -16,10 +16,12 @@ export interface GameVersionApiRecord {
   updated_at: string;
 }
 
-export interface UmaApiResponse {
+export interface LegacyUmaApiResponse {
   current: GameVersionApiRecord;
-  history: Array<GameVersionApiRecord>;
+  history?: Array<GameVersionApiRecord>;
 }
+
+export type UmaApiResponse = GameVersionApiRecord | LegacyUmaApiResponse;
 
 function isGameVersionRecord(value: unknown): value is GameVersionApiRecord {
   return Boolean(
@@ -31,14 +33,28 @@ function isGameVersionRecord(value: unknown): value is GameVersionApiRecord {
   );
 }
 
-function isUmaApiResponse(value: unknown): value is UmaApiResponse {
-  return Boolean(
-    value &&
-      typeof value === 'object' &&
-      isGameVersionRecord((value as Record<string, unknown>).current) &&
-      Array.isArray((value as Record<string, unknown>).history) &&
-      ((value as Record<string, unknown>).history as Array<unknown>).every(isGameVersionRecord),
+function isLegacyUmaApiResponse(value: unknown): value is LegacyUmaApiResponse {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (!isGameVersionRecord(record.current)) {
+    return false;
+  }
+
+  return (
+    record.history == null ||
+    (Array.isArray(record.history) && record.history.every(isGameVersionRecord))
   );
+}
+
+function isUmaApiResponse(value: unknown): value is UmaApiResponse {
+  return isGameVersionRecord(value) || isLegacyUmaApiResponse(value);
+}
+
+function getResourceVersionFromResponse(payload: UmaApiResponse): string {
+  return 'current' in payload ? payload.current.resource_version : payload.resource_version;
 }
 
 function formatErrorWithCause(error: unknown): string {
@@ -77,10 +93,11 @@ export async function fetchCurrentResourceVersion(): Promise<string> {
 
       const payload = (await response.json()) as unknown;
       if (!isUmaApiResponse(payload)) {
-        throw new Error(`Unexpected response shape from ${UMA_MOE_VERSION_URL}`);
+        const shape = payload && typeof payload === 'object' ? Object.keys(payload).join(', ') : typeof payload;
+        throw new Error(`Unexpected response shape from ${UMA_MOE_VERSION_URL} (keys: ${shape})`);
       }
 
-      return payload.current.resource_version;
+      return getResourceVersionFromResponse(payload);
     } catch (error) {
       lastError = error;
 

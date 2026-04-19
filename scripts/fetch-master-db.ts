@@ -563,7 +563,7 @@ async function main(): Promise<number> {
   program
     .name('fetch-master-db')
     .description('Fetch master.mdb from Uma Musume manifest chain')
-    .argument('[appVer]', 'Resource version (defaults to latest current.resource_version from https://uma.moe/api/ver)')
+    .argument('[appVer]', 'Resource version (defaults to latest resource_version from https://uma.moe/api/ver)')
     .option(
       '-o, --output <dir>',
       `Output directory (default: ${DEFAULT_OUTPUT_DIR})`,
