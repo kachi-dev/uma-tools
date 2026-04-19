@@ -5,6 +5,7 @@ import { IntlProvider, Text, Localizer } from 'preact-i18n';
 import { getParser } from '../uma-skill-tools/ConditionParser';
 import * as Matcher from '../uma-skill-tools/tools/ConditionMatcher';
 import { SkillRarity } from '../uma-skill-tools/RaceSolver.ts';
+import { describeRecoveryEffect } from '../uma-skill-tools/RecoveryEffects';
 
 import { useLanguage } from './Language';
 import { Tooltip } from './Tooltip';
@@ -50,6 +51,7 @@ export const STRINGS_ja = Object.freeze({
 		'4': '根性アップ',
 		'5': '賢さアップ',
 		'9': '体力回復',
+		'recovery_drain': '体力消費',
 		'21': '現在速度（減速なし）',
 		'22': '現在速度',
 		'27': '目標速度',
@@ -118,6 +120,7 @@ export const STRINGS_en = Object.freeze({
 		'4': 'Guts up',
 		'5': 'Wisdom up',
 		'9': 'Recovery',
+		'recovery_drain': 'HP drain',
 		'21': 'Current speed',
 		'22': 'Current speed with natural deceleration',
 		'27': 'Target speed',
@@ -418,12 +421,24 @@ export function ExpandedSkillDetails(props) {
 							</div>
 							<Text id="skilldetails.effects" />
 							<div class="skillEffects">
-								{alt.effects.map(ef =>
-									<div class="skillEffect">
-										<span class="skillEffectType"><Text id={`skilleffecttypes.${ef.type}`}>{ef.type}</Text></span>
-										<span class="skillEffectValue">{ef.type in formatEffect ? formatEffect[ef.type](ef.modifier / 10000) : ef.modifier / 10000}</span>
-									</div>
-								)}
+								{alt.effects.map(ef => {
+									const modifier = ef.modifier / 10000;
+									const recoveryEffect = {
+										type: ef.type,
+										modifier,
+										valueUsage: ef.valueUsage,
+										valueLevelUsage: ef.valueLevelUsage
+									};
+									const recoveryDescription = describeRecoveryEffect(recoveryEffect);
+									const effectType = ef.type == 9 && modifier < 0 ? 'recovery_drain' : ef.type;
+									const effectValue = recoveryDescription ?? (ef.type in formatEffect ? formatEffect[ef.type](modifier) : modifier);
+									return (
+										<div class="skillEffect">
+											<span class="skillEffectType"><Text id={`skilleffecttypes.${effectType}`}>{ef.type}</Text></span>
+											<span class="skillEffectValue">{effectValue}</span>
+										</div>
+									);
+								})}
 							</div>
 							{alt.baseDuration > 0 && <span class="skillDuration"><Text id="skilldetails.baseduration" />{' '}<Text id="skilldetails.seconds" fields={{n: alt.baseDuration / 10000}} /></span>}
 							{props.distanceFactor && alt.baseDuration > 0 &&
