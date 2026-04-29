@@ -38,15 +38,15 @@ my $select = $db->prepare(<<SQL
 SELECT id, rarity,
        precondition_1, condition_1,
        float_ability_time_1,
-       ability_type_1_1, float_ability_value_1_1, target_type_1_1,
-       ability_type_1_2, float_ability_value_1_2, target_type_1_2,
-       ability_type_1_3, float_ability_value_1_3, target_type_1_3,
+       ability_type_1_1, float_ability_value_1_1, target_type_1_1, ability_value_usage_1_1, ability_value_level_usage_1_1,
+       ability_type_1_2, float_ability_value_1_2, target_type_1_2, ability_value_usage_1_2, ability_value_level_usage_1_2,
+       ability_type_1_3, float_ability_value_1_3, target_type_1_3, ability_value_usage_1_3, ability_value_level_usage_1_3,
 
        precondition_2, condition_2,
        float_ability_time_2,
-       ability_type_2_1, float_ability_value_2_1, target_type_2_1,
-       ability_type_2_2, float_ability_value_2_2, target_type_2_2,
-       ability_type_2_3, float_ability_value_2_3, target_type_2_3
+       ability_type_2_1, float_ability_value_2_1, target_type_2_1, ability_value_usage_2_1, ability_value_level_usage_2_1,
+       ability_type_2_2, float_ability_value_2_2, target_type_2_2, ability_value_usage_2_2, ability_value_level_usage_2_2,
+       ability_type_2_3, float_ability_value_2_3, target_type_2_3, ability_value_usage_2_3, ability_value_level_usage_2_3
   FROM skill_data
  WHERE is_general_skill = 1 OR rarity >= 3;
 SQL
@@ -58,40 +58,51 @@ my (
 	$id, $rarity,
 	$precondition_1, $condition_1,
 	$float_ability_time_1,
-	$ability_type_1_1, $float_ability_value_1_1, $target_type_1_1,
-	$ability_type_1_2, $float_ability_value_1_2, $target_type_1_2,
-	$ability_type_1_3, $float_ability_value_1_3, $target_type_1_3,
+	$ability_type_1_1, $float_ability_value_1_1, $target_type_1_1, $ability_value_usage_1_1, $ability_value_level_usage_1_1,
+	$ability_type_1_2, $float_ability_value_1_2, $target_type_1_2, $ability_value_usage_1_2, $ability_value_level_usage_1_2,
+	$ability_type_1_3, $float_ability_value_1_3, $target_type_1_3, $ability_value_usage_1_3, $ability_value_level_usage_1_3,
 
 	$precondition_2, $condition_2,
 	$float_ability_time_2,
-	$ability_type_2_1, $float_ability_value_2_1, $target_type_2_1,
-	$ability_type_2_2, $float_ability_value_2_2, $target_type_2_2,
-	$ability_type_2_3, $float_ability_value_2_3, $target_type_2_3
+	$ability_type_2_1, $float_ability_value_2_1, $target_type_2_1, $ability_value_usage_2_1, $ability_value_level_usage_2_1,
+	$ability_type_2_2, $float_ability_value_2_2, $target_type_2_2, $ability_value_usage_2_2, $ability_value_level_usage_2_2,
+	$ability_type_2_3, $float_ability_value_2_3, $target_type_2_3, $ability_value_usage_2_3, $ability_value_level_usage_2_3
 );
 
 $select->bind_columns(\(
 	$id, $rarity,
 	$precondition_1, $condition_1,
 	$float_ability_time_1,
-	$ability_type_1_1, $float_ability_value_1_1, $target_type_1_1,
-	$ability_type_1_2, $float_ability_value_1_2, $target_type_1_2,
-	$ability_type_1_3, $float_ability_value_1_3, $target_type_1_3,
+	$ability_type_1_1, $float_ability_value_1_1, $target_type_1_1, $ability_value_usage_1_1, $ability_value_level_usage_1_1,
+	$ability_type_1_2, $float_ability_value_1_2, $target_type_1_2, $ability_value_usage_1_2, $ability_value_level_usage_1_2,
+	$ability_type_1_3, $float_ability_value_1_3, $target_type_1_3, $ability_value_usage_1_3, $ability_value_level_usage_1_3,
 
 	$precondition_2, $condition_2,
 	$float_ability_time_2,
-	$ability_type_2_1, $float_ability_value_2_1, $target_type_2_1,
-	$ability_type_2_2, $float_ability_value_2_2, $target_type_2_2,
-	$ability_type_2_3, $float_ability_value_2_3, $target_type_2_3
+	$ability_type_2_1, $float_ability_value_2_1, $target_type_2_1, $ability_value_usage_2_1, $ability_value_level_usage_2_1,
+	$ability_type_2_2, $float_ability_value_2_2, $target_type_2_2, $ability_value_usage_2_2, $ability_value_level_usage_2_2,
+	$ability_type_2_3, $float_ability_value_2_3, $target_type_2_3, $ability_value_usage_2_3, $ability_value_level_usage_2_3
 ));
+
+sub create_effect {
+	my ($id, $type, $modifier, $target, $value_usage, $value_level_usage) = @_;
+	return {
+		type => $type,
+		modifier => patch_modifier($id, $modifier),
+		target => $target,
+		valueUsage => $value_usage,
+		valueLevelUsage => $value_level_usage
+	};
+}
 
 my $skills = {};
 while ($select->fetch) {
-	my @effects_1 = ({type => $ability_type_1_1, modifier => patch_modifier($id, $float_ability_value_1_1), target => $target_type_1_1});
+	my @effects_1 = (create_effect($id, $ability_type_1_1, $float_ability_value_1_1, $target_type_1_1, $ability_value_usage_1_1, $ability_value_level_usage_1_1));
 	if ($ability_type_1_2 != 0) {
-		push @effects_1, {type => $ability_type_1_2, modifier => patch_modifier($id, $float_ability_value_1_2), target => $target_type_1_2};
+		push @effects_1, create_effect($id, $ability_type_1_2, $float_ability_value_1_2, $target_type_1_2, $ability_value_usage_1_2, $ability_value_level_usage_1_2);
 	}
 	if ($ability_type_1_3 != 0) {
-		push @effects_1, {type => $ability_type_1_3, modifier => patch_modifier($id, $float_ability_value_1_3), target => $target_type_1_3};
+		push @effects_1, create_effect($id, $ability_type_1_3, $float_ability_value_1_3, $target_type_1_3, $ability_value_usage_1_3, $ability_value_level_usage_1_3);
 	}
 	my @triggers = ({
 		precondition => $precondition_1,
@@ -100,12 +111,12 @@ while ($select->fetch) {
 		effects => \@effects_1
 	});
 	if ($condition_2 ne '' && $condition_2 ne '0') {
-		my @effects_2 = ({type => $ability_type_2_1, modifier => patch_modifier($id, $float_ability_value_2_1), target => $target_type_2_1});
+		my @effects_2 = (create_effect($id, $ability_type_2_1, $float_ability_value_2_1, $target_type_2_1, $ability_value_usage_2_1, $ability_value_level_usage_2_1));
 		if ($ability_type_2_2 != 0) {
-			push @effects_2, {type => $ability_type_2_2, modifier => patch_modifier($id, $float_ability_value_2_2), target => $target_type_2_2};
+			push @effects_2, create_effect($id, $ability_type_2_2, $float_ability_value_2_2, $target_type_2_2, $ability_value_usage_2_2, $ability_value_level_usage_2_2);
 		}
 		if ($ability_type_2_3 != 0) {
-			push @effects_2, {type => $ability_type_2_3, modifier => patch_modifier($id, $float_ability_value_2_3), target => $target_type_2_3};
+			push @effects_2, create_effect($id, $ability_type_2_3, $float_ability_value_2_3, $target_type_2_3, $ability_value_usage_2_3, $ability_value_level_usage_2_3);
 		}
 		push @triggers, {
 			precondition => $precondition_2,

@@ -251,7 +251,9 @@ function buildSkillEffects(skill, perspective: Perspective) {
 	return skill.effects.map(ef => ({
 		type: SkillType.hasOwnProperty(ef.type) && isTarget(perspective, ef.target) ? ef.type : SkillType.Noop,
 		baseDuration: skill.baseDuration / 10000,
-		modifier: ef.modifier / 10000
+		modifier: ef.modifier / 10000,
+		valueUsage: ef.valueUsage,
+		valueLevelUsage: ef.valueLevelUsage
 	}));
 }
 
