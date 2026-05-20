@@ -7,6 +7,7 @@ import { PRNG, Rule30CARng } from './Random';
 import type { HpPolicy } from './HpPolicy';
 import { ApproximateCondition } from './ApproximateConditions';
 import { createBlockedSideCondition, createOvertakeCondition } from './SpecialConditions';
+import { resolveRecoveryModifier } from './RecoveryEffects';
 
 declare var CC_GLOBAL: boolean
 
@@ -198,6 +199,8 @@ export interface SkillEffect {
 	type: SkillType
 	baseDuration: number
 	modifier: number
+	valueUsage?: number
+	valueLevelUsage?: number
 }
 
 export interface PendingSkill {
@@ -240,6 +243,7 @@ export class RaceSolver {
 	rushedRng: PRNG
 	downhillRng: PRNG[]
 	wisdomRollRng: PRNG
+	recoveryRng: PRNG
 	posKeepRng: PRNG
 	laneMovementRng: PRNG
 	specialConditionRng: PRNG
@@ -394,6 +398,7 @@ export class RaceSolver {
 		this.gorosiRng = new Rule30CARng(this.rng.int32());
 		this.rushedRng = new Rule30CARng(this.rng.int32());
 		this.wisdomRollRng = new Rule30CARng(this.rng.int32());
+		this.recoveryRng = new Rule30CARng(this.rng.int32());
 		this.posKeepRng = new Rule30CARng(this.rng.int32());
 		this.laneMovementRng = new Rule30CARng(this.rng.int32());
 		this.specialConditionRng = new Rule30CARng(this.rng.int32());
@@ -1416,13 +1421,15 @@ export class RaceSolver {
 					naturalDeceleration: ef.type == SkillType.CurrentSpeedWithNaturalDeceleration
 				});
 				break;
-			case SkillType.Recovery:
-				if (s.perspective == Perspective.Self) ++this.activateCountHeal;
-				this.hp.recover(ef.modifier);
+			case SkillType.Recovery: {
+				const modifier = resolveRecoveryModifier(ef, this.recoveryRng);
+				if (s.perspective == Perspective.Self && modifier > 0) ++this.activateCountHeal;
+				this.hp.recover(modifier);
 				if (this.phase >= 2 && !this.isLastSpurt) {
 					this.updateLastSpurtState(true);
 				}
 				break;
+			}
 			case SkillType.ActivateRandomGold:
 				this.doActivateRandomGold(ef.modifier);
 				break;
