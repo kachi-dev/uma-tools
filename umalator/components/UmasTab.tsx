@@ -671,7 +671,7 @@ export function UmasTab({ onLoadUma1, onLoadUma2, onExport }: UmasTabProps = {})
                     <input
                         type="text"
                         class="umasImportInput"
-                        placeholder="Paste your roster URL or code from roster.uma.guide…"
+                        placeholder="Paste your roster URL or code from uma.guide/roster-viewer…"
                         value={inputValue}
                         onInput={(e) => setInputValue((e.target as HTMLInputElement).value)}
                         onKeyDown={handleKeyDown}
@@ -689,7 +689,7 @@ export function UmasTab({ onLoadUma1, onLoadUma2, onExport }: UmasTabProps = {})
                 {importError && <p class="umasImportError">{importError}</p>}
                 <p class="umasImportHint">
                     Export your trained umas at{' '}
-                    <a href="https://roster.uma.guide/" target="_blank" rel="noopener">roster.uma.guide</a>
+                    <a href="https://uma.guide/roster-viewer/" target="_blank" rel="noopener">uma.guide/roster-viewer</a>
                     {' '}— paste the full URL here to load your roster.
                     {importedUmas.length > 0 && (
                         <span class="umasLoadedCount"> {importedUmas.length} uma{importedUmas.length !== 1 ? 's' : ''} loaded.</span>

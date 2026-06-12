@@ -1603,7 +1603,7 @@ function ImportDialog({ onClose, onImport }: { onClose: () => void; onImport: (s
                 <h3 class="saveLoadModalTitle">Import Uma</h3>
                 <p style="margin:4px 0 10px;font-size:13px;color:var(--muted,#6b7280)">
                     Paste a single-uma export code from{' '}
-                    <a href="https://roster.uma.guide/" target="_blank" rel="noopener" style="color:hsl(215 70% 50%)">roster.uma.guide</a>
+                    <a href="https://uma.guide/roster-viewer/" target="_blank" rel="noopener" style="color:hsl(215 70% 50%)">uma.guide/roster-viewer</a>
                     , or browse for a JSON file.
                 </p>
                 <textarea
