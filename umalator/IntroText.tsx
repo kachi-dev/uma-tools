@@ -69,6 +69,14 @@ export function IntroText(props) {
 			<details open={true}>
 				<summary>Changelog</summary>
 				<section>
+					<h2>2026-06-14</h2>
+					<ul>
+						<li>New Umas.</li>
+						<li>No further updates will be made, will be on vacation for 2 weeks! - Jecht</li>
+						
+					</ul>
+				</section>
+				<section>
 					<h2>2026-03-07</h2>
 					<ul>
 						<li>Fixed style aptitude applying to skill wit check.</li>
