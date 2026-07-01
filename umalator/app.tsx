@@ -75,33 +75,32 @@ class RaceParams extends Record({
 const enum EventType { CM, LOH }
 
 const presets = (CC_GLOBAL ? [
-	{id: 11, type: EventType.CM, name: 'Aquarius Cup', date: '2026-03', courseId: 10914, season: Season.Spring, ground: GroundCondition.Heavy, weather: Weather.Rainy, time: Time.Midday},
-	{id: 10, type: EventType.CM, name: 'Aquarius Cup', date: '2026-02', courseId: 10611, season: Season.Winter, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
-	{id: 9, type: EventType.CM, name: 'Capricorn Cup', date: '2026-02', courseId: 10701, season: Season.Winter, ground: GroundCondition.Soft, weather: Weather.Snowy, time: Time.Midday},
-	{id: 8, type: EventType.CM, name: 'Sagittarius Cup', date: '2026-01', courseId: 10506, season: Season.Winter, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
-	{id: 7, type: EventType.CM, name: 'Scorpio Cup', date: '2026-01', courseId: 10604, season: Season.Autumn, ground: GroundCondition.Soft, weather: Weather.Rainy, time: Time.Midday},
-	{id: 6, type: EventType.CM, name: 'Libra Cup', date: '2025-12', courseId: 10810, season: Season.Autumn, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
-	{id: 5, type: EventType.CM, name: 'Virgo Cup', date: '2025-11-20', courseId: 10903, season: Season.Autumn, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
-	{id: 4, type: EventType.CM, name: 'Leo Cup', date: '2025-10-30', courseId: 10906, season: Season.Summer, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
-	{id: 3, type: EventType.CM, name: 'Cancer Cup', date: '2025-10-07', courseId: 10602, season: Season.Summer, ground: GroundCondition.Yielding, weather: Weather.Sunny, time: Time.Midday},
-	{id: 2, type: EventType.CM, name: 'Gemini Cup', date: '2025-09', courseId: 10811, season: Season.Spring, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
-	{id: 1, type: EventType.CM, name: 'Taurus Cup', date: '2025-08', courseId: 10606, season: Season.Spring, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday}
+	{id: 11, type: EventType.CM, name: 'Pisces Cup', courseId: 10914, season: Season.Spring, ground: GroundCondition.Heavy, weather: Weather.Rainy, time: Time.Midday},
+	{id: 10, type: EventType.CM, name: 'Aquarius Cup', courseId: 10611, season: Season.Winter, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
+	{id: 9, type: EventType.CM, name: 'Capricorn Cup', courseId: 10701, season: Season.Winter, ground: GroundCondition.Soft, weather: Weather.Snowy, time: Time.Midday},
+	{id: 8, type: EventType.CM, name: 'Sagittarius Cup', courseId: 10506, season: Season.Winter, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
+	{id: 7, type: EventType.CM, name: 'Scorpio Cup', courseId: 10604, season: Season.Autumn, ground: GroundCondition.Soft, weather: Weather.Rainy, time: Time.Midday},
+	{id: 6, type: EventType.CM, name: 'Libra Cup', courseId: 10810, season: Season.Autumn, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
+	{id: 5, type: EventType.CM, name: 'Virgo Cup', courseId: 10903, season: Season.Autumn, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
+	{id: 4, type: EventType.CM, name: 'Leo Cup', courseId: 10906, season: Season.Summer, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
+	{id: 3, type: EventType.CM, name: 'Cancer Cup', courseId: 10602, season: Season.Summer, ground: GroundCondition.Yielding, weather: Weather.Sunny, time: Time.Midday},
+	{id: 2, type: EventType.CM, name: 'Gemini Cup', courseId: 10811, season: Season.Spring, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
+	{id: 1, type: EventType.CM, name: 'Taurus Cup', courseId: 10606, season: Season.Spring, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday}
 ] : [
-	{type: EventType.LOH, date: '2026-02', courseId: 10602, season: Season.Winter, time: Time.Midday},
-	{type: EventType.CM, date: '2026-01', courseId: 10506, season: Season.Winter, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
-	{type: EventType.CM, date: '2025-12-21', courseId: 10903, season: Season.Winter, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
-	{type: EventType.LOH, date: '2025-11', courseId: 11502, season: Season.Autumn, time: Time.Midday},
-	{type: EventType.CM, date: '2025-10', courseId: 10302, season: Season.Autumn, ground: GroundCondition.Good, weather: Weather.Cloudy, time: Time.Midday},
-	{type: EventType.CM, date: '2025-09-22', courseId: 10807, season: Season.Autumn, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
-	{type: EventType.LOH, date: '2025-08', courseId: 10105, season: Season.Summer, Time: Time.Midday},
-	{type: EventType.CM, date: '2025-07-25', courseId: 10906, ground: GroundCondition.Yielding, weather: Weather.Cloudy, season: Season.Summer, time: Time.Midday},
-	{type: EventType.CM, date: '2025-06-21', courseId: 10606, ground: GroundCondition.Good, weather: Weather.Sunny, season: Season.Spring, time: Time.Midday}
+	{type: EventType.LOH, courseId: 10602, season: Season.Winter, time: Time.Midday},
+	{type: EventType.CM, courseId: 10506, season: Season.Winter, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
+	{type: EventType.CM, courseId: 10903, season: Season.Winter, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
+	{type: EventType.LOH, courseId: 11502, season: Season.Autumn, time: Time.Midday},
+	{type: EventType.CM, courseId: 10302, season: Season.Autumn, ground: GroundCondition.Good, weather: Weather.Cloudy, time: Time.Midday},
+	{type: EventType.CM, courseId: 10807, season: Season.Autumn, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
+	{type: EventType.LOH, courseId: 10105, season: Season.Summer, Time: Time.Midday},
+	{type: EventType.CM, courseId: 10906, ground: GroundCondition.Yielding, weather: Weather.Cloudy, season: Season.Summer, time: Time.Midday},
+	{type: EventType.CM, courseId: 10606, ground: GroundCondition.Good, weather: Weather.Sunny, season: Season.Spring, time: Time.Midday}
 ])
 	.map(def => ({
 		id: def.id,
 		name: def.name,
 		type: def.type,
-		date: new Date(def.date),
 		courseId: def.courseId,
 		racedef: new RaceParams({
 			mood: 2 as Mood,
@@ -111,11 +110,7 @@ const presets = (CC_GLOBAL ? [
 			time: def.time,
 			grade: Grade.G1
 		})
-	}))
-	.sort((a,b) => +b.date - +a.date);
-
-const DEFAULT_PRESET = presets[Math.max(presets.findIndex((now => p => new Date(p.date.getFullYear(), p.date.getUTCMonth() + 1, 0) < now)(new Date())) - 1, 0)];
-const DEFAULT_COURSE_ID = DEFAULT_PRESET.courseId;
+	}));
 
 const UI_ja = Object.freeze({
 	'stats': Object.freeze(['なし', 'スピード', 'スタミナ', 'パワー', '根性', '賢さ']),
@@ -1208,7 +1203,7 @@ async function deserialize(hash) {
 				};
 			} catch (_) {
 				return {
-					courseId: DEFAULT_COURSE_ID,
+					courseId: presets[0].courseId,
 					nsamples: DEFAULT_SAMPLES,
 					seed: DEFAULT_SEED,
 					posKeepMode: PosKeepMode.Approximate,
@@ -1337,7 +1332,7 @@ async function loadFromLocalStorage() {
 	return null;
 }
 
-const EMPTY_RESULTS_STATE = {courseId: DEFAULT_COURSE_ID, results: [], runData: null, chartData: null, displaying: '', spurtInfo: null, staminaStats: null, firstUmaStats: null};
+const EMPTY_RESULTS_STATE = {courseId: presets[0].courseId, results: [], runData: null, chartData: null, displaying: '', spurtInfo: null, staminaStats: null, firstUmaStats: null};
 function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | string | {results: any, runData: any, spurtInfo?: any, staminaStats?: any, firstUmaStats?: any}) {
 	if (typeof o == 'number') {
 		return {
@@ -1805,7 +1800,7 @@ function App(props) {
 	const isMobile = useMobile();
 	const [mobileDialogOpen, setMobileDialogOpen] = useState<null | 'uma' | 'settings'>(null);
 	const [skillsOpen, setSkillsOpen] = useState(false);
-	const [racedef, setRaceDef] = useState(() => DEFAULT_PRESET.racedef);
+	const [racedef, setRaceDef] = useState(() => presets[0].racedef);
 	const [nsamples, setSamples] = useState(DEFAULT_SAMPLES);
 	const [seed, setSeed] = useState(DEFAULT_SEED);
 	const [runOnceCounter, setRunOnceCounter] = useState(0);
