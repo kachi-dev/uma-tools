@@ -161,6 +161,61 @@ function readV4Uma(bv: BitVector): DecodedUma | null {
     };
 }
 
+function readV5Uma(bv: BitVector): DecodedUma | null {
+    if (bv.remaining() < 141) return null;
+
+    const card_id = bv.read(20);
+    const talent_level = bv.read(3) + 1;
+    const has_rank = bv.read(1) === 1;
+    const rank_score = has_rank ? bv.read(15) : undefined;
+    const create_time = formatCreateTime(bv.read(32));
+
+    const speed   = bv.read(11);
+    const stamina = bv.read(11);
+    const power   = bv.read(11);
+    const guts    = bv.read(11);
+    const wisdom  = bv.read(11);
+
+    const apt_short   = bv.read(3) + 1;
+    const apt_mile    = bv.read(3) + 1;
+    const apt_middle  = bv.read(3) + 1;
+    const apt_long    = bv.read(3) + 1;
+    const apt_turf    = bv.read(3) + 1;
+    const apt_dirt    = bv.read(3) + 1;
+    const apt_nige    = bv.read(3) + 1;
+    const apt_senko   = bv.read(3) + 1;
+    const apt_sashi   = bv.read(3) + 1;
+    const apt_oikomi  = bv.read(3) + 1;
+
+    const factor_count = bv.read(4);
+    for (let i = 0; i < factor_count; i++) bv.read(24);
+
+    const skill_count = bv.read(6);
+    const skills: Array<{ id: number; level: number }> = [];
+    for (let i = 0; i < skill_count; i++) {
+        const id = bv.read(20);
+        const lvl = bv.read(1) === 0 ? 1 : 2;
+        skills.push({ id, level: lvl });
+    }
+
+    const parent_count = bv.read(2);
+    for (let p = 0; p < parent_count; p++) {
+        bv.read(20);
+        bv.read(3);
+        const pfc = bv.read(4);
+        for (let i = 0; i < pfc; i++) bv.read(24);
+    }
+
+    return {
+        card_id, talent_level, rank_score, create_time,
+        speed, stamina, power, guts, wisdom,
+        apt_short, apt_mile, apt_middle, apt_long,
+        apt_turf, apt_dirt,
+        apt_nige, apt_senko, apt_sashi, apt_oikomi,
+        skills,
+    };
+}
+
 function formatCreateTime(sec: number): string {
     const d = new Date(sec * 1000);
     const y = d.getUTCFullYear();
@@ -277,6 +332,18 @@ export async function decodeRoster(input: string): Promise<DecodedUma[]> {
 
     const bv = BitVector.fromBase64(encoded);
     const version = bv.read(8);
+
+    if (version === 5) {
+        const result: DecodedUma[] = [];
+
+        while (bv.remaining() >= 141) {
+            const uma = readV5Uma(bv);
+            if (!uma) break;
+            result.push(uma);
+        }
+
+        return result;
+    }
 
     if (version === 4) {
         const result: DecodedUma[] = [];
